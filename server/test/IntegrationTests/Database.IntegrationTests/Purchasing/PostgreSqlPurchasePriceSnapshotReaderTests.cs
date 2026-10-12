@@ -32,75 +32,115 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
     GC.SuppressFinalize(this);
   }
 
-  [Fact(DisplayName = "Returns empty result for empty input")]
-  public async Task GetLatestAsync_ReturnsEmpty_WhenInputIsEmpty() {
-    IReadOnlyDictionary<ProductFormatId, PriceSnapshotId> result =
-      await _reader.GetLatestAsync([], TestContext.Current.CancellationToken);
+
+  [Fact]
+  public async Task GetSnapshotsIdAsync_ReturnsEmpty_WhenInputIsEmpty() {
+    IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
+      [], UtcDate(2026, 8, 19), TestContext.Current.CancellationToken);
 
     Assert.Empty(result);
   }
 
-  [Fact(DisplayName = "Returns latest snapshot for every requested format")]
-  public async Task GetLatestAsync_ReturnsLatest_ForManyFormats() {
-    ProductFormatId milkId = await SeedFormatAsync("Milk");
-    ProductFormatId breadId = await SeedFormatAsync("Bread");
-    PriceSnapshotId oldMilk = await SeedSnapshotAsync(
-      milkId, UtcDate(2026, 8, 18), 1.25m);
-    PriceSnapshotId latestMilk = await SeedSnapshotAsync(
-      milkId, UtcDate(2026, 8, 19), 1.50m);
-    PriceSnapshotId bread = await SeedSnapshotAsync(
-      breadId, UtcDate(2026, 8, 18), 2.00m);
-
-    IReadOnlyDictionary<ProductFormatId, PriceSnapshotId> result =
-      await _reader.GetLatestAsync(
-        [milkId, breadId], TestContext.Current.CancellationToken);
-
-    Assert.Equal(latestMilk, result[milkId]);
-    Assert.Equal(bread, result[breadId]);
-    Assert.DoesNotContain(oldMilk, result.Values);
-  }
-
-  [Fact(DisplayName = "Breaks equal-time tie using highest snapshot ID")]
-  public async Task GetLatestAsync_ReturnsHighestId_WhenTimesAreEqual() {
+  [Fact]
+  public async Task GetSnapshotsIdAsync_ReturnsLatestEligibleSnapshot() {
     ProductFormatId formatId = await SeedFormatAsync("Milk");
-    DateTime observedAt = UtcDate(2026, 8, 19);
-    PriceSnapshotId firstId = await SeedSnapshotAsync(
-      formatId, observedAt, 1.25m);
-    PriceSnapshotId secondId = await SeedSnapshotAsync(
-      formatId, observedAt, 1.50m);
-    PriceSnapshotId highestId = firstId.Value.CompareTo(secondId.Value) > 0
-      ? firstId
-      : secondId;
+    await SeedSnapshotAsync(formatId, UtcDate(2026, 8, 17), 1m);
+    PriceSnapshotId eligible = await SeedSnapshotAsync(
+      formatId, UtcDate(2026, 8, 18), 2m);
+    await SeedSnapshotAsync(formatId, UtcDate(2026, 8, 20), 3m);
 
-    IReadOnlyDictionary<ProductFormatId, PriceSnapshotId> result =
-      await _reader.GetLatestAsync(
-        [formatId], TestContext.Current.CancellationToken);
+    IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
+      [formatId.Value], UtcDate(2026, 8, 19), TestContext.Current.CancellationToken);
 
-    Assert.Equal(highestId, result[formatId]);
+    Assert.Equal(eligible.Value, result[formatId.Value]);
   }
 
-  [Fact(DisplayName = "Omits requested formats without snapshots")]
-  public async Task GetLatestAsync_OmitsFormat_WhenSnapshotIsMissing() {
-    ProductFormatId existingId = await SeedFormatAsync("Milk");
-    ProductFormatId missingId = await SeedFormatAsync("Bread");
-    await SeedSnapshotAsync(existingId, UtcDate(2026, 8, 19), 1.25m);
+  [Fact]
+  public async Task GetSnapshotsIdAsync_IncludesSnapshotAtExactCheckoutTime() {
+    ProductFormatId formatId = await SeedFormatAsync("Milk");
+    DateTime checkoutAt = UtcDate(2026, 8, 19);
+    PriceSnapshotId snapshot = await SeedSnapshotAsync(formatId, checkoutAt, 2m);
 
-    IReadOnlyDictionary<ProductFormatId, PriceSnapshotId> result =
-      await _reader.GetLatestAsync(
-        [existingId, missingId], TestContext.Current.CancellationToken);
+    IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
+      [formatId.Value], checkoutAt, TestContext.Current.CancellationToken);
 
-    Assert.True(result.ContainsKey(existingId));
-    Assert.False(result.ContainsKey(missingId));
+    Assert.Equal(snapshot.Value, result[formatId.Value]);
   }
 
-  [Fact(DisplayName = "Propagates cancelled snapshot lookup")]
-  public async Task GetLatestAsync_PropagatesCancellation() {
+  [Fact]
+  public async Task GetSnapshotsIdAsync_BreaksEqualTimeTieWithHighestId() {
+    ProductFormatId formatId = await SeedFormatAsync("Milk");
+    DateTime checkoutAt = UtcDate(2026, 8, 19);
+    PriceSnapshotId first = await SeedSnapshotAsync(formatId, checkoutAt, 1m);
+    PriceSnapshotId second = await SeedSnapshotAsync(formatId, checkoutAt, 2m);
+    Guid expected = first.Value.CompareTo(second.Value) > 0
+      ? first.Value : second.Value;
+
+    IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
+      [formatId.Value], checkoutAt, TestContext.Current.CancellationToken);
+
+    Assert.Equal(expected, result[formatId.Value]);
+  }
+
+  [Fact]
+  public async Task GetSnapshotsIdAsync_OmitsFormatWithoutSnapshots() {
+    ProductFormatId formatId = await SeedFormatAsync("Milk");
+
+    IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
+      [formatId.Value], UtcDate(2026, 8, 19), TestContext.Current.CancellationToken);
+
+    Assert.Empty(result);
+  }
+
+  [Fact]
+  public async Task GetSnapshotsIdAsync_OmitsFormatWithOnlyFutureSnapshots() {
+    ProductFormatId formatId = await SeedFormatAsync("Milk");
+    await SeedSnapshotAsync(formatId, UtcDate(2026, 8, 20), 3m);
+
+    IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
+      [formatId.Value], UtcDate(2026, 8, 19), TestContext.Current.CancellationToken);
+
+    Assert.Empty(result);
+  }
+
+  [Fact]
+  public async Task GetSnapshotsIdAsync_ResolvesMultipleFormats() {
+    ProductFormatId milk = await SeedFormatAsync("Milk");
+    ProductFormatId bread = await SeedFormatAsync("Bread");
+    PriceSnapshotId milkSnapshot = await SeedSnapshotAsync(
+      milk, UtcDate(2026, 8, 18), 1m);
+    PriceSnapshotId breadSnapshot = await SeedSnapshotAsync(
+      bread, UtcDate(2026, 8, 18), 2m);
+
+    IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
+      [milk.Value, bread.Value], UtcDate(2026, 8, 19),
+      TestContext.Current.CancellationToken);
+
+    Assert.Equal(new[] { milkSnapshot.Value, breadSnapshot.Value }.Order(),
+      result.Values.Order());
+  }
+
+  [Fact]
+  public async Task GetSnapshotsIdAsync_DeduplicatesRequestedFormats() {
+    ProductFormatId formatId = await SeedFormatAsync("Milk");
+    await SeedSnapshotAsync(formatId, UtcDate(2026, 8, 18), 1m);
+
+    IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
+      [formatId.Value, formatId.Value], UtcDate(2026, 8, 19),
+      TestContext.Current.CancellationToken);
+
+    Assert.Single(result);
+  }
+
+  [Fact]
+  public async Task GetSnapshotsIdAsync_PropagatesCancellation() {
     ProductFormatId formatId = await SeedFormatAsync("Milk");
     using var source = new CancellationTokenSource();
     await source.CancelAsync();
 
     await Assert.ThrowsAnyAsync<OperationCanceledException>(() =>
-      _reader.GetLatestAsync([formatId], source.Token));
+      _reader.GetSnapshotsIdAsync([formatId.Value], UtcDate(2026, 8, 19),
+        source.Token));
   }
 
   private async Task<ProductFormatId> SeedFormatAsync(string name) {

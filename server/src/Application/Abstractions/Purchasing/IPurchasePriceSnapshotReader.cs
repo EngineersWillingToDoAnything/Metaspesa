@@ -1,9 +1,8 @@
-using Metaspesa.Domain.Markets;
-
 namespace Metaspesa.Application.Abstractions.Purchasing;
 
 public interface IPurchasePriceSnapshotReader {
-  Task<IReadOnlyDictionary<ProductFormatId, PriceSnapshotId>> GetLatestAsync(
-    IReadOnlyCollection<ProductFormatId> productFormatIds,
+  Task<IReadOnlyDictionary<Guid, Guid>> GetSnapshotsIdAsync(
+    IReadOnlyCollection<Guid> productFormatIds,
+    DateTime purchasedAt,
     CancellationToken cancellationToken);
 }

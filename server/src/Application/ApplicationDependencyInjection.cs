@@ -44,6 +44,7 @@ public static class ApplicationDependencyInjection {
       services.AddScoped<RemoveItem.Handler>();
 
       services.AddScoped<CheckoutShoppingList.Handler>();
+      services.AddScoped<CreatePurchase.Handler>();
       return services;
     }
   }

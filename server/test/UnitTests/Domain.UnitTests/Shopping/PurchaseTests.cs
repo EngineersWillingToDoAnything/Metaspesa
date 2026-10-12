@@ -1,68 +1,196 @@
 using Metaspesa.Domain.Identity;
-using Metaspesa.Domain.Markets;
-using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
 
 namespace Metaspesa.Domain.UnitTests.Shopping;
 
 public class PurchaseTests {
-  private static readonly DateTime PurchasedAt =
-    new(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
+  [Fact]
+  public void Create_PreservesExplicitId() {
+    var purchaseId = Guid.CreateVersion7();
 
-  [Fact(DisplayName = "Creates immutable purchase")]
-  public void Create_ExposesReceiptState() {
-    var buyerId = new UserId(Guid.CreateVersion7());
-    var shoppingListId = new ShoppingListId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var purchase = Purchase.Create(
-      buyerId,
-      shoppingListId,
-      [Item(7, 2)],
-      PurchasedAt);
+    var createParams = new CreatePurchaseParams(
+      purchaseId,
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      DateTime.UtcNow,
+      [new CreatePurchaseItem(Guid.CreateVersion7(), 2)]);
 
-    Assert.Equal(7, purchase.Id.Value.Version);
-    Assert.Equal(buyerId, purchase.BuyerId);
-    Assert.Equal(shoppingListId, purchase.ShoppingListId);
-    Assert.Equal(PurchasedAt, purchase.PurchasedAt);
-    Assert.Single(purchase.Items);
-    Assert.All(
-      typeof(Purchase).GetProperties(),
-      property => Assert.False(property.CanWrite));
+    var purchase = Purchase.Create(createParams);
+
+    Assert.Equal(new PurchaseId(purchaseId), purchase.Id);
   }
 
-  [Fact(DisplayName = "Rehydrates purchase with deleted references")]
-  public void Rehydrate_AcceptsMissingBuyerAndList() {
-    var purchase = Purchase.Rehydrate(
-      new PurchaseId(Guid.Parse("00000000-0000-7000-8000-000000000005")), null, null, [Item(7, 2)], PurchasedAt);
+  [Fact]
+  public void Create_PreservesBuyer() {
+    var buyerId = Guid.CreateVersion7();
+    var createParams = new CreatePurchaseParams(
+      Guid.CreateVersion7(),
+      buyerId,
+      Guid.CreateVersion7(),
+      DateTime.UtcNow,
+      [new CreatePurchaseItem(Guid.CreateVersion7(), 2)]);
 
-    Assert.Equal(new PurchaseId(Guid.Parse("00000000-0000-7000-8000-000000000005")), purchase.Id);
+    var purchase = Purchase.Create(createParams);
+
+    Assert.Equal(new UserId(buyerId), purchase.BuyerId);
+  }
+
+  [Fact]
+  public void Create_PreservesShoppingList() {
+    var shoppingListId = Guid.CreateVersion7();
+
+    var createParams = new CreatePurchaseParams(
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      shoppingListId,
+      DateTime.UtcNow,
+      [new CreatePurchaseItem(Guid.CreateVersion7(), 2)]);
+
+    var purchase = Purchase.Create(createParams);
+
+    Assert.Equal(new ShoppingListId(shoppingListId), purchase.ShoppingListId);
+  }
+
+  [Fact]
+  public void Create_PreservesTimestamp() {
+    DateTime purchasedAt = new(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
+
+    var createParams = new CreatePurchaseParams(
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      purchasedAt,
+      [new CreatePurchaseItem(Guid.CreateVersion7(), 2)]);
+
+    var purchase = Purchase.Create(createParams);
+
+    Assert.Equal(purchasedAt, purchase.PurchasedAt);
+  }
+
+  [Fact]
+  public void Create_PreservesLineAmount() {
+    const int purchaseItemAmount = 2;
+
+    var createParams = new CreatePurchaseParams(
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      DateTime.UtcNow,
+      [new CreatePurchaseItem(Guid.CreateVersion7(), purchaseItemAmount)]);
+
+    var purchase = Purchase.Create(createParams);
+
+    Assert.Equal(purchaseItemAmount, purchase.Items.Single().Amount.Value);
+  }
+
+  [Fact]
+  public void Create_PreservesSnapshotId() {
+    var snapshotId = Guid.CreateVersion7();
+    var createParams = new CreatePurchaseParams(
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      DateTime.UtcNow,
+      [new CreatePurchaseItem(snapshotId, 2)]);
+
+    var purchase = Purchase.Create(createParams);
+
+    Assert.Equal(snapshotId, purchase.Items.Single().PriceSnapshotId.Value);
+  }
+
+  [Fact]
+  public void Create_RejectsEmptyItems() {
+    var createParams = new CreatePurchaseParams(
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      DateTime.UtcNow,
+      []);
+
+    void action() => Purchase.Create(createParams);
+
+    Assert.Throws<EmptyCheckoutException>(action);
+  }
+
+  [Fact]
+  public void Create_RejectsDuplicateSnapshot() {
+    var snapshotId = Guid.CreateVersion7();
+    IReadOnlyCollection<CreatePurchaseItem> items = [
+      new CreatePurchaseItem(snapshotId, 1),
+      new CreatePurchaseItem(snapshotId, 2),
+    ];
+    var createParams = new CreatePurchaseParams(
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      DateTime.UtcNow,
+      items);
+
+    void action() => Purchase.Create(createParams);
+
+    Assert.Throws<DuplicatePurchaseItemException>(action);
+  }
+
+  [Theory]
+  [ClassData<InvalidPurchaseTimes>]
+  public void Create_RejectsInvalidTime(DateTime value) {
+    var createParams = new CreatePurchaseParams(
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      value,
+      [new CreatePurchaseItem(Guid.CreateVersion7(), 2)]);
+
+    void action() => Purchase.Create(createParams);
+
+    Assert.Throws<InvalidPurchasedAtException>(action);
+  }
+
+  [Fact]
+  public void Rehydrate_AcceptsDeletedBuyerReference() {
+    var purchase = Purchase.Rehydrate(
+      Guid.CreateVersion7(),
+      null,
+      Guid.CreateVersion7(),
+      DateTime.UtcNow,
+      [PurchaseItem.Create(Guid.CreateVersion7(), 2)]
+    );
+
     Assert.Null(purchase.BuyerId);
+  }
+
+  [Fact]
+  public void Rehydrate_AcceptsDeletedListReference() {
+    var purchase = Purchase.Rehydrate(
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      null,
+      DateTime.UtcNow,
+      [PurchaseItem.Create(Guid.CreateVersion7(), 2)]);
+
     Assert.Null(purchase.ShoppingListId);
   }
 
-  [Fact(DisplayName = "Rejects empty purchase")]
-  public void Create_ThrowsExactException_WhenItemsAreEmpty() {
-    Assert.Throws<EmptyCheckoutException>(() =>
-      Purchase.Create(null, null, [], PurchasedAt));
+  [Fact]
+  public void Rehydrate_PreservesItemIdentity() {
+    var item = PurchaseItem.Create(Guid.CreateVersion7(), 2);
+
+    var purchase = Purchase.Rehydrate(
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      DateTime.UtcNow,
+      [item]);
+
+    Assert.Equal(item.Id, purchase.Items.Single().Id);
   }
 
-  [Fact(DisplayName = "Rejects duplicate paid snapshot")]
-  public void Create_ThrowsExactException_WhenSnapshotIsDuplicated() {
-    Assert.Throws<DuplicatePurchaseItemException>(() =>
-      Purchase.Create(null, null, [Item(7, 1), Item(7, 2)], PurchasedAt));
+  [Fact]
+  public void Purchase_HasNoWritableProperties() {
+    Assert.All(typeof(Purchase).GetProperties(),
+      property => Assert.False(property.CanWrite));
   }
-
-  [Theory(DisplayName = "Rejects invalid purchase time")]
-  [ClassData<InvalidPurchaseTimes>]
-  public void Create_ThrowsExactException_WhenTimeIsInvalid(DateTime value) {
-    Assert.Throws<InvalidPurchasedAtException>(() =>
-      Purchase.Create(null, null, [Item(7, 1)], value));
-  }
-
-  private static PurchaseItem Item(int snapshotId, int amount) =>
-    new(new PriceSnapshotId(Guid.Parse(
-      $"00000000-0000-7000-8000-{snapshotId:x12}")),
-      new PositiveAmount(amount));
 
   private sealed class InvalidPurchaseTimes() : TheoryData<DateTime>(
     default,

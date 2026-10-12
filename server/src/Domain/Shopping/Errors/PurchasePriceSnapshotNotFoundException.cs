@@ -4,7 +4,7 @@ namespace Metaspesa.Domain.Shopping.Errors;
 
 public class PurchasePriceSnapshotNotFoundException : PurchaseDomainException {
   public PurchasePriceSnapshotNotFoundException() { }
-  public PurchasePriceSnapshotNotFoundException(ProductFormatId productFormatId)
+  public PurchasePriceSnapshotNotFoundException(Guid productFormatId)
     : base(
       "Purchase.PriceSnapshot.NotFound",
       $"No price snapshot exists for product format '{productFormatId}'.") { }
