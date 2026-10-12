@@ -1,12 +1,12 @@
 using Metaspesa.Application.Abstractions.Core;
-using Metaspesa.Application.Purchasing;
+using Metaspesa.Application.Shopping;
 using Metaspesa.Database.Entities;
 using Metaspesa.Database.Repositories;
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Markets;
-using Metaspesa.Domain.Purchasing.Errors;
 using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
+using Metaspesa.Domain.Shopping.Errors;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 

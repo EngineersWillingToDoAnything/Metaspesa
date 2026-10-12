@@ -1,7 +1,7 @@
-using Metaspesa.Domain.Purchasing;
-using Metaspesa.Domain.Purchasing.Errors;
+using Metaspesa.Domain.Shopping;
+using Metaspesa.Domain.Shopping.Errors;
 
-namespace Metaspesa.Domain.UnitTests.Purchasing;
+namespace Metaspesa.Domain.UnitTests.Shopping;
 
 public class PurchaseIdTests {
   [Fact(DisplayName = "Creates and compares purchase IDs by value")]

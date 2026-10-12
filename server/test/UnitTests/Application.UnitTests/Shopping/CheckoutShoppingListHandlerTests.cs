@@ -3,15 +3,13 @@ using Metaspesa.Application.Abstractions.Purchasing;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Markets;
-using Metaspesa.Domain.Purchasing;
-using Metaspesa.Domain.Purchasing.Errors;
 using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
 using NSubstitute;
-using static Metaspesa.Application.Purchasing.CheckoutShoppingList;
+using static Metaspesa.Application.Shopping.CheckoutShoppingList;
 
-namespace Metaspesa.Application.UnitTests.Purchasing;
+namespace Metaspesa.Application.UnitTests.Shopping;
 
 public class CheckoutShoppingListHandlerTests {
   private static readonly DateTime PurchasedAt =

@@ -6,7 +6,7 @@ namespace Metaspesa.Database.Configurations;
 
 internal class PurchaseItemConfiguration : IEntityTypeConfiguration<PurchaseItemDbEntity> {
   public void Configure(EntityTypeBuilder<PurchaseItemDbEntity> builder) {
-    builder.ToTable("purchase_items", "purchasing", t =>
+    builder.ToTable("purchase_items", "shopping", t =>
       t.HasComment("""
       Immutable purchase receipt lines. Each line references the exact market
       price snapshot used at purchase time.

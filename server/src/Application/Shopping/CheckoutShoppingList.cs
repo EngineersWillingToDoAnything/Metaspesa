@@ -3,12 +3,11 @@ using Metaspesa.Application.Abstractions.Purchasing;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Markets;
-using Metaspesa.Domain.Purchasing;
-using Metaspesa.Domain.Purchasing.Errors;
+
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
 
-namespace Metaspesa.Application.Purchasing;
+namespace Metaspesa.Application.Shopping;
 
 public static class CheckoutShoppingList {
   public record Command(Guid UserUid, Guid ShoppingListId);

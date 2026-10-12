@@ -2,15 +2,14 @@ using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Purchasing;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Domain.Markets;
-using Metaspesa.Domain.Purchasing;
-using Metaspesa.Domain.Purchasing.Errors;
 using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
+using Metaspesa.Domain.Shopping.Errors;
 using Metaspesa.RestApi.Shopping.CheckoutShoppingList;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
 using static Metaspesa.RestApi.UnitTests.Shopping.ShoppingEndpointTestData;
-using CheckoutUseCase = Metaspesa.Application.Purchasing.CheckoutShoppingList;
+using CheckoutUseCase = Metaspesa.Application.Shopping.CheckoutShoppingList;
 
 namespace Metaspesa.RestApi.UnitTests.Shopping.CheckoutShoppingList;
 

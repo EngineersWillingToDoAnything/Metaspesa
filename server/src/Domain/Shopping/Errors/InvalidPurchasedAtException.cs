@@ -1,4 +1,4 @@
-namespace Metaspesa.Domain.Purchasing.Errors;
+namespace Metaspesa.Domain.Shopping.Errors;
 
 public class InvalidPurchasedAtException : PurchaseDomainException {
   public InvalidPurchasedAtException() { }

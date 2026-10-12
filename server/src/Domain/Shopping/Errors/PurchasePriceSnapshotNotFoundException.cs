@@ -1,6 +1,6 @@
 using Metaspesa.Domain.Markets;
 
-namespace Metaspesa.Domain.Purchasing.Errors;
+namespace Metaspesa.Domain.Shopping.Errors;
 
 public class PurchasePriceSnapshotNotFoundException : PurchaseDomainException {
   public PurchasePriceSnapshotNotFoundException() { }

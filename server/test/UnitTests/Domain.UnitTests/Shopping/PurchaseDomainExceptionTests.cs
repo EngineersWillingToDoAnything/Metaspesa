@@ -1,6 +1,6 @@
-using Metaspesa.Domain.Purchasing.Errors;
+using Metaspesa.Domain.Shopping.Errors;
 
-namespace Metaspesa.Domain.UnitTests.Purchasing;
+namespace Metaspesa.Domain.UnitTests.Shopping;
 
 public class PurchaseDomainExceptionTests {
   [Theory(DisplayName = "Purchasing exceptions share domain base")]

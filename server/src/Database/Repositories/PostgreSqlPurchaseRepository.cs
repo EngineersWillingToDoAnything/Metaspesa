@@ -1,7 +1,7 @@
 using Metaspesa.Application.Abstractions.Purchasing;
 using Metaspesa.Database.Entities;
-using Metaspesa.Domain.Purchasing;
 using Metaspesa.Domain.SharedKernel;
+using Metaspesa.Domain.Shopping;
 
 namespace Metaspesa.Database.Repositories;
 

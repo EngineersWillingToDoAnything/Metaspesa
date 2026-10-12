@@ -1,7 +1,6 @@
 using System.Diagnostics;
 using Metaspesa.Application.Identity;
 using Metaspesa.Application.Markets;
-using Metaspesa.Application.Purchasing;
 using Metaspesa.Application.Shopping;
 using Microsoft.Extensions.DependencyInjection;
 
@@ -16,8 +15,7 @@ public static class ApplicationDependencyInjection {
 
       return services.AddIdentityUseCases()
         .AddMarketUseCases()
-        .AddShoppingUseCases()
-        .AddPurchasingUseCases();
+        .AddShoppingUseCases();
     }
 
     private IServiceCollection AddIdentityUseCases() {
@@ -45,12 +43,7 @@ public static class ApplicationDependencyInjection {
       services.AddScoped<UpdateShoppingList.Handler>();
       services.AddScoped<RemoveItem.Handler>();
 
-      return services;
-    }
-
-    private IServiceCollection AddPurchasingUseCases() {
       services.AddScoped<CheckoutShoppingList.Handler>();
-
       return services;
     }
   }

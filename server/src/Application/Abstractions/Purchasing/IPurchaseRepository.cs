@@ -1,4 +1,4 @@
-using Metaspesa.Domain.Purchasing;
+using Metaspesa.Domain.Shopping;
 
 namespace Metaspesa.Application.Abstractions.Purchasing;
 

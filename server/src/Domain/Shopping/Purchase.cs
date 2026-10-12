@@ -1,10 +1,10 @@
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Markets;
-using Metaspesa.Domain.Purchasing.Errors;
-using Metaspesa.Domain.SharedKernel;
-using Metaspesa.Domain.Shopping;
 
-namespace Metaspesa.Domain.Purchasing;
+using Metaspesa.Domain.SharedKernel;
+using Metaspesa.Domain.Shopping.Errors;
+
+namespace Metaspesa.Domain.Shopping;
 
 public sealed class Purchase {
   private readonly List<PurchaseItem> _items;

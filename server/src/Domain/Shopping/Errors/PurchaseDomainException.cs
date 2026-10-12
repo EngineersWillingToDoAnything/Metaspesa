@@ -1,6 +1,6 @@
 using Metaspesa.Domain.SharedKernel.Errors;
 
-namespace Metaspesa.Domain.Purchasing.Errors;
+namespace Metaspesa.Domain.Shopping.Errors;
 
 public abstract class PurchaseDomainException : DomainException {
   protected PurchaseDomainException() { }

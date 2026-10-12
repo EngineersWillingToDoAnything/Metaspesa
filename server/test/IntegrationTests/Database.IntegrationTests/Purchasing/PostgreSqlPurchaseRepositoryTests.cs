@@ -2,7 +2,6 @@ using Metaspesa.Database.Entities;
 using Metaspesa.Database.Repositories;
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Markets;
-using Metaspesa.Domain.Purchasing;
 using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
 using Microsoft.EntityFrameworkCore;

@@ -1,5 +1,5 @@
 using Metaspesa.RestApi.Security;
-using CheckoutUseCase = Metaspesa.Application.Purchasing.CheckoutShoppingList;
+using CheckoutUseCase = Metaspesa.Application.Shopping.CheckoutShoppingList;
 
 namespace Metaspesa.RestApi.Shopping.CheckoutShoppingList;
 

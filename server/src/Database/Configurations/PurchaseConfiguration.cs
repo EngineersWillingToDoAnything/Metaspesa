@@ -6,7 +6,7 @@ namespace Metaspesa.Database.Configurations;
 
 internal class PurchaseConfiguration : IEntityTypeConfiguration<PurchaseDbEntity> {
   public void Configure(EntityTypeBuilder<PurchaseDbEntity> builder) {
-    builder.ToTable("purchases", "purchasing", t =>
+    builder.ToTable("purchases", "shopping", t =>
       t.HasComment("""
       Purchase receipt header. It records who bought, when, and optionally which
       shopping list was checked out. Product lines live in purchase_items.

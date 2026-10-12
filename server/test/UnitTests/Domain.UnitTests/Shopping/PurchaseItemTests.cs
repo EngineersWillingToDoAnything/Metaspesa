@@ -1,8 +1,8 @@
 using Metaspesa.Domain.Markets;
-using Metaspesa.Domain.Purchasing;
 using Metaspesa.Domain.SharedKernel;
+using Metaspesa.Domain.Shopping;
 
-namespace Metaspesa.Domain.UnitTests.Purchasing;
+namespace Metaspesa.Domain.UnitTests.Shopping;
 
 public class PurchaseItemTests {
   [Fact(DisplayName = "Creates immutable purchase item from typed values")]

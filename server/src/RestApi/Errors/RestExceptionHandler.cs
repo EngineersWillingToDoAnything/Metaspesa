@@ -1,7 +1,6 @@
 using Metaspesa.Database.Exceptions;
 using Metaspesa.Domain.Identity.Errors;
 using Metaspesa.Domain.Markets.Errors;
-using Metaspesa.Domain.Purchasing.Errors;
 using Metaspesa.Domain.SharedKernel.Errors;
 using Metaspesa.Domain.Shopping.Errors;
 using Microsoft.AspNetCore.Diagnostics;

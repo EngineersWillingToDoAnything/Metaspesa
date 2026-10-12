@@ -1,6 +1,8 @@
-using Metaspesa.Domain.Purchasing.Errors;
 
-namespace Metaspesa.Domain.Purchasing;
+
+using Metaspesa.Domain.Shopping.Errors;
+
+namespace Metaspesa.Domain.Shopping;
 
 public readonly record struct PurchaseId {
   public Guid Value { get; }
