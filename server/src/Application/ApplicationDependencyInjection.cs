@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using Metaspesa.Application.Identity;
 using Metaspesa.Application.Markets;
 using Metaspesa.Application.Shopping;
@@ -11,7 +10,7 @@ public static class ApplicationDependencyInjection {
   extension(IServiceCollection services) {
 #pragma warning restore CA1034 // Nested types should not be visible
     public IServiceCollection AddApplication() {
-      Debug.Assert(services != null);
+      ArgumentNullException.ThrowIfNull(services);
 
       return services.AddIdentityUseCases()
         .AddMarketUseCases()

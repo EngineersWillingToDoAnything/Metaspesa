@@ -6,8 +6,6 @@ public interface IPriceSnapshotRepository {
   Task<IReadOnlyCollection<PriceSnapshot>> GetLatestForFormatsAsync(
     IReadOnlyCollection<ProductFormatId> productFormatIds,
     CancellationToken cancellationToken);
-  Task<PriceSnapshot?> GetByIdAsync(
-    PriceSnapshotId snapshotId, CancellationToken cancellationToken);
   Task AppendAsync(
     IReadOnlyCollection<PriceObservation> observations,
     CancellationToken cancellationToken);
