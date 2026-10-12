@@ -1,4 +1,4 @@
-using Metaspesa.Application.Abstractions.Purchasing;
+using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Database.Entities;
 using Metaspesa.Domain.Shopping;
 using Microsoft.EntityFrameworkCore;

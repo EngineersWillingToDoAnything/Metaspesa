@@ -1,4 +1,4 @@
-namespace Metaspesa.Application.Abstractions.Purchasing;
+namespace Metaspesa.Application.Abstractions.Shopping;
 
 public interface IPurchasePriceSnapshotReader {
   Task<IReadOnlyDictionary<Guid, Guid>> GetSnapshotsIdAsync(

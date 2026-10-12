@@ -1,4 +1,4 @@
-using Metaspesa.Application.Abstractions.Purchasing;
+using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
 using NSubstitute;
