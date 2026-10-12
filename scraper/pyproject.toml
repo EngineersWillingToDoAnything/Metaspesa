@@ -13,7 +13,7 @@ dependencies = [
     "opentelemetry-instrumentation-httpx>=0.65b0",
     "opentelemetry-sdk>=1.30.0",
     "playwright>=1.63.0",
-    "pydantic>=2.13.5",
+    "pydantic>=2.14.0",
     "pyyaml>=6.0.3",
 ]
 
