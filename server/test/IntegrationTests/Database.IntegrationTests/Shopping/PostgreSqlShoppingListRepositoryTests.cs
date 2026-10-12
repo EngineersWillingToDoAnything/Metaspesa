@@ -907,7 +907,7 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
 
     ShoppingList persisted = Assert.IsType<ShoppingList>(await _repository.GetAsync(
       ownerId, new ShoppingListId(id), TestContext.Current.CancellationToken));
-    persisted.ResetCheckedItems(ownerId.Value,
+    persisted.Checkout(ownerId.Value,
       new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
     await _repository.UpdateAsync(
       persisted, TestContext.Current.CancellationToken);

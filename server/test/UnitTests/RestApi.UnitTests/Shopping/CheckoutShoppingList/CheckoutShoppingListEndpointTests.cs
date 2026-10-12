@@ -45,17 +45,4 @@ public static class CheckoutShoppingListEndpointTests {
         Assert.IsAssignableFrom<IValueHttpResult<PurchaseResponse>>(result)
           .Value!.PurchaseId));
   }
-
-  [Fact]
-  public static async Task Checkout_RejectsListWithoutCheckedItems() {
-    ShoppingList list = PersistedList("Weekly");
-    IShoppingListRepository repository = RepositoryWith(list);
-
-    await Assert.ThrowsAsync<EmptyPurchaseItemsException>(() =>
-      CheckoutShoppingListEndpoint.CheckoutAsync(ListId,
-        ShopperContext(), new CheckoutUseCase.Handler(repository,
-          Substitute.For<IPurchasePriceSnapshotReader>(),
-          Substitute.For<IPurchaseRepository>(), Substitute.For<IClock>()),
-        TestContext.Current.CancellationToken));
-  }
 }

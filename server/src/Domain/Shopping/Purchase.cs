@@ -28,7 +28,7 @@ public sealed class Purchase : AggregateRoot {
 
     _items = [.. items];
     if (_items.Count == 0) {
-      throw new EmptyPurchaseItemsException();
+      throw new EmptyCheckoutException();
     }
 
     PriceSnapshotId? duplicateSnapshotId = _items

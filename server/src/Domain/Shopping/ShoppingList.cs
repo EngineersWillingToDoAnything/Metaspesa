@@ -110,20 +110,25 @@ public sealed class ShoppingList : AggregateRoot {
     _items.Where(item => item.DeletedAt is null && item.IsChecked)
       .ToList().AsReadOnly();
 
-  public void ResetCheckedItems(Guid buyerId, DateTime checkoutAt) {
-    var checkedOutItems = new List<CheckedOutItem>();
-    foreach (ShoppingItem item in _items.Where(
-      item => item.DeletedAt is null && item.IsChecked)) {
-      item.Update(null, false);
-      checkedOutItems.Add(
-        new CheckedOutItem(item.ProductFormatId.Value, item.Amount.Value));
+  public void Checkout(Guid buyerId, DateTime checkoutAt) {
+    var itemsToCheckout = _items.Where(item => item.CanBeCheckedOut()).ToList();
+    if (itemsToCheckout.Count == 0) {
+      throw new EmptyCheckoutException();
     }
+
+    foreach (ShoppingItem item in itemsToCheckout) {
+      item.Update(null, false);
+    }
+
+    CheckedOutItem[] checkedOutItems = [.. itemsToCheckout.Select(item =>
+      new CheckedOutItem(item.ProductFormatId.Value, item.Amount.Value))
+    ];
     var checkedOutEvent = new ShoppingListCheckedOut(
       Uid.Create(),
       Id.Value,
       buyerId,
       checkoutAt,
-      checkedOutItems.AsReadOnly());
+      checkedOutItems);
     Record(checkedOutEvent);
   }
 

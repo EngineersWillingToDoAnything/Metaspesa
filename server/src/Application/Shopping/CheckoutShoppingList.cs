@@ -28,9 +28,6 @@ public static class CheckoutShoppingList {
         cancellationToken) ?? throw new ShoppingListNotFoundException();
 
       IReadOnlyCollection<ShoppingItem> checkedItems = shoppingList.CheckedItems();
-      if (checkedItems.Count == 0) {
-        throw new EmptyPurchaseItemsException();
-      }
 
       List<PurchaseItem> purchaseItems = await CreatePurchaseItemsAsync(
         checkedItems, cancellationToken);
@@ -43,7 +40,7 @@ public static class CheckoutShoppingList {
         purchaseItems,
         purchasedAt);
 
-      shoppingList.ResetCheckedItems(command.UserUid, purchasedAt);
+      shoppingList.Checkout(command.UserUid, purchasedAt);
       await shoppingListRepository.UpdateAsync(shoppingList, cancellationToken);
       return await purchaseRepository.AddAsync(purchase, cancellationToken);
     }

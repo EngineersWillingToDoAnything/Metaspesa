@@ -46,9 +46,9 @@ internal sealed partial class RestExceptionHandler(
       DuplicateShoppingItemException shopping => (
         StatusCodes.Status409Conflict, shopping.Code,
         "Shopping item already exists", "shopping-item-already-exists"),
-      EmptyPurchaseItemsException purchase => (
-        StatusCodes.Status409Conflict, purchase.Code,
-        "No checked items", "no-checked-items"),
+      EmptyCheckoutException shopping => (
+        StatusCodes.Status409Conflict, shopping.Code,
+        shopping.Message, "no-checked-items"),
       PurchasePriceSnapshotNotFoundException purchase => (
         StatusCodes.Status409Conflict, purchase.Code,
         "Price snapshot not found", "price-snapshot-not-found"),

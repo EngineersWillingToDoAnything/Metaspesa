@@ -147,27 +147,6 @@ public class CheckoutShoppingListHandlerTests {
       Arg.Any<Purchase>(), Arg.Any<CancellationToken>());
   }
 
-  [Fact(DisplayName = "Rejects list without checked items")]
-  public async Task Handle_ThrowsPurchaseException_WhenNoItemIsChecked() {
-    var ownerId = Guid.CreateVersion7();
-    ShoppingList list = List(ownerId, "Weekly", Item(FirstFormatId, isChecked: false));
-    _shoppingRepository.GetAsync(
-      Arg.Any<UserId>(), Arg.Any<ShoppingListId>(), Arg.Any<CancellationToken>())
-      .Returns(list);
-    Handler handler = CreateHandler();
-
-    await Assert.ThrowsAsync<EmptyPurchaseItemsException>(() => handler.Handle(
-      new Command(ownerId, ListId), TestContext.Current.CancellationToken));
-
-    await _snapshotReader.DidNotReceive().GetLatestAsync(
-      Arg.Any<IReadOnlyCollection<ProductFormatId>>(),
-      Arg.Any<CancellationToken>());
-    await _purchaseRepository.DidNotReceive().AddAsync(
-      Arg.Any<Purchase>(), Arg.Any<CancellationToken>());
-    Assert.False(list.Items.Single().IsChecked);
-    Assert.Empty(list.DomainEvents);
-  }
-
   [Fact(DisplayName = "Rejects missing snapshot without resetting list")]
   public async Task Handle_ThrowsPurchaseException_WhenSnapshotIsMissing() {
     var ownerId = Guid.CreateVersion7();

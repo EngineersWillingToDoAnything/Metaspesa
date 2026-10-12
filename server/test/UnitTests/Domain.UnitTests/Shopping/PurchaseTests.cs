@@ -42,7 +42,7 @@ public class PurchaseTests {
 
   [Fact(DisplayName = "Rejects empty purchase")]
   public void Create_ThrowsExactException_WhenItemsAreEmpty() {
-    Assert.Throws<EmptyPurchaseItemsException>(() =>
+    Assert.Throws<EmptyCheckoutException>(() =>
       Purchase.Create(null, null, [], PurchasedAt));
   }
 

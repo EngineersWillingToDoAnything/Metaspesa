@@ -62,4 +62,6 @@ public sealed class ShoppingItem(
       IsChecked = isChecked.Value;
     }
   }
+
+  public bool CanBeCheckedOut() => DeletedAt is null && IsChecked;
 }
