@@ -35,6 +35,8 @@ public static class InfrastructureDependencyInjection {
     services.AddSingleton<IDomainEventPublisher>(provider =>
       provider.GetRequiredService<InMemoryDomainEventPublisher>());
 
+    services.AddScoped<IDomainEventHandler, ShoppingListCheckedOutHandler>();
+
     return services.AddHostedService<DomainEventDispatcher>();
   }
 
