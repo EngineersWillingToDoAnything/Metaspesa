@@ -73,4 +73,32 @@ public class ShoppingItemTests {
       item.DeletedAt,
     });
   }
+
+  [Fact(DisplayName = "Cannot be checked out if deleted")]
+  public void CanBeCheckedOut_ReturnsFalse_WhenDeleted() {
+    var item = ShoppingItem.Create(Guid.CreateVersion7(), 1, true);
+    item.Delete(DateTime.UtcNow);
+
+    bool canBeCheckedOut = item.CanBeCheckedOut();
+
+    Assert.False(canBeCheckedOut);
+  }
+
+  [Fact(DisplayName = "Cannot be checked out if not checked")]
+  public void CanBeCheckedOut_ReturnsFalse_WhenNotChecked() {
+    var item = ShoppingItem.Create(Guid.CreateVersion7(), 1, false);
+
+    bool canBeCheckedOut = item.CanBeCheckedOut();
+
+    Assert.False(canBeCheckedOut);
+  }
+
+  [Fact(DisplayName = "Can be checked out if checked and not deleted")]
+  public void CanBeCheckedOut_ReturnsTrue_WhenCheckedAndNotDeleted() {
+    var item = ShoppingItem.Create(Guid.CreateVersion7(), 1, true);
+
+    bool canBeCheckedOut = item.CanBeCheckedOut();
+
+    Assert.True(canBeCheckedOut);
+  }
 }

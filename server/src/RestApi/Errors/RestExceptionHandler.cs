@@ -1,7 +1,6 @@
 using Metaspesa.Database.Exceptions;
 using Metaspesa.Domain.Identity.Errors;
 using Metaspesa.Domain.Markets.Errors;
-using Metaspesa.Domain.Purchasing.Errors;
 using Metaspesa.Domain.SharedKernel.Errors;
 using Metaspesa.Domain.Shopping.Errors;
 using Microsoft.AspNetCore.Diagnostics;
@@ -47,9 +46,9 @@ internal sealed partial class RestExceptionHandler(
       DuplicateShoppingItemException shopping => (
         StatusCodes.Status409Conflict, shopping.Code,
         "Shopping item already exists", "shopping-item-already-exists"),
-      EmptyPurchaseItemsException purchase => (
-        StatusCodes.Status409Conflict, purchase.Code,
-        "No checked items", "no-checked-items"),
+      EmptyCheckoutException shopping => (
+        StatusCodes.Status409Conflict, shopping.Code,
+        shopping.Message, "no-checked-items"),
       PurchasePriceSnapshotNotFoundException purchase => (
         StatusCodes.Status409Conflict, purchase.Code,
         "Price snapshot not found", "price-snapshot-not-found"),

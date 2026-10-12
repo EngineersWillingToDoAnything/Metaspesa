@@ -12,6 +12,7 @@ public class ShoppingDomainExceptionTests {
   private sealed class ShoppingExceptions() : TheoryData<Exception>(
     (Exception)new DuplicateShoppingItemException(),
     (Exception)new DuplicateShoppingListOwnerException(),
+    (Exception)new EmptyCheckoutException(),
     (Exception)new EmptyShoppingItemsException(),
     (Exception)new EmptyShoppingItemUpdateException(),
     (Exception)new InvalidShoppingListIdException(),

@@ -30,19 +30,6 @@ internal class PostgreSqlPriceSnapshotRepository(
     ];
   }, "Couldn't get latest price snapshots.");
 
-  public async Task<PriceSnapshot?> GetByIdAsync(
-    PriceSnapshotId snapshotId,
-    CancellationToken cancellationToken
-  ) => await PostgreSqlExceptionMapper.MapAsync(async () => {
-    PriceSnapshotDbEntity? entity = await context.PriceSnapshots
-      .AsNoTracking()
-      .SingleOrDefaultAsync(
-        snapshot => snapshot.Id == snapshotId.Value,
-        cancellationToken);
-
-    return entity?.MapToDomain();
-  }, "Couldn't get price snapshot.");
-
   public async Task AppendAsync(
     IReadOnlyCollection<PriceObservation> observations,
     CancellationToken cancellationToken

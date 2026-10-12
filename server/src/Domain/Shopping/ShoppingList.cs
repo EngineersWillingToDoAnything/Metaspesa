@@ -2,12 +2,13 @@ using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Markets;
 using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping.Errors;
+using Metaspesa.Domain.Shopping.Events;
 
 namespace Metaspesa.Domain.Shopping;
 
 public record AddItemsParams(Guid ProductFormatUid, int Amount, bool IsChecked);
 
-public sealed class ShoppingList {
+public sealed class ShoppingList : AggregateRoot {
   private readonly List<UserId> _ownerIds;
   private readonly List<ShoppingItem> _items;
 
@@ -25,7 +26,7 @@ public sealed class ShoppingList {
     ShoppingListName? name,
     IEnumerable<ShoppingItem>? items,
     DateTime? deletedAt
-  ) {
+  ) : base() {
     _ownerIds = [.. ownerIds];
     if (_ownerIds.Count == 0) {
       throw new MissingShoppingListOwnerException();
@@ -109,11 +110,27 @@ public sealed class ShoppingList {
     _items.Where(item => item.DeletedAt is null && item.IsChecked)
       .ToList().AsReadOnly();
 
-  public void ResetCheckedItems() {
-    foreach (ShoppingItem item in _items.Where(
-      item => item.DeletedAt is null && item.IsChecked)) {
+  public Guid Checkout(Guid buyerId, DateTime checkoutAt) {
+    var itemsToCheckout = _items.Where(item => item.CanBeCheckedOut()).ToList();
+    if (itemsToCheckout.Count == 0) {
+      throw new EmptyCheckoutException();
+    }
+
+    foreach (ShoppingItem item in itemsToCheckout) {
       item.Update(null, false);
     }
+
+    CheckedOutItem[] checkedOutItems = [.. itemsToCheckout.Select(item =>
+      new CheckedOutItem(item.ProductFormatId.Value, item.Amount.Value))
+    ];
+    var checkedOutEvent = new ShoppingListCheckedOut(
+      Uid.Create(),
+      Id.Value,
+      buyerId,
+      checkoutAt,
+      checkedOutItems);
+    Record(checkedOutEvent);
+    return checkedOutEvent.CheckoutId;
   }
 
   private ShoppingItem FindItem(Guid shoppingItemId) =>

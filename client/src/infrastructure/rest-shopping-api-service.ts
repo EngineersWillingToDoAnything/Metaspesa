@@ -134,7 +134,7 @@ export default class RestShoppingApiService {
       'POST',
     );
     return zCheckoutShoppingListResponse.parse(await response.json())
-      .purchaseId;
+      .checkoutId;
   }
 
   private async request(

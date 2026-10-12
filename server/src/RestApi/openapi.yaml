@@ -513,7 +513,7 @@ paths:
       tags:
         - CheckoutShoppingListEndpoint
       summary: Check out a shopping list.
-      description: 'Record a purchase from checked items at their latest observed prices, then clear their checked states. Requires the Shopper role.'
+      description: Commit the checkout of checked items. Purchase creation is processed separately. Requires the Shopper role.
       operationId: CheckoutShoppingList
       parameters:
         - name: listId
@@ -524,26 +524,14 @@ paths:
             type: string
             format: uuid
       responses:
-        '201':
-          description: Purchase recorded; the response contains its ID.
+        '202':
+          description: Checkout accepted; the response contains its checkout ID. This does not confirm that a purchase exists.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/PurchaseResponse'
+                $ref: '#/components/schemas/CheckoutResponse'
         '400':
           description: The list ID is invalid.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-        '404':
-          description: The list was not found.
-          content:
-            application/problem+json:
-              schema:
-                $ref: '#/components/schemas/ProblemDetails'
-        '409':
-          description: No items are checked or a checked item has no price snapshot.
           content:
             application/problem+json:
               schema:
@@ -552,6 +540,18 @@ paths:
           description: No valid authentication token was provided.
         '403':
           description: The authenticated user lacks the Shopper role.
+        '404':
+          description: The list was not found.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '409':
+          description: No active items are checked.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
         '500':
           description: An unexpected server or database failure occurred.
           content:
@@ -573,6 +573,16 @@ components:
             $ref: '#/components/schemas/ShoppingItemRequest'
           description: Non-empty array of items with distinct product format IDs.
       description: Items to add to a shopping list.
+    CheckoutResponse:
+      required:
+        - checkoutId
+      type: object
+      properties:
+        checkoutId:
+          type: string
+          description: Stable checkout occurrence ID.
+          format: uuid
+      description: Identifier of an accepted checkout.
     CreateShoppingListRequest:
       required:
         - name
@@ -816,16 +826,6 @@ components:
             $ref: '#/components/schemas/FormatResponse'
           description: Available quantities and their latest observed prices.
       description: One market-owned product. IDs do not imply cross-market equivalence.
-    PurchaseResponse:
-      required:
-        - purchaseId
-      type: object
-      properties:
-        purchaseId:
-          type: string
-          description: Stable purchase ID.
-          format: uuid
-      description: Identifier of a recorded purchase.
     QuantityResponse:
       required:
         - amount

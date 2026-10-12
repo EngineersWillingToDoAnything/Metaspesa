@@ -122,9 +122,7 @@ package "Shopping Module" {
     They do not reference PriceSnapshotId.
     Price is resolved during checkout.
   end note
-}
 
-package "Purchasing Module" {
   class Purchase <<aggregate root>> {
     + PurchasedAt: DateTime
     + Create(userId?, shoppingListId?, lines, purchasedAt)
@@ -150,4 +148,5 @@ package "Purchasing Module" {
     but do not duplicate product/brand/market package data.
   end note
 }
+
 @enduml

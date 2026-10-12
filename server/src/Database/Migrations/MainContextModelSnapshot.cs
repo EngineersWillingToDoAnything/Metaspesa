@@ -201,7 +201,7 @@ namespace Metaspesa.Database.Migrations
 
                     b.HasIndex(new[] { "UserUid" }, "idx_purchases_user_uid");
 
-                    b.ToTable("purchases", "purchasing", t =>
+                    b.ToTable("purchases", "shopping", t =>
                         {
                             t.HasComment("Purchase receipt header. It records who bought, when, and optionally which\nshopping list was checked out. Product lines live in purchase_items.");
                         });
@@ -235,7 +235,7 @@ namespace Metaspesa.Database.Migrations
 
                     b.HasIndex(new[] { "PurchaseId" }, "idx_purchase_item_purchase_id");
 
-                    b.ToTable("purchase_items", "purchasing", t =>
+                    b.ToTable("purchase_items", "shopping", t =>
                         {
                             t.HasComment("Immutable purchase receipt lines. Each line references the exact market\nprice snapshot used at purchase time.");
 

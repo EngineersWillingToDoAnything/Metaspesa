@@ -128,11 +128,7 @@ Ref: shopping.shopping_items.product_format_id > market.product_formats.id [
   delete: restrict
 ]
 
-// ─────────────────────────────────────────
-// PURCHASING SCHEMA
-// ─────────────────────────────────────────
-
-Table purchasing.purchases {
+Table shopping.purchases {
   note: '''
   Purchase receipt header.
   Records when a purchase happened, who bought it if the user still exists,
@@ -151,15 +147,15 @@ Table purchasing.purchases {
   }
 }
 
-Ref: purchasing.purchases.user_uid > identity.users.uid [
+Ref: shopping.purchases.user_uid > identity.users.uid [
   delete: set null
 ]
 
-Ref: purchasing.purchases.shopping_list_id > shopping.shopping_lists.id [
+Ref: shopping.purchases.shopping_list_id > shopping.shopping_lists.id [
   delete: set null
 ]
 
-Table purchasing.purchase_items {
+Table shopping.purchase_items {
   note: '''
   Immutable purchase receipt lines.
   Each line references the exact price snapshot used at purchase time.
@@ -181,11 +177,11 @@ Table purchasing.purchase_items {
   }
 }
 
-Ref: purchasing.purchase_items.purchase_id > purchasing.purchases.id [
+Ref: shopping.purchase_items.purchase_id > shopping.purchases.id [
   delete: cascade
 ]
 
-Ref: purchasing.purchase_items.price_snapshot_id > market.price_snapshots.id [
+Ref: shopping.purchase_items.price_snapshot_id > market.price_snapshots.id [
   delete: restrict
 ]
 

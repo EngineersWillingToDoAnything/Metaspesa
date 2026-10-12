@@ -35,12 +35,6 @@ internal class PostgreSqlShoppingListRepository(
     "Couldn't get shopping lists.");
 
   public async Task<ShoppingList?> GetAsync(
-    UserId ownerId,
-    ShoppingListId id,
-    CancellationToken cancellationToken
-  ) => await GetAsync(ownerId.Value, id.Value, cancellationToken);
-
-  public async Task<ShoppingList?> GetAsync(
     Guid ownerId, Guid listId, CancellationToken cancellationToken
   ) {
     ShoppingListDbEntity? entity = await context.ShoppingLists
@@ -186,11 +180,11 @@ internal class PostgreSqlShoppingListRepository(
       entity.Name is null ? null : new ShoppingListName(entity.Name),
       entity.DeletedAt,
       entity.Items.Select(item => ShoppingItem.Rehydrate(
-          item.Id,
-          item.ProductFormatId,
-          item.Amount,
-          item.IsChecked,
-          item.DeletedAt)));
+        item.Id,
+        item.ProductFormatId,
+        item.Amount,
+        item.IsChecked,
+        item.DeletedAt)));
 
   private static ShoppingItemDbEntity ToEntity(ShoppingItem item) => new() {
     Id = item.Id.Value,

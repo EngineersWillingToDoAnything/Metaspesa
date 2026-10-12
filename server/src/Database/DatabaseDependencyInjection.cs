@@ -1,5 +1,4 @@
 using Metaspesa.Application.Abstractions.Markets;
-using Metaspesa.Application.Abstractions.Purchasing;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Application.Abstractions.Users;
 using Metaspesa.Database.Repositories;

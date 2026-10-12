@@ -15,6 +15,16 @@ export type AddShoppingItemsRequest = {
 };
 
 /**
+ * Identifier of an accepted checkout.
+ */
+export type CheckoutResponse = {
+    /**
+     * Stable checkout occurrence ID.
+     */
+    checkoutId: string;
+};
+
+/**
  * Details for a new named or temporary shopping list.
  */
 export type CreateShoppingListRequest = {
@@ -230,16 +240,6 @@ export type ProductResponse = {
      * Available quantities and their latest observed prices.
      */
     formats: Array<FormatResponse>;
-};
-
-/**
- * Identifier of a recorded purchase.
- */
-export type PurchaseResponse = {
-    /**
-     * Stable purchase ID.
-     */
-    purchaseId: string;
 };
 
 /**
@@ -1040,7 +1040,7 @@ export type CheckoutShoppingListErrors = {
      */
     404: ProblemDetails;
     /**
-     * No items are checked or a checked item has no price snapshot.
+     * No active items are checked.
      */
     409: ProblemDetails;
     /**
@@ -1053,9 +1053,9 @@ export type CheckoutShoppingListError = CheckoutShoppingListErrors[keyof Checkou
 
 export type CheckoutShoppingListResponses = {
     /**
-     * Purchase recorded; the response contains its ID.
+     * Checkout accepted; the response contains its checkout ID. This does not confirm that a purchase exists.
      */
-    201: PurchaseResponse;
+    202: CheckoutResponse;
 };
 
 export type CheckoutShoppingListResponse = CheckoutShoppingListResponses[keyof CheckoutShoppingListResponses];

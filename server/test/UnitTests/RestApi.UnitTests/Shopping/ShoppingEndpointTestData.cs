@@ -23,7 +23,7 @@ internal static class ShoppingEndpointTestData {
 
   internal static IShoppingListRepository RepositoryWith(ShoppingList list) {
     IShoppingListRepository repository = Substitute.For<IShoppingListRepository>();
-    repository.GetAsync(new UserId(OwnerUid), new ShoppingListId(ListId),
+    repository.GetAsync(OwnerUid, ListId,
       TestContext.Current.CancellationToken).Returns(list);
     return repository;
   }

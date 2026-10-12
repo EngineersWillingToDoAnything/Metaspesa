@@ -8,10 +8,6 @@ public interface IShoppingListRepository {
   Task<IReadOnlyCollection<ShoppingList>> GetByOwnerAsync(
     UserId ownerId, CancellationToken cancellationToken);
   Task<ShoppingList?> GetAsync(
-    UserId ownerId,
-    ShoppingListId id,
-    CancellationToken cancellationToken);
-  Task<ShoppingList?> GetAsync(
     Guid ownerId, Guid listId, CancellationToken cancellationToken);
   Task<bool> ExistsAsync(
     Guid ownerId, string? name, CancellationToken cancellationToken);
