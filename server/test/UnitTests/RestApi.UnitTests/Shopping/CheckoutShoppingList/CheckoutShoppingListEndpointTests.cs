@@ -1,48 +1,91 @@
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using Metaspesa.Application.Abstractions.Core;
-using Metaspesa.Application.Abstractions.Purchasing;
 using Metaspesa.Application.Abstractions.Shopping;
-using Metaspesa.Domain.Markets;
-using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
-using Metaspesa.Domain.Shopping.Errors;
+using Metaspesa.Domain.Shopping.Events;
 using Metaspesa.RestApi.Shopping.CheckoutShoppingList;
 using Microsoft.AspNetCore.Http;
 using NSubstitute;
-using static Metaspesa.RestApi.UnitTests.Shopping.ShoppingEndpointTestData;
 using CheckoutUseCase = Metaspesa.Application.Shopping.CheckoutShoppingList;
 
 namespace Metaspesa.RestApi.UnitTests.Shopping.CheckoutShoppingList;
 
-public static class CheckoutShoppingListEndpointTests {
-  private static readonly Guid PurchaseId = Guid.CreateVersion7();
+public class CheckoutShoppingListEndpointTests {
+  private readonly FakeHandler handler;
+
+  private sealed class FakeHandler : CheckoutUseCase.Handler {
+    private readonly IShoppingListRepository _repository;
+    private readonly IClock _clock;
+    private readonly ShoppingList _list;
+
+    public FakeHandler(
+      IShoppingListRepository repository, IClock clock
+    ) : base(repository, clock) {
+      _repository = repository;
+      _clock = clock;
+      _list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
+    }
+
+    public void WithHappyPath() {
+      _list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 2, true)]);
+
+      _repository.GetAsync(
+          Arg.Any<Guid>(),
+          Arg.Any<Guid>(),
+          TestContext.Current.CancellationToken)
+        .Returns(_list);
+
+      _clock.GetCurrentTime().Returns(DateTime.UtcNow);
+    }
+
+    internal Guid? GetPublishedCheckoutId() {
+      return _list.DomainEvents
+        .OfType<ShoppingListCheckedOut>()
+        .FirstOrDefault()?
+        .CheckoutId;
+    }
+  }
+
+  public CheckoutShoppingListEndpointTests() {
+    handler = new FakeHandler(
+      Substitute.For<IShoppingListRepository>(),
+      Substitute.For<IClock>());
+  }
 
   [Fact]
-  public static async Task Checkout_ReturnsCreatedPurchaseId() {
-    ShoppingList list = PersistedList("Weekly",
-      new ShoppingItem(new ProductFormatId(FormatId),
-        new PositiveAmount(2), true));
-    IShoppingListRepository repository = RepositoryWith(list);
-    IPurchasePriceSnapshotReader snapshots =
-      Substitute.For<IPurchasePriceSnapshotReader>();
-    snapshots.GetLatestAsync(Arg.Any<IReadOnlyCollection<ProductFormatId>>(),
-      TestContext.Current.CancellationToken).Returns(
-        new Dictionary<ProductFormatId, PriceSnapshotId> {
-          [new ProductFormatId(FormatId)] = new PriceSnapshotId(Guid.Parse("00000000-0000-7000-8000-00000000002c")),
-        });
-    IPurchaseRepository purchases = Substitute.For<IPurchaseRepository>();
-    purchases.AddAsync(Arg.Any<Purchase>(),
-      TestContext.Current.CancellationToken).Returns(PurchaseId);
-    IClock clock = Substitute.For<IClock>();
-    clock.GetCurrentTime().Returns(
-      new DateTime(2026, 9, 20, 12, 0, 0, DateTimeKind.Utc));
+  public async Task Checkout_ReturnsCreatedStatus() {
+    handler.WithHappyPath();
 
-    IResult result = await CheckoutShoppingListEndpoint.CheckoutAsync(ListId,
-      ShopperContext(), new CheckoutUseCase.Handler(repository,
-        snapshots, purchases, clock), TestContext.Current.CancellationToken);
+    var context = new DefaultHttpContext {
+      User = new ClaimsPrincipal(new ClaimsIdentity([
+        new Claim(JwtRegisteredClaimNames.Sub, Guid.CreateVersion7().ToString()),
+      ])),
+    };
 
-    Assert.Equal((StatusCodes.Status201Created, PurchaseId),
-      (Assert.IsAssignableFrom<IStatusCodeHttpResult>(result).StatusCode,
-        Assert.IsAssignableFrom<IValueHttpResult<PurchaseResponse>>(result)
-          .Value!.PurchaseId));
+    IResult result = await CheckoutShoppingListEndpoint.CheckoutAsync(
+      Guid.CreateVersion7(), context, handler, TestContext.Current.CancellationToken);
+
+    int? statusCode = ((IStatusCodeHttpResult)result).StatusCode;
+    Assert.Equal(StatusCodes.Status201Created, statusCode);
+  }
+
+  [Fact]
+  public async Task Checkout_ReturnsCheckoutId() {
+    handler.WithHappyPath();
+
+    var context = new DefaultHttpContext {
+      User = new ClaimsPrincipal(new ClaimsIdentity([
+        new Claim(JwtRegisteredClaimNames.Sub, Guid.CreateVersion7().ToString()),
+      ])),
+    };
+
+    IResult result = await CheckoutShoppingListEndpoint.CheckoutAsync(
+      Guid.CreateVersion7(), context, handler, TestContext.Current.CancellationToken);
+
+    PurchaseResponse? body = ((IValueHttpResult<PurchaseResponse>)result).Value;
+
+    Guid? expectedCheckoutId = handler.GetPublishedCheckoutId();
+    Assert.Equal(expectedCheckoutId, body!.PurchaseId);
   }
 }

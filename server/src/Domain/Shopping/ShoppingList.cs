@@ -110,7 +110,7 @@ public sealed class ShoppingList : AggregateRoot {
     _items.Where(item => item.DeletedAt is null && item.IsChecked)
       .ToList().AsReadOnly();
 
-  public void Checkout(Guid buyerId, DateTime checkoutAt) {
+  public Guid Checkout(Guid buyerId, DateTime checkoutAt) {
     var itemsToCheckout = _items.Where(item => item.CanBeCheckedOut()).ToList();
     if (itemsToCheckout.Count == 0) {
       throw new EmptyCheckoutException();
@@ -130,6 +130,7 @@ public sealed class ShoppingList : AggregateRoot {
       checkoutAt,
       checkedOutItems);
     Record(checkedOutEvent);
+    return checkedOutEvent.CheckoutId;
   }
 
   private ShoppingItem FindItem(Guid shoppingItemId) =>

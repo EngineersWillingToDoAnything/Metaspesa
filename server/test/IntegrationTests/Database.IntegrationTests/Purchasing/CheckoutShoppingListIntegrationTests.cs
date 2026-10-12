@@ -6,7 +6,6 @@ using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Markets;
 using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
-using Metaspesa.Domain.Shopping.Errors;
 using Microsoft.EntityFrameworkCore;
 using NSubstitute;
 
@@ -30,8 +29,6 @@ public class CheckoutShoppingListIntegrationTests : IAsyncLifetime {
     _shoppingRepository = new PostgreSqlShoppingListRepository(_context, clock);
     _handler = new CheckoutShoppingList.Handler(
       _shoppingRepository,
-      new PostgreSqlPurchasePriceSnapshotReader(_context),
-      new PostgreSqlPurchaseRepository(_context),
       clock);
   }
 
@@ -51,64 +48,36 @@ public class CheckoutShoppingListIntegrationTests : IAsyncLifetime {
     GC.SuppressFinalize(this);
   }
 
-  [Fact(DisplayName = "Checkout persists latest paid snapshot and resets checked items")]
-  public async Task Handle_PersistsPurchaseAndReset_Atomically() {
-    UserId ownerId = await SeedUserAsync();
-    ProductFormatId milkId = await SeedFormatAsync("Milk");
-    ProductFormatId breadId = await SeedFormatAsync("Bread");
-    await SeedSnapshotAsync(milkId, PurchasedAt.AddDays(-2), 1.25m);
-    PriceSnapshotId latestMilk = await SeedSnapshotAsync(
-      milkId, PurchasedAt.AddDays(-1), 1.50m);
-    await SeedSnapshotAsync(breadId, PurchasedAt.AddDays(-1), 2.00m);
-    var list = ShoppingList.Create(ownerId, new ShoppingListName("Weekly"));
-    list.AddItem(milkId, new PositiveAmount(2), true);
-    list.AddItem(breadId, new PositiveAmount(3), false);
-    Guid listId = await _shoppingRepository.AddAsync(
-      list, TestContext.Current.CancellationToken);
 
-    await _handler.Handle(
-      new CheckoutShoppingList.Command(ownerId.Value, listId),
-      TestContext.Current.CancellationToken);
-
-    PurchaseDbEntity purchase = await _context.Purchases
-      .AsNoTracking()
-      .Include(value => value.Items)
-      .SingleAsync(
-        value => value.UserUid == ownerId.Value,
-        TestContext.Current.CancellationToken);
-    PurchaseItemDbEntity item = Assert.Single(purchase.Items);
-    Assert.Equal(latestMilk.Value, item.PriceSnapshotId);
-    Assert.Equal(2, item.Amount);
-    Assert.Equal(PurchasedAt, purchase.PurchasedAt);
-    ShoppingList reset = Assert.IsType<ShoppingList>(await _shoppingRepository.GetAsync(
-      ownerId,
-      new ShoppingListId(listId),
-      TestContext.Current.CancellationToken));
-    Assert.All(reset.Items, value => Assert.False(value.IsChecked));
-  }
-
-  [Fact(DisplayName = "Missing snapshot persists neither purchase nor reset")]
-  public async Task Handle_LeavesDatabaseUnchanged_WhenSnapshotIsMissing() {
+  [Fact]
+  public async Task Handle_PersistsResetWithoutPriceSnapshot() {
     UserId ownerId = await SeedUserAsync();
     ProductFormatId formatId = await SeedFormatAsync("Milk");
     var list = ShoppingList.Create(ownerId, new ShoppingListName("Weekly"));
     list.AddItem(formatId, new PositiveAmount(2), true);
-    Guid listId = await _shoppingRepository.AddAsync(
-      list, TestContext.Current.CancellationToken);
+    await _shoppingRepository.SaveAsync(list, TestContext.Current.CancellationToken);
 
-    await Assert.ThrowsAsync<PurchasePriceSnapshotNotFoundException>(() =>
-      _handler.Handle(
-        new CheckoutShoppingList.Command(ownerId.Value, listId),
-        TestContext.Current.CancellationToken));
+    await _handler.Handle(new CheckoutShoppingList.Command(
+      ownerId.Value, list.Id.Value), TestContext.Current.CancellationToken);
 
-    Assert.Empty(await _context.Purchases
-      .AsNoTracking()
-      .ToListAsync(TestContext.Current.CancellationToken));
-    ShoppingList unchanged = Assert.IsType<ShoppingList>(await _shoppingRepository.GetAsync(
-      ownerId,
-      new ShoppingListId(listId),
-      TestContext.Current.CancellationToken));
-    Assert.True(unchanged.Items.Single().IsChecked);
+    ShoppingList? actual = await _shoppingRepository.GetAsync(ownerId.Value,
+      list.Id.Value, TestContext.Current.CancellationToken);
+    Assert.False(actual!.Items.Single().IsChecked);
+  }
+
+  [Fact]
+  public async Task Handle_DoesNotPersistPurchase() {
+    UserId ownerId = await SeedUserAsync();
+    ProductFormatId formatId = await SeedFormatAsync("Milk");
+    var list = ShoppingList.Create(ownerId, new ShoppingListName("Weekly"));
+    list.AddItem(formatId, new PositiveAmount(2), true);
+    await _shoppingRepository.SaveAsync(list, TestContext.Current.CancellationToken);
+
+    await _handler.Handle(new CheckoutShoppingList.Command(
+      ownerId.Value, list.Id.Value), TestContext.Current.CancellationToken);
+
+    Assert.Empty(await _context.Purchases.AsNoTracking()
+      .ToArrayAsync(TestContext.Current.CancellationToken));
   }
 
   private async Task EnsureShopperRoleAsync() {
@@ -164,21 +133,5 @@ public class CheckoutShoppingListIntegrationTests : IAsyncLifetime {
     _context.ProductFormats.Add(format);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     return new ProductFormatId(format.Id);
-  }
-
-  private async Task<PriceSnapshotId> SeedSnapshotAsync(
-    ProductFormatId formatId,
-    DateTime observedAt,
-    decimal price
-  ) {
-    var snapshot = new PriceSnapshotDbEntity {
-      Id = Uid.Create(),
-      ProductFormatId = formatId.Value,
-      PriceAmount = price,
-      ObservedAt = observedAt,
-    };
-    _context.PriceSnapshots.Add(snapshot);
-    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-    return new PriceSnapshotId(snapshot.Id);
   }
 }
