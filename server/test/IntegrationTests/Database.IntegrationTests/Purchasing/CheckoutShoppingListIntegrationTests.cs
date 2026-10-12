@@ -29,7 +29,8 @@ public class CheckoutShoppingListIntegrationTests : IAsyncLifetime {
     _shoppingRepository = new PostgreSqlShoppingListRepository(_context, clock);
     _handler = new CheckoutShoppingList.Handler(
       _shoppingRepository,
-      clock);
+      clock,
+      Substitute.For<IDomainEventPublisher>());
   }
 
   public async ValueTask InitializeAsync() {

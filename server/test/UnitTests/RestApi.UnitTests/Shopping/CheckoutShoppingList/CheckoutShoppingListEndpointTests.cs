@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Shopping;
+using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Events;
 using Metaspesa.RestApi.Shopping.CheckoutShoppingList;
@@ -18,12 +19,17 @@ public class CheckoutShoppingListEndpointTests {
     private readonly IShoppingListRepository _repository;
     private readonly IClock _clock;
     private readonly ShoppingList _list;
+    private Guid? _publishedCheckoutId;
 
     public FakeHandler(
-      IShoppingListRepository repository, IClock clock
-    ) : base(repository, clock) {
+      IShoppingListRepository repository, IClock clock, IDomainEventPublisher publisher
+    ) : base(repository, clock, publisher) {
       _repository = repository;
       _clock = clock;
+      publisher.When(value => value.PublishAsync(
+        Arg.Any<IReadOnlyCollection<IDomainEvent>>(), Arg.Any<CancellationToken>()))
+        .Do(call => _publishedCheckoutId = call.Arg<IReadOnlyCollection<IDomainEvent>>()
+          .OfType<ShoppingListCheckedOut>().Single().CheckoutId);
       _list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
     }
 
@@ -39,18 +45,14 @@ public class CheckoutShoppingListEndpointTests {
       _clock.GetCurrentTime().Returns(DateTime.UtcNow);
     }
 
-    internal Guid? GetPublishedCheckoutId() {
-      return _list.DomainEvents
-        .OfType<ShoppingListCheckedOut>()
-        .FirstOrDefault()?
-        .CheckoutId;
-    }
+    internal Guid? GetPublishedCheckoutId() => _publishedCheckoutId;
   }
 
   public CheckoutShoppingListEndpointTests() {
     handler = new FakeHandler(
       Substitute.For<IShoppingListRepository>(),
-      Substitute.For<IClock>());
+      Substitute.For<IClock>(),
+      Substitute.For<IDomainEventPublisher>());
   }
 
   [Fact]

@@ -232,6 +232,10 @@ dotnet_diagnostic.CA2007.severity = none
 # CA1034: Do not nest type Command. Alternatively, change its accessibility so that it is not externally visible
 dotnet_diagnostic.CA1034.severity = none
 
+[src/Application/Abstractions/Core/IDomainEventHandler.cs]
+# CA1711: This interface handles domain events rather than CLR events.
+dotnet_diagnostic.CA1711.severity = none
+
 [src/Domain/Shopping/ShoppingList.cs]
 # CA1710: Identifiers should have correct suffix
 dotnet_diagnostic.CA1710.severity = none

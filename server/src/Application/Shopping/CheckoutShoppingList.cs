@@ -9,22 +9,26 @@ public static class CheckoutShoppingList {
   public record Command(Guid UserUid, Guid ShoppingListId);
 
   public class Handler(
-    IShoppingListRepository shoppingListRepository,
-    IClock clock
+    IShoppingListRepository repository,
+    IClock clock,
+    IDomainEventPublisher eventPublisher
   ) {
     public async Task<Guid> Handle(
       Command command, CancellationToken cancellationToken = default
     ) {
       ArgumentNullException.ThrowIfNull(command);
 
-      ShoppingList shoppingList = await shoppingListRepository.GetAsync(
+      ShoppingList shoppingList = await repository.GetAsync(
         command.UserUid, command.ShoppingListId, cancellationToken)
         ?? throw new ShoppingListNotFoundException();
 
       Guid checkoutId = shoppingList.Checkout(
         command.UserUid, clock.GetCurrentTime());
 
-      await shoppingListRepository.SaveAsync(shoppingList, cancellationToken);
+      await repository.SaveAsync(shoppingList, cancellationToken);
+      await eventPublisher.PublishAsync(
+        shoppingList.DomainEvents, CancellationToken.None);
+      shoppingList.ClearDomainEvents();
 
       return checkoutId;
     }

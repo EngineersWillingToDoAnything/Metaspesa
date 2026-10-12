@@ -2,6 +2,7 @@ using System.Security.Cryptography;
 using System.Text;
 using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Users;
+using Metaspesa.Infrastructure.Events;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -23,7 +24,18 @@ public static class InfrastructureDependencyInjection {
     services.AddSingleton<ITokenProvider, JwtTokenProvider>();
     services.AddSingleton<IHasher, Pbkdf2Hasher>();
 
-    return services.AddSession();
+    return services.AddSession()
+      .AddEventHandling();
+  }
+
+  private static IServiceCollection AddEventHandling(
+    this IServiceCollection services
+  ) {
+    services.AddSingleton<InMemoryDomainEventPublisher>();
+    services.AddSingleton<IDomainEventPublisher>(provider =>
+      provider.GetRequiredService<InMemoryDomainEventPublisher>());
+
+    return services;
   }
 
   private static IServiceCollection AddSession(
