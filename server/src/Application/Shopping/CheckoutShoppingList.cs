@@ -3,7 +3,6 @@ using Metaspesa.Application.Abstractions.Purchasing;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Markets;
-
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
 
@@ -37,13 +36,14 @@ public static class CheckoutShoppingList {
         checkedItems, cancellationToken);
 
       ShoppingListId shoppingListId = shoppingList.Id;
+      DateTime purchasedAt = clock.GetCurrentTime();
       var purchase = Purchase.Create(
         ownerId,
         shoppingListId,
         purchaseItems,
-        clock.GetCurrentTime());
+        purchasedAt);
 
-      shoppingList.ResetCheckedItems();
+      shoppingList.ResetCheckedItems(command.UserUid, purchasedAt);
       await shoppingListRepository.UpdateAsync(shoppingList, cancellationToken);
       return await purchaseRepository.AddAsync(purchase, cancellationToken);
     }

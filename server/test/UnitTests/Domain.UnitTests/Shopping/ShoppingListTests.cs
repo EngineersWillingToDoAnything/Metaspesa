@@ -5,6 +5,7 @@ using Metaspesa.Domain.Markets.Errors;
 using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
+using Metaspesa.Domain.Shopping.Events;
 
 namespace Metaspesa.Domain.UnitTests.Shopping;
 
@@ -294,14 +295,220 @@ public class ShoppingListTests {
     Assert.Equal(2, list.Items.Count);
   }
 
-  [Fact(DisplayName = "Resets checked items without removing them")]
+  [Fact(DisplayName = "Resets checked items")]
   public void ResetCheckedItems_UnchecksAllItems() {
     var list = ShoppingList.Create(OwnerId, null);
     list.AddItem(new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000002")), new PositiveAmount(1), true);
 
-    list.ResetCheckedItems();
+    list.ResetCheckedItems(OwnerId.Value,
+      new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
+
+    Assert.False(list.Items.Single().IsChecked);
+  }
+
+  [Fact(DisplayName = "Preserves items when resetting checked state")]
+  public void ResetCheckedItems_DoesNotRemoveItems() {
+    var list = ShoppingList.Create(OwnerId, null);
+    list.AddItem(new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000002")), new PositiveAmount(1), true);
+
+    list.ResetCheckedItems(OwnerId.Value,
+      new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
 
     Assert.Single(list.Items);
-    Assert.False(list.Items.Single().IsChecked);
+  }
+
+  [Fact]
+  public void ResetCheckedItems_RecordsShoppingListId() {
+    var list = ShoppingList.Create(OwnerId, null);
+    var buyerId = Guid.Parse("11111111-1111-1111-1111-111111111112");
+    var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
+    list.AddItems([new AddItemsParams(
+      Guid.Parse("00000000-0000-7000-8000-000000000002"), 2, true)]);
+
+    list.ResetCheckedItems(buyerId, checkoutAt);
+
+    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    Assert.Equal(list.Id.Value, domainEvent.ShoppingListId);
+  }
+
+  [Fact]
+  public void ResetCheckedItems_RecordsBuyerId() {
+    var list = ShoppingList.Create(OwnerId, null);
+    var buyerId = Guid.Parse("11111111-1111-1111-1111-111111111112");
+    var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
+    list.AddItems([new AddItemsParams(
+      Guid.Parse("00000000-0000-7000-8000-000000000002"), 2, true)]);
+
+    list.ResetCheckedItems(buyerId, checkoutAt);
+
+    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    Assert.Equal(buyerId, domainEvent.BuyerId);
+  }
+
+  [Fact]
+  public void ResetCheckedItems_RecordsCheckoutAt() {
+    var list = ShoppingList.Create(OwnerId, null);
+    var buyerId = Guid.Parse("11111111-1111-1111-1111-111111111112");
+    var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
+    list.AddItems([new AddItemsParams(
+      Guid.Parse("00000000-0000-7000-8000-000000000002"), 2, true)]);
+
+    list.ResetCheckedItems(buyerId, checkoutAt);
+
+    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    Assert.Equal(checkoutAt, domainEvent.CheckoutAt);
+  }
+
+  [Fact]
+  public void ResetCheckedItems_RecordsActiveCheckedProductFormats() {
+    var list = ShoppingList.Create(OwnerId, null);
+    var firstId = Guid.Parse("00000000-0000-7000-8000-000000000002");
+    var secondId = Guid.Parse("00000000-0000-7000-8000-000000000003");
+    var uncheckedId = Guid.Parse("00000000-0000-7000-8000-000000000004");
+    var deletedId = Guid.Parse("00000000-0000-7000-8000-000000000005");
+    var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
+    list.AddItems([
+      new AddItemsParams(firstId, 2, true),
+      new AddItemsParams(secondId, 3, true),
+      new AddItemsParams(uncheckedId, 4, false),
+      new AddItemsParams(deletedId, 5, true),
+    ]);
+    list.RemoveItem(list.Items.Single(item =>
+      item.ProductFormatId.Value == deletedId).Id.Value, checkoutAt);
+
+    list.ResetCheckedItems(OwnerId.Value, checkoutAt);
+
+    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    Assert.Equal([firstId, secondId],
+      domainEvent.Items.Select(item => item.ProductFormatId));
+  }
+
+  [Fact]
+  public void ResetCheckedItems_RecordsCheckedAmounts() {
+    var list = ShoppingList.Create(OwnerId, null);
+    var firstId = Guid.Parse("00000000-0000-7000-8000-000000000002");
+    var secondId = Guid.Parse("00000000-0000-7000-8000-000000000003");
+    var uncheckedId = Guid.Parse("00000000-0000-7000-8000-000000000004");
+    var deletedId = Guid.Parse("00000000-0000-7000-8000-000000000005");
+    var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
+    list.AddItems([
+      new AddItemsParams(firstId, 2, true),
+      new AddItemsParams(secondId, 3, true),
+      new AddItemsParams(uncheckedId, 4, false),
+      new AddItemsParams(deletedId, 5, true),
+    ]);
+    list.RemoveItem(list.Items.Single(item =>
+      item.ProductFormatId.Value == deletedId).Id.Value, checkoutAt);
+
+    list.ResetCheckedItems(OwnerId.Value, checkoutAt);
+
+    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    Assert.Equal([2, 3], domainEvent.Items.Select(item => item.Amount));
+  }
+
+  [Fact]
+  public void ResetCheckedItems_ExcludesUncheckedItemsFromEvent() {
+    var list = ShoppingList.Create(OwnerId, null);
+    var firstId = Guid.Parse("00000000-0000-7000-8000-000000000002");
+    var secondId = Guid.Parse("00000000-0000-7000-8000-000000000003");
+    var uncheckedId = Guid.Parse("00000000-0000-7000-8000-000000000004");
+    var deletedId = Guid.Parse("00000000-0000-7000-8000-000000000005");
+    var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
+    list.AddItems([
+      new AddItemsParams(firstId, 2, true),
+      new AddItemsParams(secondId, 3, true),
+      new AddItemsParams(uncheckedId, 4, false),
+      new AddItemsParams(deletedId, 5, true),
+    ]);
+    list.RemoveItem(list.Items.Single(item =>
+      item.ProductFormatId.Value == deletedId).Id.Value, checkoutAt);
+
+    list.ResetCheckedItems(OwnerId.Value, checkoutAt);
+
+    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    Assert.DoesNotContain(domainEvent.Items,
+      item => item.ProductFormatId == uncheckedId);
+  }
+
+  [Fact]
+  public void ResetCheckedItems_ExcludesDeletedItemsFromEvent() {
+    var list = ShoppingList.Create(OwnerId, null);
+    var firstId = Guid.Parse("00000000-0000-7000-8000-000000000002");
+    var secondId = Guid.Parse("00000000-0000-7000-8000-000000000003");
+    var uncheckedId = Guid.Parse("00000000-0000-7000-8000-000000000004");
+    var deletedId = Guid.Parse("00000000-0000-7000-8000-000000000005");
+    var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
+    list.AddItems([
+      new AddItemsParams(firstId, 2, true),
+      new AddItemsParams(secondId, 3, true),
+      new AddItemsParams(uncheckedId, 4, false),
+      new AddItemsParams(deletedId, 5, true),
+    ]);
+    list.RemoveItem(list.Items.Single(item =>
+      item.ProductFormatId.Value == deletedId).Id.Value, checkoutAt);
+
+    list.ResetCheckedItems(OwnerId.Value, checkoutAt);
+
+    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    Assert.DoesNotContain(domainEvent.Items,
+      item => item.ProductFormatId == deletedId);
+  }
+
+  [Fact]
+  public void ResetCheckedItems_PreservesDeletedItemState() {
+    var list = ShoppingList.Create(OwnerId, null);
+    var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
+    list.AddItems([new AddItemsParams(
+      Guid.Parse("00000000-0000-7000-8000-000000000002"), 2, true)]);
+    ShoppingItem deletedItem = list.Items.Single();
+    list.RemoveItem(deletedItem.Id.Value, checkoutAt);
+    list.AddItems([new AddItemsParams(
+      Guid.Parse("00000000-0000-7000-8000-000000000003"), 1, true)]);
+
+    list.ResetCheckedItems(OwnerId.Value, checkoutAt);
+
+    Assert.True(deletedItem.IsChecked);
+  }
+
+  [Fact]
+  public void ResetCheckedItems_EventLinesSurviveSubsequentItemChanges() {
+    var list = ShoppingList.Create(OwnerId, null);
+    var formatId = Guid.Parse("00000000-0000-7000-8000-000000000002");
+    list.AddItems([new AddItemsParams(formatId, 2, true)]);
+    list.ResetCheckedItems(OwnerId.Value,
+      new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
+    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+
+    list.UpdateItem(list.Items.Single().Id.Value, 99, true);
+
+    Assert.Equal([new CheckedOutItem(formatId, 2)], domainEvent.Items);
+  }
+
+  [Fact]
+  public void ResetCheckedItems_GeneratesDistinctCheckoutIdsForEachOccurrence() {
+    var list = ShoppingList.Create(OwnerId, null);
+    var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
+    list.AddItems([new AddItemsParams(
+      Guid.Parse("00000000-0000-7000-8000-000000000002"), 2, true)]);
+    list.ResetCheckedItems(OwnerId.Value, checkoutAt);
+    list.UpdateItem(list.Items.Single().Id.Value, null, true);
+
+    list.ResetCheckedItems(OwnerId.Value, checkoutAt.AddMinutes(1));
+
+    Guid[] checkoutIds = list.DomainEvents.Cast<ShoppingListCheckedOut>()
+      .Select(domainEvent => domainEvent.CheckoutId).ToArray();
+    Assert.Equal(2, checkoutIds.Distinct().Count());
+  }
+
+  [Fact]
+  public void Rehydrate_DoesNotRaiseEventsForPersistedItems() {
+    var list = ShoppingList.Rehydrate(
+      new ShoppingListId(Guid.Parse("00000000-0000-7000-8000-000000000001")),
+      [OwnerId], null, null,
+      [new ShoppingItem(
+        new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000002")),
+        new PositiveAmount(2), true)]);
+
+    Assert.Empty(list.DomainEvents);
   }
 }

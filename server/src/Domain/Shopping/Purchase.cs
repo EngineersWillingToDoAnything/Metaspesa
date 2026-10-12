@@ -1,12 +1,11 @@
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Markets;
-
 using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping.Errors;
 
 namespace Metaspesa.Domain.Shopping;
 
-public sealed class Purchase {
+public sealed class Purchase : AggregateRoot {
   private readonly List<PurchaseItem> _items;
 
   public PurchaseId Id { get; }
@@ -21,7 +20,7 @@ public sealed class Purchase {
     ShoppingListId? shoppingListId,
     IEnumerable<PurchaseItem> items,
     DateTime purchasedAt
-  ) {
+  ) : base() {
     ArgumentNullException.ThrowIfNull(items);
     if (purchasedAt == default || purchasedAt.Kind != DateTimeKind.Utc) {
       throw new InvalidPurchasedAtException(purchasedAt);

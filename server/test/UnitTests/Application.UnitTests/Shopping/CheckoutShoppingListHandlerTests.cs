@@ -6,6 +6,7 @@ using Metaspesa.Domain.Markets;
 using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
+using Metaspesa.Domain.Shopping.Events;
 using NSubstitute;
 using static Metaspesa.Application.Shopping.CheckoutShoppingList;
 
@@ -76,6 +77,9 @@ public class CheckoutShoppingListHandlerTests {
     Assert.All(list.Items, item => Assert.False(item.IsChecked));
     await _shoppingRepository.Received(1).UpdateAsync(
       list, TestContext.Current.CancellationToken);
+    ShoppingListCheckedOut domainEvent = Assert.IsType<ShoppingListCheckedOut>(
+      Assert.Single(list.DomainEvents));
+    Assert.Equal(PurchasedAt, domainEvent.CheckoutAt);
   }
 
   [Fact(DisplayName = "Loads temporary list by missing name")]
@@ -161,6 +165,7 @@ public class CheckoutShoppingListHandlerTests {
     await _purchaseRepository.DidNotReceive().AddAsync(
       Arg.Any<Purchase>(), Arg.Any<CancellationToken>());
     Assert.False(list.Items.Single().IsChecked);
+    Assert.Empty(list.DomainEvents);
   }
 
   [Fact(DisplayName = "Rejects missing snapshot without resetting list")]
@@ -188,6 +193,7 @@ public class CheckoutShoppingListHandlerTests {
     await _purchaseRepository.DidNotReceive().AddAsync(
       Arg.Any<Purchase>(), Arg.Any<CancellationToken>());
     Assert.All(list.Items, item => Assert.True(item.IsChecked));
+    Assert.Empty(list.DomainEvents);
     await _shoppingRepository.DidNotReceive().UpdateAsync(
       Arg.Any<ShoppingList>(), Arg.Any<CancellationToken>());
   }
@@ -212,6 +218,7 @@ public class CheckoutShoppingListHandlerTests {
     await _purchaseRepository.DidNotReceive().AddAsync(
       Arg.Any<Purchase>(), Arg.Any<CancellationToken>());
     Assert.True(list.Items.Single().IsChecked);
+    Assert.Empty(list.DomainEvents);
   }
 
   private Handler CreateHandler() => new(

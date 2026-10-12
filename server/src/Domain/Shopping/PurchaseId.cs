@@ -1,5 +1,4 @@
 
-
 using Metaspesa.Domain.Shopping.Errors;
 
 namespace Metaspesa.Domain.Shopping;
