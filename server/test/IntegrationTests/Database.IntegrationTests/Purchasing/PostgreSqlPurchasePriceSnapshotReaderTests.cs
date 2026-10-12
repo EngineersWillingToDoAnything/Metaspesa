@@ -154,7 +154,7 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
     };
     var unit = new UnitOfMeasureDbEntity {
       Id = Guid.CreateVersion7(),
-      Code = $"u{Guid.CreateVersion7():N}"[..16],
+      Code = $"u{Guid.NewGuid():N}"[..16],
       Name = $"Unit {Guid.CreateVersion7()}",
     };
     var format = new ProductFormatDbEntity {

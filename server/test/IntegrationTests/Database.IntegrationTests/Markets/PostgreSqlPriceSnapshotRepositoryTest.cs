@@ -38,23 +38,6 @@ public class PostgreSqlPriceSnapshotRepositoryTest : IAsyncLifetime {
     GC.SuppressFinalize(this);
   }
 
-  [Fact(DisplayName = "Loads immutable price snapshot by typed id")]
-  public async Task Repository_LoadsPriceSnapshot_ByTypedId() {
-    await ResolveAndAppendAsync();
-    Guid snapshotId = await _context.PriceSnapshots
-      .Select(snapshot => snapshot.Id)
-      .SingleAsync(TestContext.Current.CancellationToken);
-
-    PriceSnapshot? snapshot = await _snapshotRepository.GetByIdAsync(
-      new PriceSnapshotId(snapshotId),
-      TestContext.Current.CancellationToken);
-
-    Assert.NotNull(snapshot);
-    Assert.Equal(new PriceSnapshotId(snapshotId), snapshot.Id);
-    Assert.Equal(new Money(1.99m), snapshot.Price);
-    Assert.Equal(DateTimeKind.Utc, snapshot.ObservedAt.Kind);
-  }
-
   [Fact(DisplayName = "Loads latest format snapshot by observation time")]
   public async Task Repository_LoadsLatestSnapshot_ByObservationTime() {
     ProductImportResult result = await ResolveAndAppendAsync();

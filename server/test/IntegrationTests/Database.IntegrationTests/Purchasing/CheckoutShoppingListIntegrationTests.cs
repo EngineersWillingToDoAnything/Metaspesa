@@ -125,7 +125,7 @@ public class CheckoutShoppingListIntegrationTests : IAsyncLifetime {
       Quantity = 1,
       UnitOfMeasure = new UnitOfMeasureDbEntity {
         Id = Uid.Create(),
-        Code = $"u{Guid.CreateVersion7():N}"[..16],
+        Code = $"u{Guid.NewGuid():N}"[..16],
         Name = $"Unit {Guid.CreateVersion7()}",
       },
       ImageUrl = string.Empty,
