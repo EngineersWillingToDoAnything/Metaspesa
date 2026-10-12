@@ -35,7 +35,7 @@ public static class InfrastructureDependencyInjection {
     services.AddSingleton<IDomainEventPublisher>(provider =>
       provider.GetRequiredService<InMemoryDomainEventPublisher>());
 
-    return services;
+    return services.AddHostedService<DomainEventDispatcher>();
   }
 
   private static IServiceCollection AddSession(
