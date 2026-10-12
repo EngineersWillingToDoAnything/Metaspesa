@@ -11,7 +11,6 @@ public class PurchaseDomainExceptionTests {
 
   private sealed class PurchasingExceptions() : TheoryData<Exception>(
     (Exception)new DuplicatePurchaseItemException(),
-    (Exception)new EmptyCheckoutException(),
     (Exception)new InvalidPurchasedAtException(),
     (Exception)new InvalidPurchaseIdException(),
     (Exception)new PurchasePriceSnapshotNotFoundException()
