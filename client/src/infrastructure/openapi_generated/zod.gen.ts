@@ -3,6 +3,13 @@
 import * as z from 'zod';
 
 /**
+ * Identifier of an accepted checkout.
+ */
+export const zCheckoutResponse = z.object({
+    checkoutId: z.uuid()
+});
+
+/**
  * Details for a new named or temporary shopping list.
  */
 export const zCreateShoppingListRequest = z.object({
@@ -71,13 +78,6 @@ export const zProblemDetails = z.object({
     instance: z.string().nullish(),
     code: z.string(),
     traceId: z.string()
-});
-
-/**
- * Identifier of a recorded purchase.
- */
-export const zPurchaseResponse = z.object({
-    purchaseId: z.uuid()
 });
 
 /**
@@ -372,6 +372,6 @@ export const zCheckoutShoppingListPath = z.object({
 });
 
 /**
- * Purchase recorded; the response contains its ID.
+ * Checkout accepted; the response contains its checkout ID. This does not confirm that a purchase exists.
  */
-export const zCheckoutShoppingListResponse = zPurchaseResponse;
+export const zCheckoutShoppingListResponse = zCheckoutResponse;

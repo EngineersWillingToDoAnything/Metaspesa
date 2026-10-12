@@ -54,7 +54,7 @@ public class CheckoutShoppingListEndpointTests {
   }
 
   [Fact]
-  public async Task Checkout_ReturnsCreatedStatus() {
+  public async Task Checkout_ReturnsAcceptedStatus() {
     handler.WithHappyPath();
 
     var context = new DefaultHttpContext {
@@ -67,7 +67,7 @@ public class CheckoutShoppingListEndpointTests {
       Guid.CreateVersion7(), context, handler, TestContext.Current.CancellationToken);
 
     int? statusCode = ((IStatusCodeHttpResult)result).StatusCode;
-    Assert.Equal(StatusCodes.Status201Created, statusCode);
+    Assert.Equal(StatusCodes.Status202Accepted, statusCode);
   }
 
   [Fact]
@@ -83,9 +83,9 @@ public class CheckoutShoppingListEndpointTests {
     IResult result = await CheckoutShoppingListEndpoint.CheckoutAsync(
       Guid.CreateVersion7(), context, handler, TestContext.Current.CancellationToken);
 
-    PurchaseResponse? body = ((IValueHttpResult<PurchaseResponse>)result).Value;
+    CheckoutResponse? body = ((IValueHttpResult<CheckoutResponse>)result).Value;
 
     Guid? expectedCheckoutId = handler.GetPublishedCheckoutId();
-    Assert.Equal(expectedCheckoutId, body!.PurchaseId);
+    Assert.Equal(expectedCheckoutId, body!.CheckoutId);
   }
 }
