@@ -44,21 +44,18 @@ internal class PostgreSqlPurchaseRepository(
       .BeginTransactionAsync(cancellationToken);
 
     await context.Database.ExecuteSqlInterpolatedAsync($"""
-      INSERT INTO shopping.purchases (id, user_uid, shopping_list_id, purchased_at)
-      VALUES ({purchaseId}, {buyerId}, {shoppingListId}, {purchase.PurchasedAt})
-      ON CONFLICT (id) DO UPDATE SET
-        user_uid = EXCLUDED.user_uid,
-        shopping_list_id = EXCLUDED.shopping_list_id,
-        purchased_at = EXCLUDED.purchased_at;
-
-      DELETE FROM shopping.purchase_items
-      WHERE purchase_id = {purchaseId};
-
+      WITH inserted_purchase AS (
+        INSERT INTO shopping.purchases (id, user_uid, shopping_list_id, purchased_at)
+        VALUES ({purchaseId}, {buyerId}, {shoppingListId}, {purchase.PurchasedAt})
+        ON CONFLICT (id) DO NOTHING
+        RETURNING id
+      )
       INSERT INTO shopping.purchase_items (
         id, purchase_id, price_snapshot_id, amount
       )
-      SELECT item_id, {purchaseId}, price_snapshot_id, amount
-      FROM unnest({itemIds}, {snapshotIds}, {amounts})
+      SELECT item_id, inserted_purchase.id, price_snapshot_id, amount
+      FROM inserted_purchase
+      CROSS JOIN unnest({itemIds}, {snapshotIds}, {amounts})
         AS items(item_id, price_snapshot_id, amount);
       """, cancellationToken);
 

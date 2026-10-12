@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Testcontainers.PostgreSql;
 
 namespace Metaspesa.Database.IntegrationTests;
@@ -21,9 +22,10 @@ public class DatabaseFixture : IAsyncLifetime {
     GC.SuppressFinalize(this);
   }
 
-  internal MainContext CreateContext() {
+  internal MainContext CreateContext(params IInterceptor[] interceptors) {
     DbContextOptions<MainContext> options = new DbContextOptionsBuilder<MainContext>()
       .UseNpgsql(_container.GetConnectionString())
+      .AddInterceptors(interceptors)
       .Options;
     return new MainContext(options);
   }

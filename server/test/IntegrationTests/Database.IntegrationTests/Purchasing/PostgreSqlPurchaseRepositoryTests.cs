@@ -1,8 +1,10 @@
+using System.Data.Common;
 using Metaspesa.Database.Entities;
 using Metaspesa.Database.Repositories;
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Shopping;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace Metaspesa.Database.IntegrationTests.Purchasing;
 
@@ -39,6 +41,114 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
   public async ValueTask DisposeAsync() {
     await _context.DisposeAsync();
     GC.SuppressFinalize(this);
+  }
+
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public async Task SaveAsync_ConcurrentSameIdPreservesFirstPurchase(bool differentPayload) {
+    (Guid firstSnapshot, Guid secondSnapshot) = await SeedConcurrentSaveSnapshotsAsync();
+    var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
+    var purchase = Purchase.Rehydrate(Guid.CreateVersion7(), null, null, purchasedAt,
+      [PurchaseItem.Create(firstSnapshot, 2)]);
+    var duplicate = Purchase.Rehydrate(purchase.Id.Value, null, null,
+      differentPayload ? purchasedAt.AddHours(1) : purchasedAt,
+      [PurchaseItem.Create(differentPayload ? secondSnapshot : firstSnapshot,
+        differentPayload ? 9 : 2)]);
+    var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var firstGate = new SaveCommandInterceptor(release.Task);
+    var secondGate = new SaveCommandInterceptor(Task.CompletedTask);
+    await using MainContext firstContext = _fixture.CreateContext(firstGate);
+    await using MainContext secondContext = _fixture.CreateContext(secondGate);
+    var firstRepository = new PostgreSqlPurchaseRepository(firstContext);
+    var secondRepository = new PostgreSqlPurchaseRepository(secondContext);
+    Task firstSave = firstRepository.SaveAsync(purchase, TestContext.Current.CancellationToken);
+    Task secondSave = Task.CompletedTask;
+    try {
+      await firstGate.Written.Task.WaitAsync(TimeSpan.FromSeconds(10),
+        TestContext.Current.CancellationToken);
+      secondSave = secondRepository.SaveAsync(duplicate, TestContext.Current.CancellationToken);
+      await secondGate.Started.Task.WaitAsync(TimeSpan.FromSeconds(10),
+        TestContext.Current.CancellationToken);
+    } finally {
+      release.TrySetResult();
+      await Task.WhenAll(firstSave, secondSave);
+    }
+
+    PurchaseDbEntity actual = await _context.Purchases.AsNoTracking()
+      .Include(row => row.Items).SingleAsync(TestContext.Current.CancellationToken);
+    PurchaseItem expectedItem = purchase.Items.Single();
+    Assert.Equal(
+      (purchase.Id.Value, purchasedAt, expectedItem.Id.Value, firstSnapshot, 2),
+      (actual.Id, actual.PurchasedAt, actual.Items.Single().Id,
+        actual.Items.Single().PriceSnapshotId, actual.Items.Single().Amount));
+  }
+
+  [Fact]
+  public async Task SaveAsync_RollsBackAllLines_WhenNewPurchaseHasMissingSnapshot() {
+    (Guid firstSnapshot, _) = await SeedConcurrentSaveSnapshotsAsync();
+    var purchase = Purchase.Rehydrate(Guid.CreateVersion7(), null, null,
+      new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc),
+      [PurchaseItem.Create(firstSnapshot, 2), PurchaseItem.Create(Guid.CreateVersion7(), 3)]);
+
+    _ = await Record.ExceptionAsync(() =>
+      _repository.SaveAsync(purchase, TestContext.Current.CancellationToken));
+
+    Assert.Empty(await _context.PurchaseItems.AsNoTracking()
+      .ToArrayAsync(TestContext.Current.CancellationToken));
+  }
+
+  private async Task<(Guid First, Guid Second)> SeedConcurrentSaveSnapshotsAsync() {
+    var format = new ProductFormatDbEntity {
+      Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
+      UnitOfMeasure = new UnitOfMeasureDbEntity {
+        Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16], Name = "Unit",
+      },
+      Product = new ProductDbEntity {
+        Id = Guid.CreateVersion7(), Name = "Milk",
+        Brand = new ProductBrandDbEntity {
+          Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
+        },
+        SuperMarket = new SuperMarketDbEntity {
+          Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
+        },
+      },
+    };
+    var first = new PriceSnapshotDbEntity {
+      Id = Guid.CreateVersion7(), ProductFormat = format, PriceAmount = 1m,
+      ObservedAt = new DateTime(2026, 8, 18, 12, 0, 0, DateTimeKind.Utc),
+    };
+    var second = new PriceSnapshotDbEntity {
+      Id = Guid.CreateVersion7(), ProductFormat = format, PriceAmount = 2m,
+      ObservedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc),
+    };
+    _context.PriceSnapshots.AddRange(first, second);
+    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+    return (first.Id, second.Id);
+  }
+
+  private sealed class SaveCommandInterceptor(Task release) : DbCommandInterceptor {
+    internal TaskCompletionSource Started { get; } =
+      new(TaskCreationOptions.RunContinuationsAsynchronously);
+    internal TaskCompletionSource Written { get; } =
+      new(TaskCreationOptions.RunContinuationsAsynchronously);
+
+    public override ValueTask<InterceptionResult<int>> NonQueryExecutingAsync(
+      DbCommand command, CommandEventData eventData, InterceptionResult<int> result,
+      CancellationToken cancellationToken = default
+    ) {
+      Started.TrySetResult();
+      return ValueTask.FromResult(result);
+    }
+
+    public override async ValueTask<int> NonQueryExecutedAsync(
+      DbCommand command, CommandExecutedEventData eventData, int result,
+      CancellationToken cancellationToken = default
+    ) {
+      Written.TrySetResult();
+      await release.WaitAsync(cancellationToken);
+      return result;
+    }
   }
 
   [Fact]
@@ -406,7 +516,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
   }
 
   [Fact]
-  public async Task SaveAsync_UpdatesExistingRoot() {
+  public async Task SaveAsync_PreservesExistingRoot() {
     var buyerId = Guid.CreateVersion7();
     var listId = Guid.CreateVersion7();
     var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
@@ -461,11 +571,11 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     DateTime actual = await _context.Purchases.AsNoTracking()
       .Select(purchase => purchase.PurchasedAt)
       .SingleAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(replacement.PurchasedAt, actual);
+    Assert.Equal(original.PurchasedAt, actual);
   }
 
   [Fact]
-  public async Task SaveAsync_RemovesItemsAbsentFromAggregate() {
+  public async Task SaveAsync_PreservesItemsAbsentFromRepeatedSave() {
     var buyerId = Guid.CreateVersion7();
     var listId = Guid.CreateVersion7();
     var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
@@ -518,11 +628,11 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     Guid[] actual = await _context.PurchaseItems.AsNoTracking()
       .Select(item => item.PriceSnapshotId)
       .ToArrayAsync(TestContext.Current.CancellationToken);
-    Assert.Equal([snapshots[0].Id], actual);
+    Assert.Equal(original.Items.Select(item => item.PriceSnapshotId.Value).Order(), actual.Order());
   }
 
   [Fact]
-  public async Task SaveAsync_PersistsReplacementItemState() {
+  public async Task SaveAsync_PreservesExistingItemAmounts() {
     var buyerId = Guid.CreateVersion7();
     var listId = Guid.CreateVersion7();
     var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
@@ -572,13 +682,13 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
 
     await _repository.SaveAsync(replacement, TestContext.Current.CancellationToken);
 
-    int actual = await _context.PurchaseItems.AsNoTracking()
-      .Select(item => item.Amount).SingleAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(9, actual);
+    int[] actual = await _context.PurchaseItems.AsNoTracking()
+      .Select(item => item.Amount).ToArrayAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(original.Items.Select(item => item.Amount.Value).Order(), actual.Order());
   }
 
   [Fact]
-  public async Task SaveAsync_AddsNewItems() {
+  public async Task SaveAsync_DoesNotAddItemsToExistingPurchase() {
     var buyerId = Guid.CreateVersion7();
     var listId = Guid.CreateVersion7();
     var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
@@ -640,7 +750,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     Guid[] actual = await _context.PurchaseItems.AsNoTracking()
       .Select(item => item.PriceSnapshotId)
       .ToArrayAsync(TestContext.Current.CancellationToken);
-    Assert.Contains(addition.Id, actual);
+    Assert.Equal(original.Items.Select(item => item.PriceSnapshotId.Value).Order(), actual.Order());
   }
 
   [Fact]
@@ -874,7 +984,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
   }
 
   [Fact]
-  public async Task SaveAsync_RollsBackHeader_WhenChildInsertFails() {
+  public async Task SaveAsync_PreservesHeader_WhenDuplicateContainsMissingSnapshot() {
     var buyerId = Guid.CreateVersion7();
     var listId = Guid.CreateVersion7();
     var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
@@ -923,8 +1033,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
       [new CreatePurchaseItem(
         Guid.Parse("00000000-0000-7000-8000-000000000001"), 9)]));
 
-    _ = await Record.ExceptionAsync(() => _repository.SaveAsync(
-      replacement, TestContext.Current.CancellationToken));
+    await _repository.SaveAsync(replacement, TestContext.Current.CancellationToken);
 
     DateTime actual = await _context.Purchases.AsNoTracking()
       .Select(purchase => purchase.PurchasedAt)
@@ -933,7 +1042,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
   }
 
   [Fact]
-  public async Task SaveAsync_RollsBackItems_WhenChildInsertFails() {
+  public async Task SaveAsync_PreservesItemIds_WhenDuplicateContainsMissingSnapshot() {
     var buyerId = Guid.CreateVersion7();
     var listId = Guid.CreateVersion7();
     var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
@@ -982,8 +1091,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
       [new CreatePurchaseItem(
         Guid.Parse("00000000-0000-7000-8000-000000000001"), 9)]));
 
-    _ = await Record.ExceptionAsync(() => _repository.SaveAsync(
-      replacement, TestContext.Current.CancellationToken));
+    await _repository.SaveAsync(replacement, TestContext.Current.CancellationToken);
 
     Guid[] actual = await _context.PurchaseItems.AsNoTracking()
       .Select(item => item.Id).ToArrayAsync(TestContext.Current.CancellationToken);
