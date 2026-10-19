@@ -1,4 +1,4 @@
-FROM node:26.11-alpine AS builder
+FROM node:26.12-alpine AS builder
 
 ARG NEXT_PUBLIC_REST_API_URL=http://localhost:4001/api/v1
 ENV NEXT_PUBLIC_REST_API_URL=$NEXT_PUBLIC_REST_API_URL
@@ -15,7 +15,7 @@ COPY . .
 
 RUN pnpm run build
 
-FROM node:26.11-alpine AS runner
+FROM node:26.12-alpine AS runner
 
 WORKDIR /client
 
