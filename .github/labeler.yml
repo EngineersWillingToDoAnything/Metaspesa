@@ -1,35 +1,27 @@
-javascript:
+component/client:
   - changed-files:
       - any-glob-to-any-file: "client/**"
 
-"python:uv":
+component/scraper:
   - changed-files:
       - any-glob-to-any-file: "scraper/**"
 
-".NET":
+component/server:
   - changed-files:
       - any-glob-to-any-file: "server/**"
 
-docker_compose:
+component/db:
   - changed-files:
       - any-glob-to-any-file:
-          - "compose*.yml"
-          - "compose*.yaml"
-          - "**/compose*.yml"
-          - "**/compose*.yaml"
-          - "docker-compose*.yml"
-          - "docker-compose*.yaml"
-          - "**/docker-compose*.yml"
-          - "**/docker-compose*.yaml"
+          - "server/src/Database/Entities/**"
+          - "server/src/Database/Configurations/**"
+          - "docs/schema.dbml"
 
-docker:
+context/markets:
   - changed-files:
       - any-glob-to-any-file:
-          - "Dockerfile*"
-          - "**/Dockerfile*"
-          - ".dockerignore"
-          - "**/.dockerignore"
+          - "server/**/Markets/**"
 
-github_actions:
+context/shopping:
   - changed-files:
-      - any-glob-to-any-file: ".github/**"
+      - any-glob-to-any-file: "server/**/Shopping/**"
