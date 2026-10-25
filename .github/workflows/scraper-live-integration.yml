@@ -2,7 +2,7 @@ name: Scraper live integration
 
 on:
   schedule:
-    - cron: "0 5 * * *"
+    - cron: "0 5 * * 1" # Mondays at 05:00 UTC
   workflow_dispatch:
 
 concurrency:
