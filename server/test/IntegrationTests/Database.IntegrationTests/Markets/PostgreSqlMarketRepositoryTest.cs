@@ -26,8 +26,6 @@ public class PostgreSqlMarketRepositoryTest : IAsyncLifetime {
     await _context.Products.ExecuteDeleteAsync(cancellationToken);
     await _context.ProductBrands.ExecuteDeleteAsync(cancellationToken);
     await _context.SuperMarkets.ExecuteDeleteAsync(cancellationToken);
-    await EnsureUnitOfMeasureAsync("l");
-    await EnsureUnitOfMeasureAsync("kg");
   }
 
   public async ValueTask DisposeAsync() {
@@ -48,23 +46,6 @@ public class PostgreSqlMarketRepositoryTest : IAsyncLifetime {
     Assert.NotEqual(Guid.Empty, market.Id.Value);
     Assert.Equal(new MarketName("Mercadona"), market.Name);
     Assert.Null(market.LogoUrl);
-  }
-
-  [Fact(DisplayName = "Reports supported unit ignoring case")]
-  public async Task Repository_ChecksSupportedUnit_IgnoringCase() {
-    bool supported =
-      await _marketRepository.CheckUnitOfMeasureIsSupportedAsync(
-      "L", TestContext.Current.CancellationToken);
-
-    Assert.True(supported);
-  }
-
-  [Fact(DisplayName = "Rejects unsupported unit code")]
-  public async Task Repository_ReturnsFalse_ForUnsupportedUnit() {
-    bool supported = await _marketRepository.CheckUnitOfMeasureIsSupportedAsync(
-      "missing-unit", TestContext.Current.CancellationToken);
-
-    Assert.False(supported);
   }
 
   [Fact(DisplayName = "Maps market logo in summaries")]
@@ -100,19 +81,4 @@ public class PostgreSqlMarketRepositoryTest : IAsyncLifetime {
     Assert.Equal(new MarketName("Keep me"), Assert.Single(markets).Name);
   }
 
-  private async Task EnsureUnitOfMeasureAsync(string code) {
-    bool exists = await _context.UnitsOfMeasure.AnyAsync(
-      unit => unit.Code == code,
-      TestContext.Current.CancellationToken);
-    if (exists) {
-      return;
-    }
-
-    _context.UnitsOfMeasure.Add(new UnitOfMeasureDbEntity {
-      Id = Guid.CreateVersion7(),
-      Code = code,
-      Name = $"Test unit {code}",
-    });
-    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-  }
 }

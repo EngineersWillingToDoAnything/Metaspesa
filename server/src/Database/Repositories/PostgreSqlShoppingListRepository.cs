@@ -222,7 +222,7 @@ internal class PostgreSqlShoppingListRepository(
             MarketName = item.ProductFormat.Product.SuperMarket.Name,
             MarketLogoUrl = item.ProductFormat.Product.SuperMarket.LogoUrl,
             item.ProductFormat.Quantity,
-            UnitOfMeasureCode = item.ProductFormat.UnitOfMeasure.Code,
+            UnitOfMeasureCode = item.ProductFormat.UnitOfMeasure,
             item.ProductFormat.ImageUrl,
             Price = item.ProductFormat.PriceSnapshots
               .OrderByDescending(snapshot => snapshot.ObservedAt)

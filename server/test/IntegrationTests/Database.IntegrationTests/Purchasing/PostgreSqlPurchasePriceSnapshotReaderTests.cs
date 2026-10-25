@@ -152,11 +152,6 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
       Id = Guid.CreateVersion7(),
       Name = $"Brand {Guid.CreateVersion7()}",
     };
-    var unit = new UnitOfMeasureDbEntity {
-      Id = Guid.CreateVersion7(),
-      Code = $"u{Guid.NewGuid():N}"[..16],
-      Name = $"Unit {Guid.CreateVersion7()}",
-    };
     var format = new ProductFormatDbEntity {
       Id = Guid.CreateVersion7(),
       Product = new ProductDbEntity {
@@ -166,7 +161,7 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
         Brand = brand,
       },
       Quantity = 1,
-      UnitOfMeasure = unit,
+      UnitOfMeasure = "g",
       ImageUrl = string.Empty,
     };
     _context.ProductFormats.Add(format);

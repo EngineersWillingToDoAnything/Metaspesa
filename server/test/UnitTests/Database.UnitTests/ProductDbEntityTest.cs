@@ -47,7 +47,7 @@ public static class ProductDbEntityTest {
         Id = Guid.Parse("00000000-0000-7000-8000-000000000007"),
         Quantity = 1m,
         ImageUrl = "https://example.com/milk.png",
-        UnitOfMeasure = new UnitOfMeasureDbEntity { Code = "l" },
+        UnitOfMeasure = "ml",
       },
     ],
   };

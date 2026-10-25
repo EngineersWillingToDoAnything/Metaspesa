@@ -24,7 +24,7 @@ public static class GetShoppingListEndpointTests {
         new MarketSummary(MarketUid, "Market", null),
         2,
         new GetList.ResponseItemFormat(
-          new Quantity(1, new UnitOfMeasure("l")),
+          Quantity.Create(1, "ml"),
           new Money(1.25m),
           new Uri("https://example.test/milk")),
         true),
@@ -46,7 +46,7 @@ public static class GetShoppingListEndpointTests {
         "Milk",
         "Brand",
         new ShoppingMarketResponse(MarketUid, "Market"),
-        new ShoppingQuantityResponse(1, "l"),
+        new ShoppingQuantityResponse(1, "ml"),
         new ShoppingMoneyResponse(1.25m, "EUR"),
         2,
         true,

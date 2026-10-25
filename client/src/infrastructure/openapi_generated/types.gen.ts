@@ -435,7 +435,7 @@ export type SnapshotItem = {
      */
     quantity: number;
     /**
-     * Unit of the quantity; must be supported.
+     * Supported unit or alias, converted to g, ml, unit, wash, or dose.
      */
     unitOfMeasure: null | string;
     /**

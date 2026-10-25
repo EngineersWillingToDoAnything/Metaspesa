@@ -74,15 +74,6 @@ internal class PostgreSqlMarketRepository(
       .ExecuteDeleteAsync(cancellationToken);
   }, "Couldn't delete markets.");
 
-  public Task<bool> CheckUnitOfMeasureIsSupportedAsync(
-    string unitOfMeasure,
-    CancellationToken cancellationToken
-  ) => PostgreSqlExceptionMapper.MapAsync(async () =>
-    await context.UnitsOfMeasure.AnyAsync(
-      unit => EF.Functions.ILike(unit.Code, unitOfMeasure),
-      cancellationToken),
-    "Couldn't check unit of measure.");
-
   private static ImageUrl? ToImageUrl(string? value) =>
     string.IsNullOrWhiteSpace(value)
       ? null

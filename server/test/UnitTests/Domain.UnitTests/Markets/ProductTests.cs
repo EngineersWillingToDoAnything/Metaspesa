@@ -12,7 +12,7 @@ public static class ProductTests {
   public static void Product_Created_WithBoundedFormats() {
     var format = new ProductFormat(
       new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-00000000000a")),
-      new Quantity(1, new UnitOfMeasure("kg")),
+      Quantity.Create(1, "g"),
       Image);
     Product product = CreateProduct([format]);
 
@@ -30,7 +30,7 @@ public static class ProductTests {
   public static void Product_AddFormat_AddsValidFormat() {
     Product product = CreateProduct();
     var id = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-00000000000a"));
-    var quantity = new Quantity(1, new UnitOfMeasure("kg"));
+    var quantity = Quantity.Create(1, "g");
 
     product.AddFormat(id, quantity, Image);
 
@@ -45,14 +45,14 @@ public static class ProductTests {
     var id = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-00000000000a"));
     var original = new ProductFormat(
       id,
-      new Quantity(1, new UnitOfMeasure("kg")),
+      Quantity.Create(1, "g"),
       Image);
     Product product = CreateProduct([original]);
 
     Assert.Throws<DuplicateProductFormatException>(
       () => product.AddFormat(
         id,
-        new Quantity(2, new UnitOfMeasure("kg")),
+        Quantity.Create(2, "g"),
         new ImageUrl(new Uri("https://example.com/other.png"))));
     Assert.Same(original, Assert.Single(product.Formats));
   }
@@ -62,10 +62,10 @@ public static class ProductTests {
     var id = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-00000000000a"));
     var format = new ProductFormat(
       id,
-      new Quantity(1, new UnitOfMeasure("kg")),
+      Quantity.Create(1, "g"),
       Image);
     Product product = CreateProduct([format]);
-    var quantity = new Quantity(2, new UnitOfMeasure("kg"));
+    var quantity = Quantity.Create(2, "g");
     var image = new ImageUrl(new Uri("https://example.com/other.png"));
 
     product.UpdateFormat(id, quantity, image);
@@ -78,14 +78,14 @@ public static class ProductTests {
   public static void Product_UpdateFormat_ThrowsSpecificException_WhenIdIsUnknown() {
     var original = new ProductFormat(
       new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-00000000000a")),
-      new Quantity(1, new UnitOfMeasure("kg")),
+      Quantity.Create(1, "g"),
       Image);
     Product product = CreateProduct([original]);
 
     Assert.Throws<ProductFormatNotFoundException>(
       () => product.UpdateFormat(
         new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000014")),
-        new Quantity(2, new UnitOfMeasure("kg")),
+        Quantity.Create(2, "g"),
         Image));
     Assert.Same(original, Assert.Single(product.Formats));
   }
@@ -96,8 +96,8 @@ public static class ProductTests {
 
     Assert.Throws<DuplicateProductFormatException>(
       () => CreateProduct([
-        new ProductFormat(id, new Quantity(1, new UnitOfMeasure("kg")), Image),
-        new ProductFormat(id, new Quantity(2, new UnitOfMeasure("kg")), Image),
+        new ProductFormat(id, Quantity.Create(1, "g"), Image),
+        new ProductFormat(id, Quantity.Create(2, "g"), Image),
       ]));
   }
 

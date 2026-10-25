@@ -1034,12 +1034,12 @@ components:
         quantity:
           type: number
           description: Positive amount sold in this format.
-          format: float
+          format: double
         unitOfMeasure:
           type:
             - 'null'
             - string
-          description: Unit of the quantity; must be supported.
+          description: 'Supported unit or alias, converted to g, ml, unit, wash, or dose.'
         brandName:
           type:
             - 'null'

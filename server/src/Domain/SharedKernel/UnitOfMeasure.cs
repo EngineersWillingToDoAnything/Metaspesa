@@ -2,26 +2,56 @@ using Metaspesa.Domain.SharedKernel.Errors;
 
 namespace Metaspesa.Domain.SharedKernel;
 
-public readonly record struct UnitOfMeasure {
+public readonly record struct UnitOfMeasure(
+  string Value
+) {
   private static readonly string[] SupportedUnits = [
     "unit",
-    "g",
+    "wash",
+    "dose",
     "kg",
-    "ml",
+    "g",
+    "mg",
     "l",
+    "ml",
+    "cl",
   ];
 
-  public string Value { get; }
+  private string CanonCode => Value switch {
+    "kg" => "g",
+    "mg" => "g",
+    "l" => "ml",
+    "cl" => "ml",
+    _ => Value,
+  };
 
-  public UnitOfMeasure(string value) {
-    string normalizedValue = Normalize(value) ??
+  private decimal CanonFactor => Value switch {
+    "kg" => 1000m,
+    "mg" => 0.001m,
+    "l" => 1000m,
+    "cl" => 10m,
+    _ => 1m,
+  };
+
+  public static UnitOfMeasure Create(string value) {
+    string normalizedValue = FindSupportedUnit(value) ??
       throw InvalidUnitOfMeasureException.ForUnit(value);
 
-    Value = normalizedValue;
+    return new UnitOfMeasure(normalizedValue);
   }
 
-  private static string? Normalize(string? value) {
-    string trimmedValue = value?.Trim() ?? "";
+  public decimal ConvertToCanonValue(decimal amount) {
+    if (amount < 0) {
+      throw new InvalidQuantityAmountException(amount);
+    }
+
+    return amount * CanonFactor;
+  }
+
+  public UnitOfMeasure ToCanon() => Create(CanonCode);
+
+  private static string? FindSupportedUnit(string? value) {
+    string? trimmedValue = value?.Trim();
     return SupportedUnits.FirstOrDefault(
       unit => string.Equals(unit, trimmedValue, StringComparison.OrdinalIgnoreCase));
   }

@@ -27,7 +27,7 @@ internal static class ShoppingTestData {
     "Milk",
     "Brand",
     [new MarketProductFormat(
-      new Quantity(1, new UnitOfMeasure("l")),
+      Quantity.Create(1, "ml"),
       new Money(1.25m),
       new Uri($"https://example.test/{formatId}"),
       formatId)]);
