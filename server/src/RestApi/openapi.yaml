@@ -1033,7 +1033,7 @@ components:
           format: double
         quantity:
           type: number
-          description: 'Positive amount; converted quantity must fit numeric(10,3) exactly.'
+          description: Positive amount sold in this format.
           format: double
         unitOfMeasure:
           type:

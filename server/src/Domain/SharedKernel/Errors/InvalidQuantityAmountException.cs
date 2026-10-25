@@ -9,7 +9,7 @@ public class InvalidQuantityAmountException : DomainException {
     : base(message, innerException) { }
 
   public InvalidQuantityAmountException(decimal amount)
-    : base($"Quantity amount must be positive, at most 9999999.999, and have at most three fractional digits. Amount: {amount}") {
+    : base($"Quantity amount must be greater than zero. Amount: {amount}") {
     Amount = amount;
   }
 
