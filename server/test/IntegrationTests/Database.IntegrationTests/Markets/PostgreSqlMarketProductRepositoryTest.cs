@@ -1,10 +1,12 @@
 using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Markets;
+using Metaspesa.Application.Markets;
 using Metaspesa.Database.Entities;
 using Metaspesa.Database.Repositories;
 using Metaspesa.Domain.Markets;
 using Metaspesa.Domain.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Metaspesa.Database.IntegrationTests.Markets;
 
@@ -30,8 +32,6 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     await _context.Products.ExecuteDeleteAsync(cancellationToken);
     await _context.ProductBrands.ExecuteDeleteAsync(cancellationToken);
     await _context.SuperMarkets.ExecuteDeleteAsync(cancellationToken);
-    await EnsureUnitOfMeasureAsync("l");
-    await EnsureUnitOfMeasureAsync("kg");
   }
 
   public async ValueTask DisposeAsync() {
@@ -116,7 +116,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     Assert.Equal(new ProductName("Milk"), product.Name);
     Assert.Equal(new BrandName("Brand"), product.Brand);
     ProductFormat format = Assert.Single(product.Formats);
-    Assert.Equal(new Quantity(1, new UnitOfMeasure("l")), format.Quantity);
+    Assert.Equal(Quantity.Create(1, "ml"), format.Quantity);
     Assert.DoesNotContain(
       typeof(Product).GetProperties(),
       property => property.PropertyType == typeof(PriceSnapshot));
@@ -221,7 +221,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
         new ProductName("Yogurt"),
         new BrandName("Brand"),
         [new ProductFormatImport(
-          new Quantity(1, new UnitOfMeasure("kg")),
+          Quantity.Create(1, "g"),
           new Money(2.49m),
           null)])]);
     ProductImportResult second = await _productRepository.ResolveProductsAsync(
@@ -249,7 +249,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       new MarketName("Mercadona"),
       [new ProductImport(new ProductName("Yogurt"), new BrandName("Brand"),
         [new ProductFormatImport(
-          new Quantity(1, new UnitOfMeasure("kg")), new Money(2.00m), null)])]);
+          Quantity.Create(1, "g"), new Money(2.00m), null)])]);
     ProductImportResult yogurt = await _productRepository.ResolveProductsAsync(
       secondImport, UtcDate(2026, 7, 28), TestContext.Current.CancellationToken);
     await _snapshotRepository.AppendAsync(
@@ -360,7 +360,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
         new ProductName("Milk"),
         new BrandName("Brand"),
         [new ProductFormatImport(
-          new Quantity(2, new UnitOfMeasure("kg")),
+          Quantity.Create(2, "g"),
           new Money(3.49m),
           null)])]);
     ProductImportResult secondResult =
@@ -395,6 +395,22 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     return result;
   }
 
+  [Theory]
+  [InlineData("kg")]
+  [InlineData("ML")]
+  [InlineData("box")]
+  [InlineData("")]
+  public async Task Database_RejectsNonCanonicalUnitCode(string code) {
+    await ResolveAndAppendAsync();
+
+    Task action() => _context.Database.ExecuteSqlInterpolatedAsync(
+      $"UPDATE market.product_formats SET unit_of_measure = {code}",
+      TestContext.Current.CancellationToken);
+
+    PostgresException exception = await Assert.ThrowsAsync<PostgresException>(action);
+    Assert.Equal("chk_product_format_unit_of_measure", exception.ConstraintName);
+  }
+
   private async Task<MarketImport> CreateMarketImportAsync() {
     _context.SuperMarkets.Add(new SuperMarketDbEntity {
       Id = Uid.Create(),
@@ -412,26 +428,11 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
         new ProductName("Milk"),
         new BrandName("Brand"),
         [new ProductFormatImport(
-          new Quantity(1, new UnitOfMeasure("l")),
+          Quantity.Create(1, "ml"),
           new Money(1.99m),
           new ImageUrl(new Uri("https://example.com/milk.png")))])]);
   }
 
-  private async Task EnsureUnitOfMeasureAsync(string code) {
-    bool exists = await _context.UnitsOfMeasure.AnyAsync(
-      unit => unit.Code == code,
-      TestContext.Current.CancellationToken);
-    if (exists) {
-      return;
-    }
-
-    _context.UnitsOfMeasure.Add(new UnitOfMeasureDbEntity {
-      Id = Uid.Create(),
-      Code = code,
-      Name = $"Test unit {code}",
-    });
-    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-  }
 
   private static DateTime UtcDate(int year, int month, int day) =>
     new(year, month, day, 0, 0, 0, DateTimeKind.Utc);

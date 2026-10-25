@@ -20,12 +20,12 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
-          gh label create "javascript" --repo "$GITHUB_REPOSITORY" --color "F7DF1E" --force
-          gh label create "python:uv" --repo "$GITHUB_REPOSITORY" --color "3776AB" --force
-          gh label create ".NET" --repo "$GITHUB_REPOSITORY" --color "512BD4" --force
-          gh label create "docker_compose" --repo "$GITHUB_REPOSITORY" --color "2496ED" --force
-          gh label create "docker" --repo "$GITHUB_REPOSITORY" --color "0DB7ED" --force
-          gh label create "github_actions" --repo "$GITHUB_REPOSITORY" --color "2088FF" --force
+          gh label create "component/client" --repo "$GITHUB_REPOSITORY" --color "01f0b2" --force
+          gh label create "component/scraper" --repo "$GITHUB_REPOSITORY" --color "ab6358" --force
+          gh label create "component/server" --repo "$GITHUB_REPOSITORY" --color "5582f2" --force
+          gh label create "component/db" --repo "$GITHUB_REPOSITORY" --color "dcfe01" --force
+          gh label create "context/markets" --repo "$GITHUB_REPOSITORY" --color "f13d36" --force
+          gh label create "context/shopping" --repo "$GITHUB_REPOSITORY" --color "c9bb70" --force
 
       - name: Apply labels
         uses: actions/labeler@v7

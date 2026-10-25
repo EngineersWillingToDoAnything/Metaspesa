@@ -12,7 +12,7 @@ public static class AddMarketProducts {
   public record CommandProduct(
     string? Name,
     decimal Price,
-    float Quantity,
+    decimal Quantity,
     string? UnitOfMeasure,
     string? MarketName,
     string? BrandName,
@@ -36,9 +36,9 @@ public static class AddMarketProducts {
                 productGroup.Key.Brand,
                 [
                   ..productGroup.Select(product => new ProductFormatImport(
-                    new Quantity(
-                      (decimal)product.Quantity,
-                      new UnitOfMeasure(product.UnitOfMeasure!)),
+                    Quantity.Create(
+                      product.Quantity,
+                      UnitOfMeasureNormalizer.Normalize(product.UnitOfMeasure)!),
                     new Money(product.Price),
                     product.ImageUrl is null ? null : new ImageUrl(product.ImageUrl)))
                 ]))
@@ -82,53 +82,26 @@ public static class AddMarketProducts {
       }
 
       List<MarketImport> markets = command.ToMarkets();
-      EnsureProductsAreUnique(command.Products);
-      await EnsureUnitsAreSupportedAsync(markets, cancellationToken);
+      EnsureProductsAreUnique(markets);
 
       await AddMarketsAsync(markets, cancellationToken);
       await AddBrandsAsync(markets, cancellationToken);
       await AddProductsAndSnapshotsAsync(command, markets, cancellationToken);
     }
 
-    private static void EnsureProductsAreUnique(
-      IReadOnlyCollection<CommandProduct> products
-    ) {
-      CommandProduct? duplicate = products
-        .GroupBy(product => (
-          product.Name?.ToUpperInvariant(),
-          product.MarketName?.ToUpperInvariant(),
-          product.BrandName?.ToUpperInvariant(),
-          Math.Round(product.Quantity, 2),
-          product.UnitOfMeasure?.ToUpperInvariant()))
-        .Where(group => group.Count() > 1)
-        .Select(group => group.First())
-        .FirstOrDefault();
-
-      if (duplicate is not null) {
-        throw new DuplicateMarketProductException(
-          duplicate.Name,
-          duplicate.MarketName,
-          duplicate.BrandName,
-          duplicate.Quantity,
-          duplicate.UnitOfMeasure);
-      }
-    }
-
-    private async Task EnsureUnitsAreSupportedAsync(
-      IEnumerable<MarketImport> markets,
-      CancellationToken cancellationToken
-    ) {
-      IEnumerable<string> units = markets
-        .SelectMany(market => market.Products)
-        .SelectMany(product => product.Formats)
-        .Select(format => format.Quantity.UnitOfMeasure.Value)
-        .Distinct(StringComparer.OrdinalIgnoreCase);
-
-      foreach (string unit in units) {
-        if (!await marketRepository.CheckUnitOfMeasureIsSupportedAsync(
-          unit,
-          cancellationToken)) {
-          throw new UnsupportedUnitOfMeasureException(unit);
+    private static void EnsureProductsAreUnique(IEnumerable<MarketImport> markets) {
+      var identities = new HashSet<(string Market, string Name, string Brand, Quantity Quantity)>();
+      foreach (MarketImport market in markets) {
+        foreach (ProductImport product in market.Products) {
+          ProductFormatImport? duplicate = product.Formats.FirstOrDefault(format =>
+            !identities.Add((market.Name.Value.ToUpperInvariant(),
+              product.Name.Value.ToUpperInvariant(), product.Brand.Value.ToUpperInvariant(),
+              format.Quantity)));
+          if (duplicate is not null) {
+            throw new DuplicateMarketProductException(
+              product.Name.Value, market.Name.Value, product.Brand.Value,
+              (float)duplicate.Quantity.Amount, duplicate.Quantity.UnitOfMeasure.Value);
+          }
         }
       }
     }

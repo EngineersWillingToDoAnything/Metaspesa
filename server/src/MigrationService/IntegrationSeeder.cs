@@ -11,9 +11,9 @@ internal sealed class IntegrationSeeder(MainContext context) {
     new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
   private static readonly Fixture[] Fixtures = [
-    new("Integration Market A", "Integration Milk 1L", 1m, "l", "Liter", 1.25m),
-    new("Integration Market A", "Integration Bread", 1m, "unit", "Unit", 2.10m),
-    new("Integration Market B", "Integration Pasta", 1m, "kg", "Kilogram", 3.40m),
+    new("Integration Market A", "Integration Milk 1L", 1000m, "ml", 1.25m),
+    new("Integration Market A", "Integration Bread", 1m, "unit", 2.10m),
+    new("Integration Market B", "Integration Pasta", 1000m, "g", 3.40m),
   ];
 
   internal async Task SeedAsync(CancellationToken cancellationToken) {
@@ -54,16 +54,6 @@ internal sealed class IntegrationSeeder(MainContext context) {
       context.ProductBrands.Add(brand);
     }
 
-    UnitOfMeasureDbEntity? unit = await context.UnitsOfMeasure.SingleOrDefaultAsync(
-      value => value.Code == fixture.UnitCode, cancellationToken);
-    if (unit is null) {
-      unit = new UnitOfMeasureDbEntity {
-        Id = Uid.Create(),
-        Code = fixture.UnitCode, Name = fixture.UnitName,
-      };
-      context.UnitsOfMeasure.Add(unit);
-    }
-
     await context.SaveChangesAsync(cancellationToken);
 
     ProductDbEntity? product = await context.Products.SingleOrDefaultAsync(
@@ -80,12 +70,12 @@ internal sealed class IntegrationSeeder(MainContext context) {
 
     ProductFormatDbEntity? format = await context.ProductFormats.SingleOrDefaultAsync(
       value => value.ProductId == product.Id && value.Quantity == fixture.Quantity &&
-        value.UnitOfMeasureId == unit.Id, cancellationToken);
+        value.UnitOfMeasure == fixture.UnitOfMeasure, cancellationToken);
     if (format is null) {
       format = new ProductFormatDbEntity {
         Id = Uid.Create(),
         ProductId = product.Id, Quantity = fixture.Quantity,
-        UnitOfMeasureId = unit.Id, ImageUrl = "",
+        UnitOfMeasure = fixture.UnitOfMeasure, ImageUrl = "",
       };
       context.ProductFormats.Add(format);
       await context.SaveChangesAsync(cancellationToken);
@@ -112,5 +102,5 @@ internal sealed class IntegrationSeeder(MainContext context) {
 
   private sealed record Fixture(
     string Market, string Product, decimal Quantity,
-    string UnitCode, string UnitName, decimal Price);
+    string UnitOfMeasure, decimal Price);
 }

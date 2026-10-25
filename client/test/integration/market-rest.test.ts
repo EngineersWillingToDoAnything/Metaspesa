@@ -33,7 +33,7 @@ describeIfRest('market REST integration', () => {
       expect.arrayContaining([
         expect.objectContaining({
           currentPrice: { amount: 1.25, currency: 'EUR' },
-          quantity: { amount: 1, unit: 'l' },
+          quantity: { amount: 1000, unit: 'ml' },
         }),
       ]),
     );

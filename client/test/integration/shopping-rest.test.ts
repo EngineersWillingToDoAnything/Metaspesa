@@ -38,7 +38,7 @@ async function getMarketProducts(count: number): Promise<ProductMessage[]> {
       market: 'Integration Market A',
       name: 'Integration Milk 1L',
       price: 1.25,
-      quantity: { amount: 1, unit: 'l' },
+      quantity: { amount: 1000, unit: 'ml' },
     },
     {
       market: 'Integration Market A',

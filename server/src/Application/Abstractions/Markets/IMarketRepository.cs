@@ -10,6 +10,4 @@ public interface IMarketRepository {
     IReadOnlyCollection<MarketName> marketNames, CancellationToken cancellationToken);
   Task DeleteMarketsAsync(
     IReadOnlyCollection<MarketName> marketNames, CancellationToken cancellationToken);
-  Task<bool> CheckUnitOfMeasureIsSupportedAsync(
-    string unitOfMeasure, CancellationToken cancellationToken);
 }

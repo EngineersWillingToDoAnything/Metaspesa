@@ -22,7 +22,7 @@ internal class ProductDbEntity {
       new ProductFormatId(format.Id),
       new Quantity(
         format.Quantity,
-        new UnitOfMeasure(format.UnitOfMeasure.Code)),
+        new UnitOfMeasure(format.UnitOfMeasure)),
       string.IsNullOrWhiteSpace(format.ImageUrl)
         ? null
         : new ImageUrl(new Uri(format.ImageUrl, UriKind.Absolute)))));
