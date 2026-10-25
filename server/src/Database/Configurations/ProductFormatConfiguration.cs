@@ -27,8 +27,9 @@ internal class ProductFormatConfiguration : IEntityTypeConfiguration<ProductForm
       .HasPrecision(10, 3)
       .IsRequired();
 
-    builder.Property(e => e.UnitOfMeasureId)
-      .HasColumnName("unit_of_measure_id")
+    builder.Property(e => e.UnitOfMeasure)
+      .HasColumnName("unit_of_measure")
+      .HasMaxLength(4)
       .IsRequired();
 
     builder.Property(e => e.ImageUrl)
@@ -36,25 +37,21 @@ internal class ProductFormatConfiguration : IEntityTypeConfiguration<ProductForm
       .IsRequired(true);
 
     builder.HasIndex(e => e.ProductId, "idx_product_format_product_id");
-    builder.HasIndex(e => e.UnitOfMeasureId, "idx_product_format_unit_of_measure_id");
     builder.HasAlternateKey(e => new { e.Id, e.ProductId })
       .HasName("ak_product_format_id_product_id");
     builder.HasIndex(
-        e => new { e.ProductId, e.Quantity, e.UnitOfMeasureId },
+        e => new { e.ProductId, e.Quantity, e.UnitOfMeasure },
         "idx_product_format_identity")
       .IsUnique();
 
     builder.ToTable(t => t.HasCheckConstraint(
       "chk_product_format_positive_quantity", "quantity > 0.000"));
+    builder.ToTable(t => t.HasCheckConstraint(
+      "chk_product_format_unit_of_measure", "unit_of_measure IN ('g', 'ml', 'unit', 'wash', 'dose')"));
 
     builder.HasOne(e => e.Product)
       .WithMany(e => e.Formats)
       .HasForeignKey(e => e.ProductId)
-      .OnDelete(DeleteBehavior.Restrict);
-
-    builder.HasOne(e => e.UnitOfMeasure)
-      .WithMany(e => e.ProductFormats)
-      .HasForeignKey(e => e.UnitOfMeasureId)
       .OnDelete(DeleteBehavior.Restrict);
   }
 }

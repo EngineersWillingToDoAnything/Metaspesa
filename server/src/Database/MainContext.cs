@@ -12,13 +12,11 @@ internal class MainContext(
   public DbSet<ShoppingListDbEntity> ShoppingLists { get; set; } = null!;
   public DbSet<ShoppingItemDbEntity> ShoppingItems { get; set; } = null!;
   public DbSet<ShoppingListOwnershipDbEntity> ShoppingListOwnerships { get; set; } = null!;
-
   public DbSet<PurchaseDbEntity> Purchases { get; set; } = null!;
   public DbSet<PurchaseItemDbEntity> PurchaseItems { get; set; } = null!;
 
   public DbSet<SuperMarketDbEntity> SuperMarkets { get; set; } = null!;
   public DbSet<ProductBrandDbEntity> ProductBrands { get; set; } = null!;
-  public DbSet<UnitOfMeasureDbEntity> UnitsOfMeasure { get; set; } = null!;
   public DbSet<ProductDbEntity> Products { get; set; } = null!;
   public DbSet<ProductFormatDbEntity> ProductFormats { get; set; } = null!;
   public DbSet<PriceSnapshotDbEntity> PriceSnapshots { get; set; } = null!;

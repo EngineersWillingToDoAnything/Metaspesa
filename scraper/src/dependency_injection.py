@@ -14,7 +14,6 @@ from application.product_processors import (
     QuantityRedundancyRemover,
     QuantityUnitOfMeasureExtractor,
     StringSanitizer,
-    UnitOfMeasureNormalizer,
 )
 from application.use_cases import (
     RetryFailedSavesCommandHandler,
@@ -47,10 +46,10 @@ def __create_market_web_scrapers(
 def __create_product_processor(settings: AppConfig) -> ProductProcessor:
     first_processor = StringSanitizer()
     first_processor.next(QuantityUnitOfMeasureExtractor()).next(
-        UnitOfMeasureNormalizer()
-    ).next(QuantityRedundancyRemover()).next(
-        BrandSimplifier(settings.processor.replacements)
-    ).next(BrandExtractor(settings.processor.known_brands))
+        QuantityRedundancyRemover()
+    ).next(BrandSimplifier(settings.processor.replacements)).next(
+        BrandExtractor(settings.processor.known_brands)
+    )
     return first_processor
 
 

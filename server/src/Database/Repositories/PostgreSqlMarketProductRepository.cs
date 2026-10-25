@@ -19,7 +19,7 @@ internal partial class PostgreSqlMarketProductRepository(
   private readonly record struct ProductFormatKey(
     Guid ProductId,
     decimal Quantity,
-    Guid UnitOfMeasureId
+    string UnitOfMeasure
   );
 
   public async Task<Product?> GetByIdAsync(
@@ -29,7 +29,6 @@ internal partial class PostgreSqlMarketProductRepository(
       .AsNoTracking()
       .Include(product => product.Brand)
       .Include(product => product.Formats)
-      .ThenInclude(format => format.UnitOfMeasure)
       .SingleOrDefaultAsync(
         product => product.Id == productId.Value,
         cancellationToken);
@@ -82,7 +81,6 @@ internal partial class PostgreSqlMarketProductRepository(
       .Include(product => product.Brand)
       .Include(product => product.SuperMarket)
       .Include(product => product.Formats)
-      .ThenInclude(format => format.UnitOfMeasure)
       .Include(product => product.Formats)
       .ThenInclude(format => format.PriceSnapshots)
       .AsSplitQuery()
@@ -151,15 +149,13 @@ internal partial class PostgreSqlMarketProductRepository(
           existingProducts,
           cancellationToken);
 
-      Dictionary<string, Guid> unitLookup = await GetUnitLookupAsync(
-        cancellationToken);
       (
         Dictionary<ProductFormatKey, Guid> formatLookup,
         IReadOnlyCollection<ProductFormatId> addedProductFormatIds
       ) = await ResolveProductFormatsAsync(
-        productSources, unitLookup, cancellationToken);
+        productSources, cancellationToken);
       IReadOnlyCollection<PriceObservation> observations = BuildPriceObservations(
-        productSources, unitLookup, formatLookup, observedAt);
+        productSources, formatLookup, observedAt);
 
       return new ProductImportResult(
         addedProductIds, addedProductFormatIds, observations);
@@ -211,7 +207,7 @@ internal partial class PostgreSqlMarketProductRepository(
       .ThenByDescending(value => value.Id)
       .First();
     return new CatalogFormat(
-      format.Id, format.Quantity, format.UnitOfMeasure.Code,
+      format.Id, format.Quantity, format.UnitOfMeasure,
       snapshot.PriceAmount, snapshot.CurrencyCode, ToUri(format.ImageUrl),
       DateTime.SpecifyKind(snapshot.ObservedAt, DateTimeKind.Utc));
   }
@@ -310,29 +306,18 @@ internal partial class PostgreSqlMarketProductRepository(
     return sources;
   }
 
-  private async Task<Dictionary<string, Guid>> GetUnitLookupAsync(
-    CancellationToken cancellationToken
-  ) => await context.UnitsOfMeasure
-    .AsNoTracking()
-    .ToDictionaryAsync(
-      unit => unit.Code,
-      unit => unit.Id,
-      StringComparer.OrdinalIgnoreCase,
-      cancellationToken);
-
   private async Task<(
     Dictionary<ProductFormatKey, Guid> FormatLookup,
     IReadOnlyCollection<ProductFormatId> AddedProductFormatIds
   )> ResolveProductFormatsAsync(
     IReadOnlyCollection<ProductSource> productSources,
-    IReadOnlyDictionary<string, Guid> unitLookup,
     CancellationToken cancellationToken
   ) {
     Dictionary<ProductFormatKey, Guid> formatLookup =
       await GetExistingProductFormatLookupAsync(
         productSources, cancellationToken);
     List<ProductFormatDbEntity> missingFormats = BuildMissingProductFormats(
-      productSources, unitLookup, formatLookup);
+      productSources, formatLookup);
     IDictionary<ProductFormatKey, Guid> newFormats = await AddProductFormatsAsync(
       missingFormats, cancellationToken);
 
@@ -357,20 +342,19 @@ internal partial class PostgreSqlMarketProductRepository(
         format.Id,
         format.ProductId,
         format.Quantity,
-        format.UnitOfMeasureId,
+        format.UnitOfMeasure,
       })
       .ToDictionaryAsync(
         format => new ProductFormatKey(
           format.ProductId,
           format.Quantity,
-          format.UnitOfMeasureId),
+          format.UnitOfMeasure),
         format => format.Id,
         cancellationToken);
   }
 
   private static List<ProductFormatDbEntity> BuildMissingProductFormats(
     IEnumerable<ProductSource> productSources,
-    IReadOnlyDictionary<string, Guid> unitLookup,
     IReadOnlyDictionary<ProductFormatKey, Guid> existingFormatLookup
   ) {
     var missingFormats = new Dictionary<ProductFormatKey, ProductFormatDbEntity>();
@@ -378,7 +362,7 @@ internal partial class PostgreSqlMarketProductRepository(
     foreach (ProductSource productSource in productSources) {
       foreach (ProductFormatImport format in productSource.Source.Formats) {
         ProductFormatKey key = ToProductFormatKey(
-          productSource.ProductId, format, unitLookup);
+          productSource.ProductId, format);
         if (existingFormatLookup.ContainsKey(key) ||
           missingFormats.ContainsKey(key)) {
           continue;
@@ -388,7 +372,7 @@ internal partial class PostgreSqlMarketProductRepository(
           Id = Uid.Create(),
           ProductId = key.ProductId,
           Quantity = key.Quantity,
-          UnitOfMeasureId = key.UnitOfMeasureId,
+          UnitOfMeasure = key.UnitOfMeasure,
           ImageUrl = format.ImageUrl?.Value.ToString() ?? string.Empty,
         };
       }
@@ -415,7 +399,7 @@ internal partial class PostgreSqlMarketProductRepository(
         var key = new ProductFormatKey(
           format.ProductId,
           format.Quantity,
-          format.UnitOfMeasureId);
+          format.UnitOfMeasure);
         newFormatLookup[key] = format.Id;
       }
     }
@@ -425,14 +409,13 @@ internal partial class PostgreSqlMarketProductRepository(
 
   private static IReadOnlyCollection<PriceObservation> BuildPriceObservations(
     IEnumerable<ProductSource> productSources,
-    IReadOnlyDictionary<string, Guid> unitLookup,
     IReadOnlyDictionary<ProductFormatKey, Guid> formatLookup,
     DateTime observedAt
   ) => [
     ..productSources.SelectMany(productSource =>
       productSource.Source.Formats.Select(format => {
         ProductFormatKey key = ToProductFormatKey(
-          productSource.ProductId, format, unitLookup);
+          productSource.ProductId, format);
         return new PriceObservation(
           new ProductFormatId(formatLookup[key]),
           format.Price,
@@ -442,12 +425,11 @@ internal partial class PostgreSqlMarketProductRepository(
 
   private static ProductFormatKey ToProductFormatKey(
     Guid productId,
-    ProductFormatImport format,
-    IReadOnlyDictionary<string, Guid> unitLookup
+    ProductFormatImport format
   ) => new(
     productId,
     format.Quantity.Amount,
-    unitLookup[format.Quantity.UnitOfMeasure.Value]);
+    format.Quantity.UnitOfMeasure.Value);
 
   private async Task DeleteProductsByIdsAsync(
     IReadOnlyCollection<Guid> productIds,

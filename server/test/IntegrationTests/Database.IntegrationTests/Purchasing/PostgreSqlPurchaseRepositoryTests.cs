@@ -101,9 +101,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
   private async Task<(Guid First, Guid Second)> SeedConcurrentSaveSnapshotsAsync() {
     var format = new ProductFormatDbEntity {
       Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-      UnitOfMeasure = new UnitOfMeasureDbEntity {
-        Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16], Name = "Unit",
-      },
+      UnitOfMeasure = "unit",
       Product = new ProductDbEntity {
         Id = Guid.CreateVersion7(), Name = "Milk",
         Brand = new ProductBrandDbEntity {
@@ -171,10 +169,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -223,10 +218,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -275,10 +267,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -327,10 +316,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -379,10 +365,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -431,10 +414,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -483,10 +463,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -535,10 +512,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -594,10 +568,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -651,10 +622,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -707,10 +675,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -773,10 +738,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -825,10 +787,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -883,10 +842,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -941,10 +897,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -1003,10 +956,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -1061,10 +1011,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -1118,10 +1065,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -1174,10 +1118,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -1231,10 +1172,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {
@@ -1285,10 +1223,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         ObservedAt = purchasedAt.AddDays(-1),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = new UnitOfMeasureDbEntity {
-            Id = Guid.CreateVersion7(), Code = $"u{Guid.NewGuid():N}"[..16],
-            Name = "Unit",
-          },
+          UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
             Brand = new ProductBrandDbEntity {

@@ -641,14 +641,6 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
       Id = Uid.Create(),
       Name = $"Test brand {Guid.CreateVersion7()}",
     };
-    UnitOfMeasureDbEntity? unit = await _context.UnitsOfMeasure
-      .SingleOrDefaultAsync(value => value.Code == "kg",
-        TestContext.Current.CancellationToken);
-    unit ??= new UnitOfMeasureDbEntity {
-      Id = Uid.Create(),
-      Code = "kg",
-      Name = "Kilogram",
-    };
     var format = new ProductFormatDbEntity {
       Id = Uid.Create(),
       Product = new ProductDbEntity {
@@ -657,8 +649,8 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
         SuperMarket = market,
         Brand = brand,
       },
-      Quantity = 0.5m,
-      UnitOfMeasure = unit,
+      Quantity = 500m,
+      UnitOfMeasure = "g",
       ImageUrl = "https://example.test/coffee.png",
       PriceSnapshots = [
         new PriceSnapshotDbEntity {
@@ -716,8 +708,8 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
         MarketName = market.Name,
         MarketLogo = (string?)market.LogoUrl,
         Amount = 3,
-        Quantity = 0.5m,
-        Unit = "kg",
+        Quantity = 500m,
+        Unit = "g",
         Price = 4.75m,
         Image = (string?)format.ImageUrl,
         IsChecked = true,
@@ -921,11 +913,6 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
       Id = Uid.Create(),
       Name = $"Test brand {Guid.CreateVersion7()}",
     };
-    var unit = new UnitOfMeasureDbEntity {
-      Id = Uid.Create(),
-      Code = $"u{Guid.NewGuid():N}"[..16],
-      Name = $"Test unit {Guid.CreateVersion7()}",
-    };
     var product = new ProductDbEntity {
       Id = Uid.Create(),
       Name = productName,
@@ -936,7 +923,7 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
       Id = Uid.Create(),
       Product = product,
       Quantity = 1,
-      UnitOfMeasure = unit,
+      UnitOfMeasure = "g",
       ImageUrl = "https://example.test/product.png",
     };
     _context.PriceSnapshots.Add(new PriceSnapshotDbEntity {

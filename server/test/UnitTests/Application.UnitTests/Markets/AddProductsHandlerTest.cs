@@ -41,11 +41,6 @@ public class AddProductsHandlerTest {
 
     _marketRepository.GetMarketsAsync(Arg.Any<CancellationToken>())
       .Returns([]);
-    _marketRepository
-      .CheckUnitOfMeasureIsSupportedAsync(
-        Arg.Any<string>(),
-        Arg.Any<CancellationToken>())
-      .Returns(true);
     _productRepository.GetBrandsAsync(Arg.Any<CancellationToken>())
       .Returns([]);
     _productRepository
@@ -230,23 +225,38 @@ public class AddProductsHandlerTest {
     Assert.True(true, "No exception was thrown");
   }
 
-  [Fact(DisplayName = "Throws exact exception if products only differ in quantity in case of decimal precision")]
-  public async Task Handler_ThrowsDuplicateMarketProduct_WhenQuantitiesDifferOnlyInPrecision() {
+  [Fact(DisplayName = "Preserves distinct quantities at database precision")]
+  public async Task Handler_AcceptsDistinctQuantities_AtDatabasePrecision() {
     Command command = CreateCommand();
     CommandProduct product = command.Products.Single();
     command = command with {
       Products = [
         product,
-        product with { Quantity = product.Quantity + 0.001f },
+        product with { Quantity = product.Quantity + 0.001m },
       ],
     };
 
-    async Task action() => await _handler.Handle(
-      command,
-      TestContext.Current.CancellationToken);
+    await _handler.Handle(command, TestContext.Current.CancellationToken);
+
+    await _productRepository.Received(1).ResolveProductsAsync(
+      Arg.Is<MarketImport>(market => market.Products.Single().Formats.Count == 2),
+      Arg.Any<DateTime>(),
+      Arg.Any<CancellationToken>());
+  }
+
+  [Fact]
+  public async Task Handler_RejectsEquivalentQuantities_AfterUnitConversion() {
+    Command command = CreateCommand();
+    CommandProduct product = command.Products.Single();
+    command = command with {
+      Products = [product, product with { Quantity = 1000, UnitOfMeasure = "ml" }],
+    };
+
+    Task action() => _handler.Handle(command, TestContext.Current.CancellationToken);
 
     await Assert.ThrowsAsync<DuplicateMarketProductException>(action);
   }
+
 
   [Fact(DisplayName = "Doesn't throw exact exception if products only differ in unit of measure")]
   public async Task Handler_DoesNotThrowDuplicateMarketProduct_WhenUnitsDiffer() {
@@ -259,11 +269,8 @@ public class AddProductsHandlerTest {
       ],
     };
 
-    async Task action() => await _handler.Handle(
-      command,
-      TestContext.Current.CancellationToken);
+    await _handler.Handle(command, TestContext.Current.CancellationToken);
 
-    await action();
     Assert.True(true, "No exception was thrown");
   }
 
@@ -321,21 +328,6 @@ public class AddProductsHandlerTest {
     await Assert.ThrowsAsync<DuplicateMarketProductException>(action);
   }
 
-  [Fact(DisplayName = "Throws exact exception for an unsupported unit")]
-  public async Task Handler_ThrowsUnsupportedUnit_WhenUnitIsNotSupported() {
-    _marketRepository
-      .CheckUnitOfMeasureIsSupportedAsync(
-        "l",
-        TestContext.Current.CancellationToken)
-      .Returns(false);
-
-    async Task action() => await _handler.Handle(
-      CreateCommand(),
-      TestContext.Current.CancellationToken);
-
-    await Assert.ThrowsAsync<UnsupportedUnitOfMeasureException>(action);
-  }
-
   [Fact(DisplayName = "Preserves exact domain exception for invalid product name")]
   public async Task Handler_ThrowsInvalidProductName_WhenNameIsInvalid() {
     Command command = CreateCommand();
@@ -380,7 +372,7 @@ public class AddProductsHandlerTest {
       Arg.Is<MarketImport>(market =>
         market.Name.Value == "Market" &&
         market.Products.Single().Name.Value == "Milk" &&
-        market.Products.Single().Formats.Single().Quantity.Amount == 1m &&
+        market.Products.Single().Formats.Single().Quantity.Amount == 1000m &&
         market.Products.Single().Formats.Single().Price.Amount == 1.99m),
       Arg.Is<DateTime>(value =>
         value == new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc)),
@@ -617,21 +609,6 @@ public class AddProductsHandlerTest {
     await _marketRepository.Received(1).DeleteMarketsAsync(
       Arg.Any<IReadOnlyCollection<MarketName>>(),
       Arg.Any<CancellationToken>());
-  }
-
-  [Fact(DisplayName = "Checks equivalent unit codes only once")]
-  public async Task Handler_ChecksUnitSupportOnce_IgnoringCase() {
-    Command command = new([
-      new CommandProduct(
-        "Milk", 1.99m, 1, "l", "Market", "Brand", null),
-      new CommandProduct(
-        "Juice", 2.49m, 1, "L", "Market", "Brand", null),
-    ], new DateOnly(2026, 7, 28));
-
-    await _handler.Handle(command, TestContext.Current.CancellationToken);
-
-    await _marketRepository.Received(1).CheckUnitOfMeasureIsSupportedAsync(
-      Arg.Any<string>(), TestContext.Current.CancellationToken);
   }
 
   [Fact(DisplayName = "Rollback deletes only market and brand created by import")]

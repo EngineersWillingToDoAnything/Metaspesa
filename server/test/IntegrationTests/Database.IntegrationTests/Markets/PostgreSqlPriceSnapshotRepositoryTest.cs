@@ -29,8 +29,6 @@ public class PostgreSqlPriceSnapshotRepositoryTest : IAsyncLifetime {
     await _context.Products.ExecuteDeleteAsync(cancellationToken);
     await _context.ProductBrands.ExecuteDeleteAsync(cancellationToken);
     await _context.SuperMarkets.ExecuteDeleteAsync(cancellationToken);
-    await EnsureUnitOfMeasureAsync("l");
-    await EnsureUnitOfMeasureAsync("kg");
   }
 
   public async ValueTask DisposeAsync() {
@@ -157,26 +155,11 @@ public class PostgreSqlPriceSnapshotRepositoryTest : IAsyncLifetime {
         new ProductName("Milk"),
         new BrandName("Brand"),
         [new ProductFormatImport(
-          new Quantity(1, new UnitOfMeasure("l")),
+          Quantity.Create(1, "ml"),
           new Money(1.99m),
           new ImageUrl(new Uri("https://example.com/milk.png")))])]);
   }
 
-  private async Task EnsureUnitOfMeasureAsync(string code) {
-    bool exists = await _context.UnitsOfMeasure.AnyAsync(
-      unit => unit.Code == code,
-      TestContext.Current.CancellationToken);
-    if (exists) {
-      return;
-    }
-
-    _context.UnitsOfMeasure.Add(new UnitOfMeasureDbEntity {
-      Id = Uid.Create(),
-      Code = code,
-      Name = $"Test unit {code}",
-    });
-    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-  }
 
   private static DateTime UtcDate(int year, int month, int day) =>
     new(year, month, day, 0, 0, 0, DateTimeKind.Utc);
