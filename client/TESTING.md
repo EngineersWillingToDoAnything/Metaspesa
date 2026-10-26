@@ -25,7 +25,7 @@ Start required services from repository root against a fresh test database:
 ```powershell
 docker compose up -d db
 docker compose --profile tools run --rm -e SEED_PROFILE=integration migrations
-docker compose up -d rest-api
+docker compose up -d server
 ```
 
 Then run integration tests from `client/`:
