@@ -147,6 +147,48 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+    post:
+      tags:
+        - CreateMarketEndpoint
+      summary: Create a Market.
+      description: "Requires the CatalogAdmin role using a bearer token or session cookie.\r\nSession-cookie requests must include an allowed Origin header.\r\nNames are case-insensitive and accent-sensitive."
+      operationId: CreateMarket
+      requestBody:
+        description: Display information for a new Market. The server assigns its ID.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMarketRequest'
+        required: true
+      responses:
+        '201':
+          description: Market created with a server-generated ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateMarketResponse'
+        '400':
+          description: 'Invalid name, logo URL, or request properties.'
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: A valid bearer token or session cookie is required.
+        '403':
+          description: 'The CatalogAdmin role is missing, or the session-cookie origin is not allowed.'
+        '409':
+          description: A Market with this name already exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: An unexpected server or database failure occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
   '/api/v1/markets/{marketName}/snapshots/{date}':
     post:
       tags:
@@ -187,6 +229,61 @@ paths:
           description: No valid authentication token was provided.
         '403':
           description: The authenticated user lacks the ProductManager role.
+        '409':
+          description: The market is not configured in master data.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '422':
+          description: A product references an unknown brand.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '500':
+          description: An unexpected server or database failure occurred.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+  /api/v1/brands:
+    post:
+      tags:
+        - CreateBrandEndpoint
+      summary: Create a Brand.
+      description: "Requires the CatalogAdmin role using a bearer token or session cookie.\r\nSession-cookie requests must include an allowed Origin header.\r\nNames are case-insensitive and accent-sensitive."
+      operationId: CreateBrand
+      requestBody:
+        description: Display name for a new Brand. The server assigns its ID.
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBrandRequest'
+        required: true
+      responses:
+        '201':
+          description: Brand created with a server-generated ID.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CreateBrandResponse'
+        '400':
+          description: Invalid name or request properties.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: A valid bearer token or session cookie is required.
+        '403':
+          description: 'The CatalogAdmin role is missing, or the session-cookie origin is not allowed.'
+        '409':
+          description: A Brand with this name already exists.
+          content:
+            application/problem+json:
+              schema:
+                $ref: '#/components/schemas/ProblemDetails'
         '500':
           description: An unexpected server or database failure occurred.
           content:
@@ -583,6 +680,47 @@ components:
           description: Stable checkout occurrence ID.
           format: uuid
       description: Identifier of an accepted checkout.
+    CreateBrandRequest:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
+      additionalProperties: false
+      description: Display name for a new Brand. The server assigns its ID.
+    CreateBrandResponse:
+      required:
+        - id
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+      description: Server-generated identity of the created Brand.
+    CreateMarketRequest:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          type: string
+        logoUrl:
+          type:
+            - 'null'
+            - string
+          format: uri
+      additionalProperties: false
+      description: Display information for a new Market. The server assigns its ID.
+    CreateMarketResponse:
+      required:
+        - id
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+      description: Server-generated identity of the created Market.
     CreateShoppingListRequest:
       required:
         - name
@@ -1105,8 +1243,10 @@ tags:
   - name: CreateSessionEndpoint
   - name: CreateTokenEndpoint
   - name: GetMarketsEndpoint
+  - name: CreateMarketEndpoint
   - name: GetProductsEndpoint
   - name: SnapshotEndpoint
+  - name: CreateBrandEndpoint
   - name: GetShoppingListsEndpoint
   - name: CreateShoppingListEndpoint
   - name: GetShoppingListEndpoint

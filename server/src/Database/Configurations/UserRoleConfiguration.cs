@@ -38,6 +38,11 @@ internal class UserRoleConfiguration : IEntityTypeConfiguration<UserRoleDbEntity
         Id = UserRoleIds.ProductManager,
         Name = nameof(Role.ProductManager),
         Description = "User who manages market products",
+      },
+      new UserRoleDbEntity {
+        Id = UserRoleIds.CatalogAdmin,
+        Name = nameof(Role.CatalogAdmin),
+        Description = "Operator who creates Market and Brand master data",
       }
     );
   }

@@ -8,14 +8,8 @@ public interface IProductRepository {
     ProductId productId, CancellationToken cancellationToken);
   Task<PagedResult<CatalogProduct>> GetProductsAsync(
     GetMarketProductsFilter filter, CancellationToken cancellationToken);
-  Task<IReadOnlyCollection<BrandName>> GetBrandsAsync(
-    CancellationToken cancellationToken);
-  Task AddBrandsAsync(
-    IReadOnlyCollection<BrandName> brands, CancellationToken cancellationToken);
   Task<ProductImportResult> ResolveProductsAsync(
     MarketImport market, DateTime observedAt, CancellationToken cancellationToken);
-  Task DeleteBrandsAsync(
-    IReadOnlyCollection<BrandName> brandNames, CancellationToken cancellationToken);
   Task DeleteProductsAsync(
     IReadOnlyCollection<ProductId> productIds, CancellationToken cancellationToken);
   Task DeleteProductFormatsAsync(

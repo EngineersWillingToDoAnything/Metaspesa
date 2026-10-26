@@ -17,6 +17,7 @@ namespace Metaspesa.Database.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
+                .HasAnnotation("Npgsql:CollationDefinition:reference_name", "und-u-ks-level2,und-u-ks-level2,icu,False")
                 .HasAnnotation("ProductVersion", "10.0.13")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
@@ -78,7 +79,8 @@ namespace Metaspesa.Database.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("name");
+                        .HasColumnName("name")
+                        .UseCollation("reference_name");
 
                     b.HasKey("Id")
                         .HasName("pk_product_brand");
@@ -366,7 +368,8 @@ namespace Metaspesa.Database.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("name");
+                        .HasColumnName("name")
+                        .UseCollation("reference_name");
 
                     b.HasKey("Id")
                         .HasName("pk_super_market");
@@ -457,6 +460,12 @@ namespace Metaspesa.Database.Migrations
                             Id = new Guid("00000000-0000-7000-8000-000000000002"),
                             Description = "User who manages market products",
                             Name = "ProductManager"
+                        },
+                        new
+                        {
+                            Id = new Guid("00000000-0000-7000-8000-000000000003"),
+                            Description = "Operator who creates Market and Brand master data",
+                            Name = "CatalogAdmin"
                         });
                 });
 

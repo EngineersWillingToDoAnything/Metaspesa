@@ -48,13 +48,12 @@ public static class AddMarketProducts {
 
   public class Handler(
     IMarketRepository marketRepository,
+    IBrandRepository brandRepository,
     IProductRepository productRepository,
     IPriceSnapshotRepository priceSnapshotRepository,
     IServiceScopeFactory scopeFactory,
     ILogger<Handler> logger
   ) : CancellableCommandHandler<Command>(scopeFactory, logger) {
-    private List<MarketName> _addedMarkets = [];
-    private List<BrandName> _addedBrands = [];
     private readonly List<ProductId> _addedProductIds = [];
     private readonly List<ProductFormatId> _addedProductFormatIds = [];
     private readonly List<MarketName> _completedMarkets = [];
@@ -62,9 +61,7 @@ public static class AddMarketProducts {
     protected override bool HasRollbackWork =>
       _completedMarkets.Count > 0 ||
       _addedProductIds.Count > 0 ||
-      _addedProductFormatIds.Count > 0 ||
-      _addedBrands.Count > 0 ||
-      _addedMarkets.Count > 0;
+      _addedProductFormatIds.Count > 0;
 
     protected override async Task ExecuteAsync(
       Command command,
@@ -84,18 +81,19 @@ public static class AddMarketProducts {
       List<MarketImport> markets = command.ToMarkets();
       EnsureProductsAreUnique(markets);
 
-      await AddMarketsAsync(markets, cancellationToken);
-      await AddBrandsAsync(markets, cancellationToken);
+      await EnsureMarketsExistAsync(markets, cancellationToken);
+      await EnsureBrandsExistAsync(markets, cancellationToken);
+
       await AddProductsAndSnapshotsAsync(command, markets, cancellationToken);
     }
 
     private static void EnsureProductsAreUnique(IEnumerable<MarketImport> markets) {
-      var identities = new HashSet<(string Market, string Name, string Brand, Quantity Quantity)>();
+      var identities = new HashSet<(MarketName Market, string Name, BrandName Brand, Quantity Quantity)>();
       foreach (MarketImport market in markets) {
         foreach (ProductImport product in market.Products) {
           ProductFormatImport? duplicate = product.Formats.FirstOrDefault(format =>
-            !identities.Add((market.Name.Value.ToUpperInvariant(),
-              product.Name.Value.ToUpperInvariant(), product.Brand.Value.ToUpperInvariant(),
+            !identities.Add((market.Name,
+              product.Name.Value.ToUpperInvariant(), product.Brand,
               format.Quantity)));
           if (duplicate is not null) {
             throw new DuplicateMarketProductException(
@@ -106,50 +104,39 @@ public static class AddMarketProducts {
       }
     }
 
-    private async Task AddMarketsAsync(
+    private async Task EnsureBrandsExistAsync(
       IReadOnlyCollection<MarketImport> markets,
       CancellationToken cancellationToken
     ) {
-      List<Market> existingMarkets = await marketRepository.GetMarketsAsync(
-        cancellationToken);
-      List<MarketName> newMarkets = [
-        ..markets.Select(market => market.Name)
-          .Where(name => !existingMarkets.Any(existing =>
-            string.Equals(
-              existing.Name.Value,
-              name.Value,
-              StringComparison.OrdinalIgnoreCase)))
-      ];
+      IReadOnlyDictionary<string, Guid> brandIds =
+        await brandRepository.ResolveBrandsAsync([..
+          markets.SelectMany(market => market.Products)
+            .Select(product => product.Brand.Value)
+            .Distinct(StringComparer.InvariantCultureIgnoreCase)
+        ], cancellationToken);
 
-      if (newMarkets.Count != 0) {
-        await marketRepository.AddMarketsAsync(newMarkets, cancellationToken);
-        _addedMarkets = newMarkets;
+      foreach (MarketImport market in markets) {
+        ProductImport? unknownProduct = market.Products.FirstOrDefault(
+          product => !brandIds.ContainsKey(product.Brand.Value));
+        if (unknownProduct is not null) {
+          throw new UnknownProductBrandException(
+            market.Name, unknownProduct.Name, unknownProduct.Brand);
+        }
       }
     }
 
-    private async Task AddBrandsAsync(
+    private async Task EnsureMarketsExistAsync(
       IReadOnlyCollection<MarketImport> markets,
       CancellationToken cancellationToken
     ) {
-      List<BrandName> brands = [
-        ..markets.SelectMany(market => market.Products)
-          .Select(product => product.Brand)
-          .DistinctBy(brand => brand.Value, StringComparer.OrdinalIgnoreCase)
-      ];
+      IReadOnlyDictionary<string, Guid> marketIds =
+        await marketRepository.ResolveMarketsAsync(
+          [.. markets.Select(market => market.Name.Value)], cancellationToken);
 
-      IReadOnlyCollection<BrandName> existingBrands =
-        await productRepository.GetBrandsAsync(cancellationToken);
-      List<BrandName> newBrands = [
-        ..brands.Where(brand => !existingBrands.Any(existing =>
-          string.Equals(
-            existing.Value,
-            brand.Value,
-            StringComparison.OrdinalIgnoreCase)))
-      ];
-
-      if (newBrands.Count != 0) {
-        await productRepository.AddBrandsAsync(newBrands, cancellationToken);
-        _addedBrands = newBrands;
+      MarketImport? unknownMarket = markets.FirstOrDefault(market =>
+        !marketIds.ContainsKey(market.Name.Value));
+      if (unknownMarket is not null) {
+        throw new UnknownMarketException(unknownMarket.Name);
       }
     }
 
@@ -193,7 +180,6 @@ public static class AddMarketProducts {
     ) {
       ArgumentNullException.ThrowIfNull(command);
 
-      IMarketRepository marketRepo = services.GetRequiredService<IMarketRepository>();
       IProductRepository productRepo = services.GetRequiredService<IProductRepository>();
       IPriceSnapshotRepository snapshotRepo =
         services.GetRequiredService<IPriceSnapshotRepository>();
@@ -215,16 +201,6 @@ public static class AddMarketProducts {
       if (_addedProductIds.Count > 0) {
         await productRepo.DeleteProductsAsync(
           _addedProductIds,
-          cancellationToken);
-      }
-      if (_addedBrands.Count > 0) {
-        await productRepo.DeleteBrandsAsync(
-          _addedBrands,
-          cancellationToken);
-      }
-      if (_addedMarkets.Count > 0) {
-        await marketRepo.DeleteMarketsAsync(
-          _addedMarkets,
           cancellationToken);
       }
     }
