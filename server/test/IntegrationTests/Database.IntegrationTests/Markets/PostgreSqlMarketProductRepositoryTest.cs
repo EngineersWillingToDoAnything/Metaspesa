@@ -4,6 +4,7 @@ using Metaspesa.Application.Markets;
 using Metaspesa.Database.Entities;
 using Metaspesa.Database.Repositories;
 using Metaspesa.Domain.Markets;
+using Metaspesa.Domain.Markets.Errors;
 using Metaspesa.Domain.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Npgsql;
@@ -37,19 +38,6 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
   public async ValueTask DisposeAsync() {
     await _context.DisposeAsync();
     GC.SuppressFinalize(this);
-  }
-
-  [Fact(DisplayName = "Persists and returns typed brand names")]
-  public async Task Repository_PersistsAndLoads_BrandNames() {
-    await _productRepository.AddBrandsAsync(
-      [new BrandName("Brand")],
-      TestContext.Current.CancellationToken);
-
-    IReadOnlyCollection<BrandName> brands =
-      await _productRepository.GetBrandsAsync(
-      TestContext.Current.CancellationToken);
-
-    Assert.Equal(new BrandName("Brand"), Assert.Single(brands));
   }
 
   [Fact(DisplayName = "Resolves products before appending snapshots")]
@@ -319,22 +307,6 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     Assert.True(result);
   }
 
-  [Fact(DisplayName = "Deletes only requested brand")]
-  public async Task Repository_DeleteBrandsAsync_PreservesOtherBrands() {
-    await _productRepository.AddBrandsAsync(
-      [new BrandName("Delete me"), new BrandName("Keep me")],
-      TestContext.Current.CancellationToken);
-
-    await _productRepository.DeleteBrandsAsync(
-      [new BrandName("Delete me")],
-      TestContext.Current.CancellationToken);
-
-    IReadOnlyCollection<BrandName> brands =
-      await _productRepository.GetBrandsAsync(
-        TestContext.Current.CancellationToken);
-    Assert.Equal(new BrandName("Keep me"), Assert.Single(brands));
-  }
-
   [Fact(DisplayName = "Deletes product formats and snapshots created by import")]
   public async Task Repository_DeletesProductGraph_ByTypedProductId() {
     ProductImportResult result = await ResolveAndAppendAsync();
@@ -411,6 +383,97 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     Assert.Equal("chk_product_format_unit_of_measure", exception.ConstraintName);
   }
 
+  [Fact]
+  public async Task ResolveProductsAsync_RejectsUnknownMarket() {
+    // Arrange
+    MarketImport import = CreateReferenceImport();
+
+    // Act
+    Exception? failure = await Record.ExceptionAsync(() => _productRepository.ResolveProductsAsync(
+      import, DateTime.UnixEpoch, TestContext.Current.CancellationToken));
+
+    // Assert
+    Assert.IsType<UnknownMarketException>(failure);
+  }
+
+  [Fact]
+  public async Task ResolveProductsAsync_UnknownMarketDoesNotWriteProducts() {
+    // Arrange
+    MarketImport import = CreateReferenceImport();
+
+    // Act
+    await Record.ExceptionAsync(() => _productRepository.ResolveProductsAsync(
+      import, DateTime.UnixEpoch, TestContext.Current.CancellationToken));
+
+    // Assert
+    Assert.Empty(await _context.Products.ToListAsync(TestContext.Current.CancellationToken));
+  }
+
+  [Fact]
+  public async Task ResolveProductsAsync_RejectsUnknownBrand() {
+    // Arrange
+    await SeedImportReferencesAsync(includeBrand: false);
+    MarketImport import = CreateReferenceImport();
+
+    // Act
+    Exception? failure = await Record.ExceptionAsync(() =>
+      _productRepository.ResolveProductsAsync(import, DateTime.UnixEpoch, TestContext.Current.CancellationToken));
+
+    // Assert
+    Assert.IsType<UnknownProductBrandException>(failure);
+  }
+
+  [Fact]
+  public async Task ResolveProductsAsync_UnknownBrandDoesNotWriteProducts() {
+    // Arrange
+    await SeedImportReferencesAsync(includeBrand: false);
+    MarketImport import = CreateReferenceImport();
+
+    // Act
+    await Record.ExceptionAsync(() =>
+      _productRepository.ResolveProductsAsync(import, DateTime.UnixEpoch, TestContext.Current.CancellationToken));
+
+    // Assert
+    Assert.Empty(await _context.Products.ToListAsync(TestContext.Current.CancellationToken));
+  }
+
+  [Fact]
+  public async Task ResolveProductsAsync_ReusesFormatForEquivalentUnitsAndReferenceNames() {
+    // Arrange
+    await SeedImportReferencesAsync();
+    MarketImport first = CreateReferenceImport("market", "BRAND", 1, "l");
+    await _productRepository.ResolveProductsAsync(first, UtcDate(2026, 10, 25), TestContext.Current.CancellationToken);
+    Guid originalId = await _context.ProductFormats.Select(value => value.Id).SingleAsync(TestContext.Current.CancellationToken);
+    MarketImport equivalent = CreateReferenceImport("MARKET", "brand", 1000, "ml");
+
+    // Act
+    await _productRepository.ResolveProductsAsync(equivalent, UtcDate(2026, 10, 25), TestContext.Current.CancellationToken);
+
+    // Assert
+    Assert.Equal(originalId, await _context.ProductFormats.Select(value => value.Id).SingleAsync(TestContext.Current.CancellationToken));
+  }
+
+  private async Task SeedImportReferencesAsync(bool includeBrand = true) {
+    _context.SuperMarkets.Add(new SuperMarketDbEntity {
+      Id = Guid.CreateVersion7(), Name = "Market",
+    });
+    if (includeBrand) {
+      _context.ProductBrands.Add(new ProductBrandDbEntity {
+        Id = Guid.CreateVersion7(), Name = "Brand",
+      });
+    }
+    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+  }
+
+  private static MarketImport CreateReferenceImport(
+    string marketName = "Market", string brandName = "Brand",
+    decimal quantity = 1, string unit = "l"
+  ) {
+    var format = new ProductFormatImport(Quantity.Create(quantity, unit), new Money(1), null);
+    var product = new ProductImport(new ProductName("Milk"), new BrandName(brandName), [format]);
+    return new MarketImport(new MarketName(marketName), [product]);
+  }
+
   private async Task<MarketImport> CreateMarketImportAsync() {
     _context.SuperMarkets.Add(new SuperMarketDbEntity {
       Id = Uid.Create(),
@@ -418,7 +481,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     });
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-    await _productRepository.AddBrandsAsync(
+    await SeedBrandsAsync(
       [new BrandName("Brand")],
       TestContext.Current.CancellationToken);
 
@@ -433,7 +496,12 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
           new ImageUrl(new Uri("https://example.com/milk.png")))])]);
   }
 
-
+  private async Task SeedBrandsAsync(IReadOnlyCollection<BrandName> brands, CancellationToken cancellationToken) {
+    _context.ProductBrands.AddRange(brands.Select(brand => new ProductBrandDbEntity {
+      Id = Uid.Create(), Name = brand.Value,
+    }));
+    await _context.SaveChangesAsync(cancellationToken);
+  }
   private static DateTime UtcDate(int year, int month, int day) =>
     new(year, month, day, 0, 0, 0, DateTimeKind.Utc);
 }

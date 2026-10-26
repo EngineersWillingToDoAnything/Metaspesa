@@ -45,6 +45,8 @@ package "Markets Module" {
   class Market <<aggregate root>>
   class MarketId <<value object>>
   class MarketName <<value object>>
+  class Brand <<aggregate root>>
+  class BrandId <<value object>>
 
   class Product <<aggregate root>> {
     + AddFormat(quantity, imageUrl)
@@ -67,6 +69,8 @@ package "Markets Module" {
   Market *--> MarketId : Id
   Market *--> MarketName : Name
   Market *--> "?" ImageUrl : LogoUrl
+  Brand *--> BrandId : Id
+  Brand *--> BrandName : Name
 
   Product *--> ProductId : Id
   Product *--> ProductName : Name

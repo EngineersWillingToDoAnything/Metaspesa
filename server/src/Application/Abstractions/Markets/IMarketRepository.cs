@@ -3,11 +3,12 @@ using Metaspesa.Domain.Markets;
 namespace Metaspesa.Application.Abstractions.Markets;
 
 public interface IMarketRepository {
+  Task<IReadOnlyDictionary<string, Guid>> ResolveMarketsAsync(
+    IReadOnlyCollection<string> marketNames, CancellationToken cancellationToken);
+
+  Task<bool> ExistsAsync(string marketName, CancellationToken cancellationToken);
+
+  Task SaveAsync(Market market, CancellationToken cancellationToken);
   Task<IReadOnlyCollection<MarketSummary>> GetMarketSummariesAsync(
     CancellationToken cancellationToken);
-  Task<List<Market>> GetMarketsAsync(CancellationToken cancellationToken);
-  Task AddMarketsAsync(
-    IReadOnlyCollection<MarketName> marketNames, CancellationToken cancellationToken);
-  Task DeleteMarketsAsync(
-    IReadOnlyCollection<MarketName> marketNames, CancellationToken cancellationToken);
 }

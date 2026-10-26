@@ -17,6 +17,7 @@ internal class ProductBrandConfiguration : IEntityTypeConfiguration<ProductBrand
 
     builder.Property(e => e.Name)
       .HasColumnName("name")
+      .UseCollation("reference_name")
       .IsRequired();
 
     builder.HasIndex(e => e.Name, "idx_product_brand_name").IsUnique();

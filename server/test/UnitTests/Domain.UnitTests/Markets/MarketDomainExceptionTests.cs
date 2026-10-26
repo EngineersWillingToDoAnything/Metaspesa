@@ -8,10 +8,22 @@ public static class MarketDomainExceptionTests {
   public static void MarketException_DerivesFromDomainException(
     Exception exception
   ) {
-    Assert.IsType<MarketDomainException>(exception, exactMatch: false);
+    // Arrange
+    Type expectedBaseType = typeof(MarketDomainException);
+
+    // Act
+    bool isMarketDomainException = expectedBaseType.IsInstanceOfType(exception);
+
+    // Assert
+    Assert.True(isMarketDomainException);
   }
 
   private sealed class MarketExceptions() : TheoryData<Exception>(
+    (Exception)new BrandAlreadyExistsException(),
+    (Exception)new MarketAlreadyExistsException(),
+    (Exception)new UnknownMarketException(),
+    (Exception)new UnknownProductBrandException(),
+    (Exception)new InvalidBrandIdException(),
     (Exception)new DuplicateMarketProductException(),
     (Exception)new DuplicateProductFormatException(),
     (Exception)new EmptyMarketProductsException(),

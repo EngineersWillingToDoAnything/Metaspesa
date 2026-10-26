@@ -2,6 +2,7 @@ using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Markets;
 using Metaspesa.Database.Entities;
 using Metaspesa.Domain.Markets;
+using Metaspesa.Domain.Markets.Errors;
 using Metaspesa.Domain.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 
@@ -53,7 +54,7 @@ internal partial class PostgreSqlMarketProductRepository(
     }
     if (!string.IsNullOrWhiteSpace(filter.BrandNameSegment)) {
       query = query.Where(product => EF.Functions.ILike(
-        product.Brand.Name, $"%{EscapeLike(filter.BrandNameSegment)}%", "\\"));
+        EF.Functions.Collate(product.Brand.Name, "default"), $"%{EscapeLike(filter.BrandNameSegment)}%", "\\"));
     }
 
     int totalCount = await query.CountAsync(cancellationToken);
@@ -100,30 +101,6 @@ internal partial class PostgreSqlMarketProductRepository(
     ], totalCount);
   }, "Couldn't get market products.");
 
-  public async Task<IReadOnlyCollection<BrandName>> GetBrandsAsync(
-    CancellationToken cancellationToken
-  ) => await PostgreSqlExceptionMapper.MapAsync(async () => {
-    List<string> names = await context.ProductBrands
-      .AsNoTracking()
-      .Select(brand => brand.Name)
-      .ToListAsync(cancellationToken);
-    return (IReadOnlyCollection<BrandName>)[
-      ..names.Select(name => new BrandName(name))
-    ];
-  }, "Couldn't get brands.");
-
-  public async Task AddBrandsAsync(
-    IReadOnlyCollection<BrandName> brands,
-    CancellationToken cancellationToken
-  ) => await PostgreSqlExceptionMapper.MapAsync(async () => {
-    context.ProductBrands.AddRange(
-      brands.Select(brand => new ProductBrandDbEntity {
-        Id = Uid.Create(),
-        Name = brand.Value,
-      }));
-    await context.SaveChangesAsync(cancellationToken);
-  }, "Couldn't add brands.");
-
   public async Task<ProductImportResult> ResolveProductsAsync(
     MarketImport market,
     DateTime observedAt,
@@ -135,9 +112,9 @@ internal partial class PostgreSqlMarketProductRepository(
     try {
       context.ChangeTracker.Clear();
 
-      Guid marketId = await GetMarketIdAsync(market.Name, cancellationToken);
+      Guid marketId = await GetMarketIdAsync(market.Name.Value, cancellationToken);
       Dictionary<string, Guid> brandLookup = await GetBrandLookupAsync(
-        market.Products, cancellationToken);
+        market, cancellationToken);
       Dictionary<(string Name, Guid BrandId), Guid> existingProducts =
         await GetExistingProductLookupAsync(marketId, cancellationToken);
 
@@ -164,21 +141,6 @@ internal partial class PostgreSqlMarketProductRepository(
         autoDetectChangesEnabled;
     }
   }, "Couldn't resolve market products.");
-
-  public async Task DeleteBrandsAsync(
-    IReadOnlyCollection<BrandName> brandNames,
-    CancellationToken cancellationToken
-  ) => await PostgreSqlExceptionMapper.MapAsync(async () => {
-    string[] names = [.. brandNames.Select(name => name.Value)];
-    List<Guid> productIds = await context.Products
-      .Where(product => names.Contains(product.Brand.Name))
-      .Select(product => product.Id)
-      .ToListAsync(cancellationToken);
-    await DeleteProductsByIdsAsync(productIds, cancellationToken);
-    await context.ProductBrands
-      .Where(brand => names.Contains(brand.Name))
-      .ExecuteDeleteAsync(cancellationToken);
-  }, "Couldn't delete brands.");
 
   public async Task DeleteProductsAsync(
     IReadOnlyCollection<ProductId> productIds,
@@ -213,27 +175,33 @@ internal partial class PostgreSqlMarketProductRepository(
   }
 
   private async Task<Guid> GetMarketIdAsync(
-    MarketName marketName,
-    CancellationToken cancellationToken
-  ) => await context.SuperMarkets
-    .Where(market => EF.Functions.ILike(market.Name, marketName.Value))
-    .Select(market => market.Id)
-    .SingleAsync(cancellationToken);
-
-  private async Task<Dictionary<string, Guid>> GetBrandLookupAsync(
-    IReadOnlyCollection<ProductImport> products,
+    string marketName,
     CancellationToken cancellationToken
   ) {
-    string[] brandNames = [
-      ..products.Select(product => product.Brand.Value).Distinct()
-    ];
+    Guid? id = await context.SuperMarkets.AsNoTracking()
+      .Where(market => market.Name == marketName)
+      .Select(market => (Guid?)market.Id)
+      .SingleOrDefaultAsync(cancellationToken);
+    return id ?? throw new UnknownMarketException(new MarketName(marketName));
+  }
 
-    return await context.ProductBrands
-      .Where(brand => brandNames.Contains(brand.Name))
-      .ToDictionaryAsync(
-        brand => brand.Name,
-        brand => brand.Id,
-        cancellationToken);
+  private async Task<Dictionary<string, Guid>> GetBrandLookupAsync(
+    MarketImport market,
+    CancellationToken cancellationToken
+  ) {
+    string[] names = [.. market.Products.Select(product => product.Brand.Value)
+      .Distinct(StringComparer.InvariantCultureIgnoreCase)];
+    Dictionary<string, Guid> brands = await context.ProductBrands.AsNoTracking()
+      .Where(brand => names.Contains(brand.Name))
+      .ToDictionaryAsync(brand => brand.Name, brand => brand.Id,
+        StringComparer.InvariantCultureIgnoreCase, cancellationToken);
+    ProductImport? unknownProduct = market.Products.FirstOrDefault(product =>
+      !brands.ContainsKey(product.Brand.Value));
+    if (unknownProduct is not null) {
+      throw new UnknownProductBrandException(
+        market.Name, unknownProduct.Name, unknownProduct.Brand);
+    }
+    return brands;
   }
 
   private async Task<Dictionary<(string Name, Guid BrandId), Guid>>

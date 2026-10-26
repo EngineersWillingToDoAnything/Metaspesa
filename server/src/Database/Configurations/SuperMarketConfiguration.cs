@@ -17,6 +17,7 @@ internal class SuperMarketConfiguration : IEntityTypeConfiguration<SuperMarketDb
 
     builder.Property(e => e.Name)
       .HasColumnName("name")
+      .UseCollation("reference_name")
       .IsRequired();
 
     builder.Property(e => e.LogoUrl)

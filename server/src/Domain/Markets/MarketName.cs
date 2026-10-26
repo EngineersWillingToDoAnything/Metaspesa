@@ -13,5 +13,11 @@ public readonly record struct MarketName {
     Value = value.Trim();
   }
 
+  public bool Equals(MarketName other) =>
+    StringComparer.InvariantCultureIgnoreCase.Equals(Value, other.Value);
+
+  public override int GetHashCode() =>
+    Value is null ? 0 : StringComparer.InvariantCultureIgnoreCase.GetHashCode(Value);
+
   public override string ToString() => Value;
 }

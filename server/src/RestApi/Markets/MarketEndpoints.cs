@@ -1,4 +1,6 @@
+using Metaspesa.RestApi.Brands.CreateBrand;
 using Metaspesa.RestApi.Markets.AddSnapshot;
+using Metaspesa.RestApi.Markets.CreateMarket;
 using Metaspesa.RestApi.Markets.GetMarkets;
 using Metaspesa.RestApi.Markets.GetProducts;
 
@@ -12,6 +14,8 @@ internal static class MarketEndpoints {
     api.MapGetMarketsEndpoint();
     api.MapQueryProductsEndpoint();
     api.MapSnapshotEndpoint();
+    api.MapCreateMarketEndpoint();
+    api.MapCreateBrandEndpoint();
     return endpoints;
   }
 }
