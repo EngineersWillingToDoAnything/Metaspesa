@@ -22,8 +22,8 @@ public static class PriceSnapshotDbEntityTest {
     Assert.Equal(new PriceSnapshotId(Guid.Parse("00000000-0000-7000-8000-000000000005")), snapshot.Id);
     Assert.Equal(new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000007")), snapshot.ProductFormatId);
     Assert.Equal(new Money(1.99m), snapshot.Price);
-    Assert.Equal(DateTimeKind.Utc, snapshot.ObservedAt.Kind);
-    Assert.Equal(observedAt, snapshot.ObservedAt);
+    Assert.Equal(DateTimeKind.Utc, snapshot.ObservedAt.Value.Kind);
+    Assert.Equal(observedAt, snapshot.ObservedAt.Value);
   }
 
   [Fact(DisplayName = "Throws specific exception for invalid persisted snapshot id")]
@@ -37,5 +37,20 @@ public static class PriceSnapshotDbEntityTest {
     };
 
     Assert.Throws<InvalidPriceSnapshotIdException>(entity.MapToDomain);
+  }
+
+  [Fact(DisplayName = "Restores persisted observation time without running creation validation")]
+  public static void Entity_RestoresRawObservationTime() {
+    var entity = new PriceSnapshotDbEntity {
+      Id = Guid.Parse("00000000-0000-7000-8000-000000000005"),
+      ProductFormatId = Guid.Parse("00000000-0000-7000-8000-000000000007"),
+      PriceAmount = 1.99m,
+      ObservedAt = default,
+    };
+
+    PriceSnapshot snapshot = entity.MapToDomain();
+
+    Assert.Equal((DateTime.MinValue.Ticks, DateTimeKind.Utc),
+      (snapshot.ObservedAt.Value.Ticks, snapshot.ObservedAt.Value.Kind));
   }
 }

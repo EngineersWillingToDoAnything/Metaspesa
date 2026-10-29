@@ -3,53 +3,67 @@ using Metaspesa.Domain.SharedKernel.Errors;
 
 namespace Metaspesa.Domain.UnitTests.SharedKernel;
 
-public static class MoneyTest {
-  public class Constructor {
-    [Theory(DisplayName = "Creates money when amount is non-negative")]
-    [InlineData(0)]
-    [InlineData(0.01)]
-    [InlineData(12.34)]
-    public void Money_Created_WhenAmountIsNonNegative(decimal amount) {
-      // Act
-      var money = new Money(amount);
+public class MoneyTest {
+  [Theory]
+  [InlineData(0)]
+  [InlineData(0.01)]
+  [InlineData(12.34)]
+  public void Create_PreservesNonNegativeAmount(decimal amount) {
+    var money = Money.Create(amount);
 
-      // Assert
-      Assert.Equal(amount, money.Amount);
-    }
-
-    [Fact(DisplayName = "Throws specific exception when amount is negative")]
-    public void Money_ThrowsInvalidMoneyAmountException_WhenAmountIsNegative() {
-      // Act
-      InvalidMoneyAmountException exception = Assert.Throws<InvalidMoneyAmountException>(
-        () => new Money(-0.01m));
-
-      // Assert
-      Assert.Equal(-0.01m, exception.Amount);
-    }
-
-    [Theory(DisplayName = "Rounds amount to two decimal places")]
-    [InlineData(12.345, 12.35)]
-    [InlineData(12.344, 12.34)]
-    public void Money_RoundsAmountToTwoDecimalPlaces(
-      decimal amount, decimal expectedRoundedAmount
-    ) {
-      // Act
-      var money = new Money(amount);
-
-      // Assert
-      Assert.Equal(expectedRoundedAmount, money.Amount);
-    }
+    Assert.Equal(amount, money.Amount);
   }
 
-  public class Equality {
-    [Fact(DisplayName = "Two money values with the same amount are equal")]
-    public void Money_Equal_WhenSameAmount() {
-      // Arrange
-      var money1 = new Money(5.0m);
-      var money2 = new Money(5.0m);
+  [Theory]
+  [InlineData(-0.01)]
+  [InlineData(-1)]
+  public void Create_RejectsNegativeAmount(decimal amount) {
+    void action() => Money.Create(amount);
 
-      // Act & Assert
-      Assert.Equal(money1, money2);
-    }
+    Assert.Throws<InvalidMoneyAmountException>(action);
+  }
+
+  [Fact]
+  public void Create_ReportsRejectedAmount() {
+    Exception? error = Record.Exception(() => Money.Create(-0.01m));
+
+    Assert.Equal(-0.01m, (error as InvalidMoneyAmountException)?.Amount);
+  }
+
+  [Theory]
+  [InlineData(12.345, 12.35)]
+  [InlineData(12.344, 12.34)]
+  [InlineData(0.005, 0.01)]
+  [InlineData(0.004, 0)]
+  public void Create_RoundsToTwoDecimalPlaces(decimal amount, decimal expected) {
+    var money = Money.Create(amount);
+
+    Assert.Equal(expected, money.Amount);
+  }
+
+  [Theory]
+  [InlineData(-0.01)]
+  [InlineData(3.451)]
+  [InlineData(0)]
+  public void Constructor_PreservesRawAmount(decimal amount) {
+    var money = new Money(amount);
+
+    Assert.Equal(amount, money.Amount);
+  }
+
+  [Fact]
+  public void Equality_ComparesAmountValues() {
+    var first = new Money(5);
+    var second = new Money(5);
+
+    Assert.Equal(first, second);
+  }
+
+  [Fact]
+  public void Equality_DistinguishesDifferentAmounts() {
+    var first = new Money(5);
+    var second = new Money(6);
+
+    Assert.NotEqual(first, second);
   }
 }

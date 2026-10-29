@@ -28,8 +28,11 @@ internal partial class PostgreSqlMarketProductRepository(
   ) => await PostgreSqlExceptionMapper.MapAsync(async () => {
     ProductDbEntity? entity = await context.Products
       .AsNoTracking()
-      .Include(product => product.Brand)
       .Include(product => product.Formats)
+      .ThenInclude(format => format.PriceSnapshots
+        .OrderByDescending(snapshot => snapshot.ObservedAt)
+        .ThenByDescending(snapshot => snapshot.Id)
+        .Take(1))
       .SingleOrDefaultAsync(
         product => product.Id == productId.Value,
         cancellationToken);

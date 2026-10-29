@@ -52,7 +52,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     Assert.Single(result.AddedProductFormatIds);
     PriceObservation observation = Assert.Single(result.PriceObservations);
     Assert.Equal(new Money(1.99m), observation.Price);
-    Assert.Equal(observedAt, observation.ObservedAt);
+    Assert.Equal(observedAt, observation.ObservedAt.Value);
     Assert.Equal(0, await _context.PriceSnapshots.CountAsync(
       TestContext.Current.CancellationToken));
     Assert.True(await _context.Products.AnyAsync(
@@ -92,8 +92,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       TestContext.Current.CancellationToken));
   }
 
-  [Fact(DisplayName = "Loads product aggregate without price history")]
-  public async Task Repository_LoadsProduct_WithoutPriceSnapshots() {
+  [Fact(DisplayName = "Loads product aggregate with latest snapshots and no price history")]
+  public async Task Repository_LoadsProduct_WithLatestPriceSnapshots() {
     ProductImportResult result = await ResolveAndAppendAsync();
 
     Product? product = await _productRepository.GetByIdAsync(
@@ -102,15 +102,14 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
     Assert.NotNull(product);
     Assert.Equal(new ProductName("Milk"), product.Name);
-    Assert.Equal(new BrandName("Brand"), product.Brand);
+    Assert.NotEqual(Guid.Empty, product.BrandId.Value);
     ProductFormat format = Assert.Single(product.Formats);
     Assert.Equal(Quantity.Create(1, "ml"), format.Quantity);
     Assert.DoesNotContain(
       typeof(Product).GetProperties(),
       property => property.PropertyType == typeof(PriceSnapshot));
-    Assert.DoesNotContain(
-      typeof(ProductFormat).GetProperties(),
-      property => property.PropertyType == typeof(PriceSnapshot));
+    Assert.Equal(1.99m, format.LatestSnapshot.Price.Amount);
+    Assert.Empty(product.PendingSnapshots);
   }
 
   [Fact(DisplayName = "Catalog excludes products without price history")]

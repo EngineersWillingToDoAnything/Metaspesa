@@ -13,9 +13,9 @@ internal class PriceSnapshotDbEntity {
   public ProductFormatDbEntity ProductFormat { get; set; } = null!;
   public ICollection<PurchaseItemDbEntity> PurchaseItems { get; set; } = [];
 
-  public PriceSnapshot MapToDomain() => new(
+  public PriceSnapshot MapToDomain() => PriceSnapshot.Rehydrate(
     new PriceSnapshotId(Id),
     new ProductFormatId(ProductFormatId),
     new Money(PriceAmount),
-    DateTime.SpecifyKind(ObservedAt, DateTimeKind.Utc));
+    new ObservationTime(DateTime.SpecifyKind(ObservedAt, DateTimeKind.Utc)));
 }

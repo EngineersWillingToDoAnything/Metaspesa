@@ -2,16 +2,17 @@ using Metaspesa.Domain.SharedKernel.Errors;
 
 namespace Metaspesa.Domain.SharedKernel;
 
-public readonly record struct Money {
+public readonly record struct Money(
+  decimal Amount
+) {
   private const int DecimalPlaces = 2;
 
-  public decimal Amount { get; }
-
-  public Money(decimal amount) {
+  public static Money Create(decimal amount) {
     if (amount < 0) {
       throw new InvalidMoneyAmountException(amount);
     }
 
-    Amount = Math.Round(amount, DecimalPlaces, MidpointRounding.AwayFromZero);
+    return new Money(
+      Math.Round(amount, DecimalPlaces, MidpointRounding.AwayFromZero));
   }
 }

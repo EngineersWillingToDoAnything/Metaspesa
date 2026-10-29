@@ -38,6 +38,11 @@ public static class MarketDomainExceptionTests {
     (Exception)new InvalidProductIdException(),
     (Exception)new InvalidProductNameException(),
     (Exception)new ProductFormatNotFoundException(),
-    (Exception)new UnsupportedUnitOfMeasureException()
+    (Exception)new UnsupportedUnitOfMeasureException(),
+    (Exception)new EmptyProductObservationException(),
+    (Exception)new DuplicateObservedProductFormatException(),
+    (Exception)new ProductObservationIdentityMismatchException(),
+    (Exception)new EarlierPriceObservationException(),
+    (Exception)new ConflictingPriceObservationException()
   );
 }

@@ -13,17 +13,21 @@ internal class ProductDbEntity {
   public ProductBrandDbEntity Brand { get; set; } = null!;
   public ICollection<ProductFormatDbEntity> Formats { get; set; } = [];
 
-  public Product MapToDomain() => new(
+  public Product MapToDomain() => Product.Rehydrate(
     new ProductId(Id),
     new ProductName(Name),
-    new BrandName(Brand.Name),
+    new BrandId(BrandId),
     new MarketId(SuperMarketId),
-    Formats.Select(format => new ProductFormat(
+    Formats.Select(format => ProductFormat.Rehydrate(
       new ProductFormatId(format.Id),
       new Quantity(
         format.Quantity,
         new UnitOfMeasure(format.UnitOfMeasure)),
       string.IsNullOrWhiteSpace(format.ImageUrl)
         ? null
-        : new ImageUrl(new Uri(format.ImageUrl, UriKind.Absolute)))));
+        : new ImageUrl(new Uri(format.ImageUrl, UriKind.Absolute)),
+      format.PriceSnapshots
+        .OrderByDescending(snapshot => snapshot.ObservedAt)
+        .ThenByDescending(snapshot => snapshot.Id)
+        .First().MapToDomain())));
 }

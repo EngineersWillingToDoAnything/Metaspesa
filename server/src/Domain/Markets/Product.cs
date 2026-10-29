@@ -5,53 +5,104 @@ namespace Metaspesa.Domain.Markets;
 
 public sealed class Product {
   private readonly List<ProductFormat> _formats;
+  private readonly List<ProductFormat> _pendingFormats = [];
+  private readonly List<PriceSnapshot> _pendingSnapshots = [];
+  private readonly ProductIdentity _identity;
 
   public ProductId Id { get; }
-  public ProductName Name { get; }
-  public BrandName Brand { get; }
-  public MarketId MarketId { get; }
+  public ProductName Name => _identity.Name;
+  public BrandId BrandId => _identity.BrandId;
+  public MarketId MarketId => _identity.MarketId;
   public IReadOnlyCollection<ProductFormat> Formats => _formats.AsReadOnly();
+  public IReadOnlyCollection<ProductFormat> PendingFormats => _pendingFormats.AsReadOnly();
+  public IReadOnlyCollection<PriceSnapshot> PendingSnapshots => _pendingSnapshots.AsReadOnly();
 
-  public Product(
+  private Product(
     ProductId id,
-    ProductName name,
-    BrandName brand,
-    MarketId marketId,
-    IEnumerable<ProductFormat>? formats = null
+    ProductIdentity identity,
+    IEnumerable<ProductFormat> formats
   ) {
     Id = id;
-    Name = name;
-    Brand = brand;
-    MarketId = marketId;
-    _formats = formats?.ToList() ?? [];
+    _identity = identity;
+    _formats = [.. formats];
+  }
 
-    ProductFormatId? duplicateId = _formats
-      .GroupBy(format => format.Id)
-      .Where(group => group.Count() > 1)
-      .Select(group => (ProductFormatId?)group.Key)
-      .FirstOrDefault();
+  public static Product Create(ProductObservationParams observation) {
+    ArgumentNullException.ThrowIfNull(observation);
 
-    if (duplicateId is not null) {
-      throw new DuplicateProductFormatException(duplicateId.Value);
+    var identity = ProductIdentity.Create(observation);
+    var product = new Product(new ProductId(Uid.Create()), identity, []);
+    product.RegisterObservation(observation);
+    return product;
+  }
+
+  public static Product Rehydrate(
+    ProductId id,
+    ProductName name,
+    BrandId brandId,
+    MarketId marketId,
+    IEnumerable<ProductFormat> formats
+  ) {
+    return new Product(id, new ProductIdentity(marketId, brandId, name), formats);
+  }
+
+  public void RegisterObservation(ProductObservationParams observation) {
+    ArgumentNullException.ThrowIfNull(observation);
+    EnsureHasSameIdentity(observation);
+
+    var observedAt = ObservationTime.Create(observation.ObservedAt);
+    List<PreparedFormatObservation> prepared = PrepareFormats(observation);
+    var existing = _formats.ToDictionary(format => format.Quantity);
+    var additions = new List<ProductFormat>();
+    var updates = new List<(ProductFormat Format, Money Price)>();
+
+    foreach (PreparedFormatObservation incoming in prepared) {
+      if (existing.TryGetValue(incoming.Quantity, out ProductFormat? format)) {
+        updates.Add((format, incoming.Price));
+      } else {
+        additions.Add(ProductFormat.Create(incoming, observedAt));
+      }
+    }
+
+    _formats.AddRange(additions);
+    _pendingFormats.AddRange(additions);
+    _pendingSnapshots.AddRange(additions.Select(format => format.LatestSnapshot));
+    foreach ((ProductFormat format, Money price) in updates) {
+      if (format.RecordSnapshot(price, observedAt)) {
+        _pendingSnapshots.Add(format.LatestSnapshot);
+      }
     }
   }
 
-  public void AddFormat(
-    ProductFormatId id, Quantity quantity, ImageUrl? imageUrl
+  private static List<PreparedFormatObservation> PrepareFormats(
+    ProductObservationParams observation
   ) {
-    if (_formats.Any(format => format.Id == id)) {
-      throw new DuplicateProductFormatException(id);
-    }
+    EnsureObservationIsNotEmpty(observation);
 
-    _formats.Add(new ProductFormat(id, quantity, imageUrl));
+    var identities = new HashSet<Quantity>();
+    var prepared = new List<PreparedFormatObservation>();
+    foreach (ProductFormatObservationParams format in observation.Formats) {
+      PreparedFormatObservation incoming = ProductFormat.PrepareObservation(format);
+      if (!identities.Add(incoming.Quantity)) {
+        throw new DuplicateObservedProductFormatException(incoming.Quantity);
+      }
+      prepared.Add(incoming);
+    }
+    return prepared;
   }
 
-  public void UpdateFormat(
-    ProductFormatId id, Quantity quantity, ImageUrl? imageUrl
-  ) {
-    ProductFormat format = _formats.FirstOrDefault(format => format.Id == id) ??
-      throw new ProductFormatNotFoundException(id);
+  private void EnsureHasSameIdentity(ProductObservationParams observation) {
+    var identity = ProductIdentity.Create(observation);
+    if (identity != _identity) {
+      throw new ProductObservationIdentityMismatchException(_identity, identity);
+    }
+  }
 
-    format.Update(quantity, imageUrl);
+  private static void EnsureObservationIsNotEmpty(
+    ProductObservationParams observation
+  ) {
+    if (observation.Formats is null || observation.Formats.Count == 0) {
+      throw new EmptyProductObservationException();
+    }
   }
 }

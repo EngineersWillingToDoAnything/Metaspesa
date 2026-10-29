@@ -29,7 +29,7 @@ public static class AddMarketProducts {
           marketGroup.Key,
           [
             ..marketGroup.GroupBy(product => (
-              Name: new ProductName(product.Name!),
+              Name: ProductName.Create(product.Name!),
               Brand: new BrandName(product.BrandName!)))
               .Select(productGroup => new ProductImport(
                 productGroup.Key.Name,
@@ -39,7 +39,7 @@ public static class AddMarketProducts {
                     Quantity.Create(
                       product.Quantity,
                       UnitOfMeasureNormalizer.Normalize(product.UnitOfMeasure)!),
-                    new Money(product.Price),
+                    Money.Create(product.Price),
                     product.ImageUrl is null ? null : new ImageUrl(product.ImageUrl)))
                 ]))
           ]))

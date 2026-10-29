@@ -352,8 +352,8 @@ public sealed class AddProductsHandlerTest : IDisposable {
     var latestDate = new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc);
     var observedAt = new DateTime(2026, 7, observationDay, 0, 0, 0, DateTimeKind.Utc);
     var observation = new PriceObservation(formatId, new Money(1.99m), observedAt);
-    var latest = new PriceSnapshot(new PriceSnapshotId(Guid.Parse("00000000-0000-7000-8000-000000000008")),
-      formatId, new Money(1.99m), latestDate);
+    var latest = PriceSnapshot.Create(
+      formatId, Money.Create(1.99m), ObservationTime.Create(latestDate));
     _productRepository.ResolveProductsAsync(Arg.Any<MarketImport>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
       .Returns(new ProductImportResult([], [], [observation]));
     _snapshotRepository.GetLatestForFormatsAsync(Arg.Any<IReadOnlyCollection<ProductFormatId>>(), Arg.Any<CancellationToken>()).Returns([latest]);
@@ -377,8 +377,8 @@ public sealed class AddProductsHandlerTest : IDisposable {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000007"));
     var observedAt = new DateTime(2026, 7, 29, 0, 0, 0, DateTimeKind.Utc);
     var observation = new PriceObservation(formatId, new Money(currentPrice), observedAt);
-    var latest = new PriceSnapshot(new PriceSnapshotId(Guid.Parse("00000000-0000-7000-8000-000000000008")),
-      formatId, new Money(1.99m), observedAt.AddDays(-1));
+    var latest = PriceSnapshot.Create(
+      formatId, Money.Create(1.99m), ObservationTime.Create(observedAt.AddDays(-1)));
     _productRepository.ResolveProductsAsync(Arg.Any<MarketImport>(), Arg.Any<DateTime>(), Arg.Any<CancellationToken>())
       .Returns(new ProductImportResult([], [], [observation]));
     _snapshotRepository.GetLatestForFormatsAsync(Arg.Any<IReadOnlyCollection<ProductFormatId>>(), Arg.Any<CancellationToken>()).Returns([latest]);

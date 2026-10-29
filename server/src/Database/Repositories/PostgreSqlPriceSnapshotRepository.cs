@@ -40,7 +40,7 @@ internal class PostgreSqlPriceSnapshotRepository(
         ProductFormatId = observation.ProductFormatId.Value,
         PriceAmount = observation.Price.Amount,
         CurrencyCode = "EUR",
-        ObservedAt = observation.ObservedAt,
+        ObservedAt = observation.ObservedAt.Value,
       })
       .Chunk(BatchSize);
 
