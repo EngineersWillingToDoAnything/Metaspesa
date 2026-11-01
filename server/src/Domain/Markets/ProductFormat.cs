@@ -4,10 +4,13 @@ using Metaspesa.Domain.SharedKernel;
 namespace Metaspesa.Domain.Markets;
 
 public sealed class ProductFormat {
+  private readonly List<PriceSnapshot> _pendingSnapshots = [];
+
   public ProductFormatId Id { get; }
   public Quantity Quantity { get; }
   public ImageUrl? ImageUrl { get; }
   public PriceSnapshot LatestSnapshot { get; private set; }
+  public IReadOnlyCollection<PriceSnapshot> PendingSnapshots => _pendingSnapshots.AsReadOnly();
 
   private ProductFormat(
     ProductFormatId id,
@@ -35,11 +38,13 @@ public sealed class ProductFormat {
     PreparedFormatObservation observation, ObservationDate observedOn
   ) {
     var id = new ProductFormatId(Uid.Create());
-    return new ProductFormat(
+    var format = new ProductFormat(
       id,
       observation.Quantity,
       observation.ImageUrl,
-      PriceSnapshot.Create(id, observation.Price, observedOn));
+      PriceSnapshot.Create(observation.Price, observedOn));
+    format._pendingSnapshots.Add(format.LatestSnapshot);
+    return format;
   }
 
   public static ProductFormat Rehydrate(
@@ -59,7 +64,8 @@ public sealed class ProductFormat {
       return false;
     }
 
-    LatestSnapshot = PriceSnapshot.Create(Id, price, observedOn);
+    LatestSnapshot = PriceSnapshot.Create(price, observedOn);
+    _pendingSnapshots.Add(LatestSnapshot);
     return true;
   }
 

@@ -236,17 +236,19 @@ internal class PostgreSqlMarketProductRepository(
   }
 
   private async Task InsertSnapshotsAsync(Product[] products, CancellationToken cancellationToken) {
-    PriceSnapshot[] snapshots = [..
-      products.SelectMany(product => product.PendingSnapshots)
+    (ProductFormatId FormatId, PriceSnapshot Snapshot)[] snapshots = [..
+      products.SelectMany(product => product.Formats)
+        .SelectMany(format => format.PendingSnapshots.Select(snapshot =>
+          (format.Id, snapshot)))
     ];
     if (snapshots.Length == 0) {
       return;
     }
 
-    Guid[] ids = [.. snapshots.Select(snapshot => snapshot.Id.Value)];
-    Guid[] formatIds = [.. snapshots.Select(snapshot => snapshot.ProductFormatId.Value)];
-    decimal[] prices = [.. snapshots.Select(snapshot => snapshot.Price.Amount)];
-    DateOnly[] dates = [.. snapshots.Select(snapshot => snapshot.ObservedOn.Value)];
+    Guid[] ids = [.. snapshots.Select(value => value.Snapshot.Id.Value)];
+    Guid[] formatIds = [.. snapshots.Select(value => value.FormatId.Value)];
+    decimal[] prices = [.. snapshots.Select(value => value.Snapshot.Price.Amount)];
+    DateOnly[] dates = [.. snapshots.Select(value => value.Snapshot.ObservedOn.Value)];
 
     await context.Database.ExecuteSqlInterpolatedAsync($"""
       INSERT INTO market.price_snapshots (id, product_format_id, price_amount, observed_on)

@@ -1362,6 +1362,44 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     Assert.Equal(expected, actual);
   }
 
+  [Fact]
+  public async Task SaveBatchAsync_PersistsEveryPendingSnapshotWithItsOwningFormat() {
+    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    _context.AddRange(market, brand);
+    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+    var observation = new ProductObservationParams(
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28), [
+        new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
+        new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png")),
+      ]);
+    var product = Product.Create(observation);
+    product.RegisterObservation(observation with {
+      ObservedOn = observation.ObservedOn.AddDays(1),
+      Formats = [
+        new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png")),
+        new ProductFormatObservationParams(2, "l", 3.99m, new Uri("https://example.com/large.png")),
+      ],
+    });
+    product.RegisterObservation(observation with {
+      ObservedOn = observation.ObservedOn.AddDays(2),
+      Formats = [
+        new ProductFormatObservationParams(1, "l", 2.99m, new Uri("https://example.com/milk.png")),
+        new ProductFormatObservationParams(2, "l", 4.49m, new Uri("https://example.com/large.png")),
+      ],
+    });
+    var expected = product.Formats.SelectMany(format => format.PendingSnapshots.Select(snapshot => new {
+      Id = snapshot.Id.Value, ProductFormatId = format.Id.Value,
+    })).OrderBy(value => value.Id).ToArray();
+
+    await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
+    var actual = await _context.PriceSnapshots.OrderBy(snapshot => snapshot.Id)
+      .Select(snapshot => new { snapshot.Id, snapshot.ProductFormatId })
+      .ToArrayAsync(TestContext.Current.CancellationToken);
+
+    Assert.Equal(expected, actual);
+  }
+
   private sealed class CommandCounter : DbCommandInterceptor {
     internal int Count { get; private set; }
 

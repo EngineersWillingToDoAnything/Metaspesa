@@ -94,7 +94,6 @@ package "Markets Module" {
   ProductFormat *--> PriceSnapshot : LatestSnapshot
 
   PriceSnapshot *--> PriceSnapshotId : Id
-  PriceSnapshot --> ProductFormatId
   PriceSnapshot *--> Money : Price
   PriceSnapshot *--> ObservationDate : ObservedOn
 

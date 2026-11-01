@@ -514,7 +514,7 @@ public class ProductTests {
     product.RegisterObservation(observation);
 
     Assert.Equal(
-      [product.Formats.Last().LatestSnapshot, changedFormat.LatestSnapshot],
+      [changedFormat.LatestSnapshot, product.Formats.Last().LatestSnapshot],
       product.PendingSnapshots.Skip(2));
   }
 
@@ -728,9 +728,12 @@ public class ProductTests {
       marketId, brandId, "Milk", observedOn,
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var original = Product.Create(observation);
+    ProductFormat originalFormat = original.Formats.Single();
+    var restoredFormat = ProductFormat.Rehydrate(
+      originalFormat.Id, originalFormat.Quantity, originalFormat.ImageUrl, originalFormat.LatestSnapshot);
 
     var product = Product.Rehydrate(
-      original.Id, original.Name, original.BrandId, original.MarketId, original.Formats);
+      original.Id, original.Name, original.BrandId, original.MarketId, [restoredFormat]);
 
     Assert.Empty(product.PendingSnapshots);
   }

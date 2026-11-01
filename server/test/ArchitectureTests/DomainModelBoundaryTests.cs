@@ -33,12 +33,18 @@ public class DomainModelBoundaryTests {
     Assert.Equal([nameof(Product.PendingSnapshots)], snapshotCollections);
   }
 
-  [Fact(DisplayName = "Product format holds latest snapshot without history")]
-  public void ProductFormat_HoldsLatestSnapshotWithoutHistory() {
-    const BindingFlags flags = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic;
+  [Fact(DisplayName = "Product format exposes only pending snapshots as a collection")]
+  public void ProductFormat_ExposesOnlyPendingSnapshotCollection() {
+    IEnumerable<string> snapshotCollections = typeof(ProductFormat).GetProperties()
+      .Where(property => typeof(IEnumerable<PriceSnapshot>).IsAssignableFrom(property.PropertyType))
+      .Select(property => property.Name);
 
-    Assert.DoesNotContain(typeof(ProductFormat).GetFields(flags),
-      field => typeof(IEnumerable<PriceSnapshot>).IsAssignableFrom(field.FieldType));
+    Assert.Equal([nameof(ProductFormat.PendingSnapshots)], snapshotCollections);
+  }
+
+  [Fact(DisplayName = "Price snapshot has no ProductFormat back-reference")]
+  public void PriceSnapshot_DoesNotReferenceProductFormatId() {
+    Assert.DoesNotContain(typeof(ProductFormatId), ReferencedTypes(typeof(PriceSnapshot)));
   }
 
   [Fact(DisplayName = "Product format exposes its latest snapshot")]

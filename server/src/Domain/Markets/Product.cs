@@ -6,7 +6,6 @@ namespace Metaspesa.Domain.Markets;
 public sealed class Product {
   private readonly List<ProductFormat> _formats;
   private readonly List<ProductFormat> _pendingFormats = [];
-  private readonly List<PriceSnapshot> _pendingSnapshots = [];
   private readonly ProductIdentity _identity;
 
   public ProductId Id { get; }
@@ -15,7 +14,8 @@ public sealed class Product {
   public MarketId MarketId => _identity.MarketId;
   public IReadOnlyCollection<ProductFormat> Formats => _formats.AsReadOnly();
   public IReadOnlyCollection<ProductFormat> PendingFormats => _pendingFormats.AsReadOnly();
-  public IReadOnlyCollection<PriceSnapshot> PendingSnapshots => _pendingSnapshots.AsReadOnly();
+  public IReadOnlyCollection<PriceSnapshot> PendingSnapshots => _formats
+    .SelectMany(format => format.PendingSnapshots).ToList().AsReadOnly();
 
   private Product(
     ProductId id,
@@ -66,11 +66,8 @@ public sealed class Product {
 
     _formats.AddRange(additions);
     _pendingFormats.AddRange(additions);
-    _pendingSnapshots.AddRange(additions.Select(format => format.LatestSnapshot));
     foreach ((ProductFormat format, Money price) in updates) {
-      if (format.RecordSnapshot(price, observedOn)) {
-        _pendingSnapshots.Add(format.LatestSnapshot);
-      }
+      format.RecordSnapshot(price, observedOn);
     }
   }
 

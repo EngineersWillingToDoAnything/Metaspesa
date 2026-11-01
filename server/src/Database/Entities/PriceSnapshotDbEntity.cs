@@ -15,7 +15,6 @@ internal class PriceSnapshotDbEntity {
 
   public PriceSnapshot MapToDomain() => PriceSnapshot.Rehydrate(
     new PriceSnapshotId(Id),
-    new ProductFormatId(ProductFormatId),
     new Money(PriceAmount),
     new ObservationDate(ObservedOn));
 }

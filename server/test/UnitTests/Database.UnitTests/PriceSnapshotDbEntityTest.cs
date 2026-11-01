@@ -21,20 +21,6 @@ public static class PriceSnapshotDbEntityTest {
   }
 
   [Fact]
-  public static void Entity_PreservesFormatId() {
-    var entity = new PriceSnapshotDbEntity {
-      Id = Guid.Parse("00000000-0000-7000-8000-000000000005"),
-      ProductFormatId = Guid.Parse("00000000-0000-7000-8000-000000000007"),
-      PriceAmount = 1.99m,
-      ObservedOn = new DateOnly(2026, 7, 28),
-    };
-
-    PriceSnapshot snapshot = entity.MapToDomain();
-
-    Assert.Equal(new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000007")), snapshot.ProductFormatId);
-  }
-
-  [Fact]
   public static void Entity_PreservesPrice() {
     var entity = new PriceSnapshotDbEntity {
       Id = Guid.Parse("00000000-0000-7000-8000-000000000005"),
