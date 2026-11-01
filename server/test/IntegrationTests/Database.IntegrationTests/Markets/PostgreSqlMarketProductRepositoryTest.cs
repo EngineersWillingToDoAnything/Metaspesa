@@ -1253,6 +1253,115 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     Assert.Equal([product.PendingSnapshots.Single().Id.Value], actual);
   }
 
+  [Fact]
+  public async Task SaveBatchAsync_PreservesSnapshotHistory_WhenReloadedBatchesHaveUnchangedObservations() {
+    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    _context.AddRange(market, brand);
+    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+    var observation = new ProductObservationParams(
+      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
+    const int productCount = 1_001;
+    Product[] products = [.. Enumerable.Range(0, productCount)
+      .Select(index => Product.Create(observation with { ProductName = $"Product {index}" }))];
+    foreach (Product[] batch in products.Chunk(1000)) {
+      await _productRepository.SaveBatchAsync(batch, TestContext.Current.CancellationToken);
+    }
+    Guid[] expected = [.. products.Select(product => product.PendingSnapshots.Single().Id.Value).Order()];
+
+    foreach (DateTime observedAt in new[] { observation.ObservedAt, observation.ObservedAt.AddDays(1) }) {
+      foreach (Product[] batch in products.Chunk(1000)) {
+        ProductIdentity[] identities = [.. batch.Select(product =>
+          new ProductIdentity(product.MarketId, product.BrandId, product.Name))];
+        IReadOnlyDictionary<ProductIdentity, Product> loaded =
+          await _productRepository.GetBatchAsync(identities, TestContext.Current.CancellationToken);
+        foreach (Product product in loaded.Values) {
+          product.RegisterObservation(observation with { ProductName = product.Name.Value, ObservedAt = observedAt });
+        }
+        await _productRepository.SaveBatchAsync([.. loaded.Values], TestContext.Current.CancellationToken);
+      }
+    }
+    Guid[] actual = await _context.PriceSnapshots.OrderBy(snapshot => snapshot.Id)
+      .Select(snapshot => snapshot.Id).ToArrayAsync(TestContext.Current.CancellationToken);
+
+    Assert.Equal(expected, actual);
+  }
+
+  [Fact]
+  public async Task GetProductsAsync_ProjectsLatestPriceAfterMultipleBatchAppends() {
+    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    _context.AddRange(market, brand);
+    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+    var observation = new ProductObservationParams(
+      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
+    Product[] products = [.. Enumerable.Range(0, 1_001)
+      .Select(index => Product.Create(observation with { ProductName = $"Product {index}" }))];
+    foreach (Product product in products) {
+      product.RegisterObservation(observation with {
+        ProductName = product.Name.Value,
+        ObservedAt = observation.ObservedAt.AddDays(1),
+        Formats = [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png"))],
+      });
+    }
+    foreach (Product[] batch in products.Chunk(1000)) {
+      await _productRepository.SaveBatchAsync(batch, TestContext.Current.CancellationToken);
+    }
+    foreach (Product[] batch in products.Chunk(1000)) {
+      ProductIdentity[] identities = [.. batch.Select(product =>
+        new ProductIdentity(product.MarketId, product.BrandId, product.Name))];
+      IReadOnlyDictionary<ProductIdentity, Product> loaded =
+        await _productRepository.GetBatchAsync(identities, TestContext.Current.CancellationToken);
+      foreach (Product product in loaded.Values) {
+        product.RegisterObservation(observation with {
+          ProductName = product.Name.Value,
+          ObservedAt = observation.ObservedAt.AddDays(2),
+          Formats = [new ProductFormatObservationParams(1, "l", 2.99m, new Uri("https://example.com/milk.png"))],
+        });
+      }
+      await _productRepository.SaveBatchAsync([.. loaded.Values], TestContext.Current.CancellationToken);
+    }
+
+    PagedResult<CatalogProduct> actual = await _productRepository.GetProductsAsync(
+      new GetMarketProductsFilter("Product 1000", [new MarketId(market.Id)], null, new Pagination(1, 24)),
+      TestContext.Current.CancellationToken);
+
+    Assert.Equal(2.99m, actual.Values.Single().Formats.Single().Price);
+  }
+
+  [Fact]
+  public async Task SaveBatchAsync_RetriesWithFreshAggregatesWithoutDuplicatingCommittedSnapshots() {
+    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    _context.AddRange(market, brand);
+    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+    var observation = new ProductObservationParams(
+      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
+    var committed = Product.Create(observation);
+    await _productRepository.SaveBatchAsync([committed], TestContext.Current.CancellationToken);
+    var invalid = Product.Create(observation with {
+      ProductName = "Yogurt",
+      Formats = [new ProductFormatObservationParams(1, "l", 0, new Uri("https://example.com/yogurt.png"))],
+    });
+    await Assert.ThrowsAsync<PostgresException>(() =>
+      _productRepository.SaveBatchAsync([invalid], TestContext.Current.CancellationToken));
+    Product reloaded = (await _productRepository.GetByIdAsync(committed.Id, TestContext.Current.CancellationToken))!;
+    reloaded.RegisterObservation(observation);
+    var corrected = Product.Create(observation with { ProductName = "Yogurt" });
+    Guid[] expected = [.. new[] {
+      committed.PendingSnapshots.Single().Id.Value, corrected.PendingSnapshots.Single().Id.Value,
+    }.Order()];
+
+    await _productRepository.SaveBatchAsync([reloaded, corrected], TestContext.Current.CancellationToken);
+    Guid[] actual = await _context.PriceSnapshots.OrderBy(snapshot => snapshot.Id)
+      .Select(snapshot => snapshot.Id).ToArrayAsync(TestContext.Current.CancellationToken);
+
+    Assert.Equal(expected, actual);
+  }
+
   private sealed class CommandCounter : DbCommandInterceptor {
     internal int Count { get; private set; }
 
