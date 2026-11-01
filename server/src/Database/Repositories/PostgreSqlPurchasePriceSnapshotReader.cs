@@ -16,13 +16,14 @@ internal class PostgreSqlPurchasePriceSnapshotReader(
     }
 
     Guid[] formatIds = [.. productFormatIds.Distinct()];
+    var purchasedOn = DateOnly.FromDateTime(purchasedAt);
     Dictionary<Guid, Guid> snapshots = await context.PriceSnapshots
       .AsNoTracking()
       .Where(snapshot => formatIds.Contains(snapshot.ProductFormatId) &&
-        snapshot.ObservedAt <= purchasedAt)
+        snapshot.ObservedOn <= purchasedOn)
       .GroupBy(snapshot => snapshot.ProductFormatId)
       .Select(group => group
-        .OrderByDescending(snapshot => snapshot.ObservedAt)
+        .OrderByDescending(snapshot => snapshot.ObservedOn)
         .ThenByDescending(snapshot => snapshot.Id)
         .Select(snapshot => new {
           snapshot.ProductFormatId,

@@ -84,10 +84,12 @@ public static class JwtTokenProviderTests {
       Assert.Equal(user.Username.Value, name);
     }
 
-    [Fact(DisplayName = "Includes Role claim with user role")]
-    public void GenerateToken_IncludesRoleClaim_WithUserRole() {
+    [Theory(DisplayName = "Includes Role claim with user role")]
+    [InlineData(Role.ProductManager)]
+    [InlineData(Role.CatalogAdmin)]
+    public void GenerateToken_IncludesRoleClaim_WithUserRole(Role expectedRole) {
       // Arrange
-      User user = TestUser(Role.ProductManager);
+      User user = TestUser(expectedRole);
 
       // Act
       Token token = _provider.GenerateToken(user);
@@ -95,7 +97,7 @@ public static class JwtTokenProviderTests {
 
       // Assert
       string? role = jwt.Claims.FirstOrDefault(c => c.Type == ClaimTypes.Role)?.Value;
-      Assert.Equal(Role.ProductManager.ToString(), role);
+      Assert.Equal(expectedRole.ToString(), role);
     }
 
     [Fact(DisplayName = "Sets issuer and audience from options")]

@@ -2,33 +2,24 @@ using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Markets;
 using Metaspesa.Database.Entities;
 using Metaspesa.Domain.Markets;
-using Metaspesa.Domain.SharedKernel;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Metaspesa.Database.Repositories;
 
-internal partial class PostgreSqlMarketProductRepository(
+internal class PostgreSqlMarketProductRepository(
   MainContext context
 ) : IProductRepository {
-  private const int BatchSize = 1_000;
-
-  private readonly record struct ProductSource(
-    Guid ProductId, ProductImport Source);
-  private readonly record struct ProductInsert(
-    ProductDbEntity Entity, ProductImport Source);
-  private readonly record struct ProductFormatKey(
-    Guid ProductId,
-    decimal Quantity,
-    string UnitOfMeasure
-  );
-
   public async Task<Product?> GetByIdAsync(
     ProductId productId, CancellationToken cancellationToken
   ) => await PostgreSqlExceptionMapper.MapAsync(async () => {
     ProductDbEntity? entity = await context.Products
       .AsNoTracking()
-      .Include(product => product.Brand)
       .Include(product => product.Formats)
+      .ThenInclude(format => format.PriceSnapshots
+        .OrderByDescending(snapshot => snapshot.ObservedOn)
+        .ThenByDescending(snapshot => snapshot.Id)
+        .Take(1))
       .SingleOrDefaultAsync(
         product => product.Id == productId.Value,
         cancellationToken);
@@ -45,7 +36,7 @@ internal partial class PostgreSqlMarketProductRepository(
 
     if (!string.IsNullOrWhiteSpace(filter.NameSegment)) {
       query = query.Where(product => EF.Functions.ILike(
-        product.Name, $"%{EscapeLike(filter.NameSegment)}%", "\\"));
+        EF.Functions.Collate(product.Name, "default"), $"%{EscapeLike(filter.NameSegment)}%", "\\"));
     }
     if (filter.MarketIds.Count > 0) {
       Guid[] marketIds = [.. filter.MarketIds.Select(id => id.Value)];
@@ -53,7 +44,7 @@ internal partial class PostgreSqlMarketProductRepository(
     }
     if (!string.IsNullOrWhiteSpace(filter.BrandNameSegment)) {
       query = query.Where(product => EF.Functions.ILike(
-        product.Brand.Name, $"%{EscapeLike(filter.BrandNameSegment)}%", "\\"));
+        EF.Functions.Collate(product.Brand.Name, "default"), $"%{EscapeLike(filter.BrandNameSegment)}%", "\\"));
     }
 
     int totalCount = await query.CountAsync(cancellationToken);
@@ -61,13 +52,13 @@ internal partial class PostgreSqlMarketProductRepository(
       CatalogSort.PriceAsc => query.OrderBy(product => product.Formats
         .Where(format => format.PriceSnapshots.Count > 0)
         .Min(format => format.PriceSnapshots
-          .OrderByDescending(snapshot => snapshot.ObservedAt)
+          .OrderByDescending(snapshot => snapshot.ObservedOn)
           .ThenByDescending(snapshot => snapshot.Id)
           .Select(snapshot => snapshot.PriceAmount).First())),
       CatalogSort.PriceDesc => query.OrderByDescending(product => product.Formats
         .Where(format => format.PriceSnapshots.Count > 0)
         .Min(format => format.PriceSnapshots
-          .OrderByDescending(snapshot => snapshot.ObservedAt)
+          .OrderByDescending(snapshot => snapshot.ObservedOn)
           .ThenByDescending(snapshot => snapshot.Id)
           .Select(snapshot => snapshot.PriceAmount).First())),
       _ => query.OrderBy(product => product.Name),
@@ -100,350 +91,19 @@ internal partial class PostgreSqlMarketProductRepository(
     ], totalCount);
   }, "Couldn't get market products.");
 
-  public async Task<IReadOnlyCollection<BrandName>> GetBrandsAsync(
-    CancellationToken cancellationToken
-  ) => await PostgreSqlExceptionMapper.MapAsync(async () => {
-    List<string> names = await context.ProductBrands
-      .AsNoTracking()
-      .Select(brand => brand.Name)
-      .ToListAsync(cancellationToken);
-    return (IReadOnlyCollection<BrandName>)[
-      ..names.Select(name => new BrandName(name))
-    ];
-  }, "Couldn't get brands.");
-
-  public async Task AddBrandsAsync(
-    IReadOnlyCollection<BrandName> brands,
-    CancellationToken cancellationToken
-  ) => await PostgreSqlExceptionMapper.MapAsync(async () => {
-    context.ProductBrands.AddRange(
-      brands.Select(brand => new ProductBrandDbEntity {
-        Id = Uid.Create(),
-        Name = brand.Value,
-      }));
-    await context.SaveChangesAsync(cancellationToken);
-  }, "Couldn't add brands.");
-
-  public async Task<ProductImportResult> ResolveProductsAsync(
-    MarketImport market,
-    DateTime observedAt,
-    CancellationToken cancellationToken
-  ) => await PostgreSqlExceptionMapper.MapAsync(async () => {
-    bool autoDetectChangesEnabled =
-      context.ChangeTracker.AutoDetectChangesEnabled;
-    context.ChangeTracker.AutoDetectChangesEnabled = false;
-    try {
-      context.ChangeTracker.Clear();
-
-      Guid marketId = await GetMarketIdAsync(market.Name, cancellationToken);
-      Dictionary<string, Guid> brandLookup = await GetBrandLookupAsync(
-        market.Products, cancellationToken);
-      Dictionary<(string Name, Guid BrandId), Guid> existingProducts =
-        await GetExistingProductLookupAsync(marketId, cancellationToken);
-
-      (List<ProductSource> productSources, List<ProductId> addedProductIds) =
-        await ResolveProductSourcesAsync(
-          market.Products,
-          marketId,
-          brandLookup,
-          existingProducts,
-          cancellationToken);
-
-      (
-        Dictionary<ProductFormatKey, Guid> formatLookup,
-        IReadOnlyCollection<ProductFormatId> addedProductFormatIds
-      ) = await ResolveProductFormatsAsync(
-        productSources, cancellationToken);
-      IReadOnlyCollection<PriceObservation> observations = BuildPriceObservations(
-        productSources, formatLookup, observedAt);
-
-      return new ProductImportResult(
-        addedProductIds, addedProductFormatIds, observations);
-    } finally {
-      context.ChangeTracker.AutoDetectChangesEnabled =
-        autoDetectChangesEnabled;
-    }
-  }, "Couldn't resolve market products.");
-
-  public async Task DeleteBrandsAsync(
-    IReadOnlyCollection<BrandName> brandNames,
-    CancellationToken cancellationToken
-  ) => await PostgreSqlExceptionMapper.MapAsync(async () => {
-    string[] names = [.. brandNames.Select(name => name.Value)];
-    List<Guid> productIds = await context.Products
-      .Where(product => names.Contains(product.Brand.Name))
-      .Select(product => product.Id)
-      .ToListAsync(cancellationToken);
-    await DeleteProductsByIdsAsync(productIds, cancellationToken);
-    await context.ProductBrands
-      .Where(brand => names.Contains(brand.Name))
-      .ExecuteDeleteAsync(cancellationToken);
-  }, "Couldn't delete brands.");
-
-  public async Task DeleteProductsAsync(
-    IReadOnlyCollection<ProductId> productIds,
-    CancellationToken cancellationToken
-  ) => await PostgreSqlExceptionMapper.MapAsync(
-    async () => await DeleteProductsByIdsAsync(
-      [.. productIds.Select(id => id.Value)], cancellationToken),
-    "Couldn't delete products.");
-
-  public async Task DeleteProductFormatsAsync(
-    IReadOnlyCollection<ProductFormatId> productFormatIds,
-    CancellationToken cancellationToken
-  ) => await PostgreSqlExceptionMapper.MapAsync(async () => {
-    Guid[] ids = [.. productFormatIds.Select(id => id.Value)];
-    await context.PriceSnapshots
-      .Where(snapshot => ids.Contains(snapshot.ProductFormatId))
-      .ExecuteDeleteAsync(cancellationToken);
-    await context.ProductFormats
-      .Where(format => ids.Contains(format.Id))
-      .ExecuteDeleteAsync(cancellationToken);
-  }, "Couldn't delete product formats.");
-
   private static CatalogFormat ToCatalogFormat(ProductFormatDbEntity format) {
     PriceSnapshotDbEntity snapshot = format.PriceSnapshots
-      .OrderByDescending(value => value.ObservedAt)
+      .OrderByDescending(value => value.ObservedOn)
       .ThenByDescending(value => value.Id)
       .First();
     return new CatalogFormat(
-      format.Id, format.Quantity, format.UnitOfMeasure,
-      snapshot.PriceAmount, snapshot.CurrencyCode, ToUri(format.ImageUrl),
-      DateTime.SpecifyKind(snapshot.ObservedAt, DateTimeKind.Utc));
-  }
-
-  private async Task<Guid> GetMarketIdAsync(
-    MarketName marketName,
-    CancellationToken cancellationToken
-  ) => await context.SuperMarkets
-    .Where(market => EF.Functions.ILike(market.Name, marketName.Value))
-    .Select(market => market.Id)
-    .SingleAsync(cancellationToken);
-
-  private async Task<Dictionary<string, Guid>> GetBrandLookupAsync(
-    IReadOnlyCollection<ProductImport> products,
-    CancellationToken cancellationToken
-  ) {
-    string[] brandNames = [
-      ..products.Select(product => product.Brand.Value).Distinct()
-    ];
-
-    return await context.ProductBrands
-      .Where(brand => brandNames.Contains(brand.Name))
-      .ToDictionaryAsync(
-        brand => brand.Name,
-        brand => brand.Id,
-        cancellationToken);
-  }
-
-  private async Task<Dictionary<(string Name, Guid BrandId), Guid>>
-    GetExistingProductLookupAsync(
-      Guid marketId,
-      CancellationToken cancellationToken
-    ) => await context.Products
-      .Where(product => product.SuperMarketId == marketId)
-      .ToDictionaryAsync(
-        product => new ValueTuple<string, Guid>(product.Name, product.BrandId),
-        product => product.Id,
-        cancellationToken);
-
-  private async Task<(List<ProductSource> Sources, List<ProductId> AddedProductIds)>
-    ResolveProductSourcesAsync(
-      IReadOnlyCollection<ProductImport> products,
-      Guid marketId,
-      Dictionary<string, Guid> brandLookup,
-      Dictionary<(string Name, Guid BrandId), Guid> existingProducts,
-      CancellationToken cancellationToken
-    ) {
-    var toInsert = new List<ProductInsert>();
-    var sources = new List<ProductSource>();
-
-    foreach (ProductImport product in products) {
-      Guid brandId = brandLookup[product.Brand.Value];
-      if (existingProducts.TryGetValue(
-        (product.Name.Value, brandId), out Guid existingId)) {
-        sources.Add(new ProductSource(existingId, product));
-        continue;
-      }
-
-      toInsert.Add(new ProductInsert(
-        new ProductDbEntity {
-          Id = Uid.Create(),
-          Name = product.Name.Value,
-          SuperMarketId = marketId,
-          BrandId = brandId,
-        },
-        product));
-    }
-
-    List<ProductSource> newSources = await AddProductsAsync(
-      toInsert, cancellationToken);
-    sources.AddRange(newSources);
-
-    return (
-      sources,
-      [.. newSources.Select(source => new ProductId(source.ProductId))]);
-  }
-
-  private async Task<List<ProductSource>> AddProductsAsync(
-    IReadOnlyCollection<ProductInsert> toInsert,
-    CancellationToken cancellationToken
-  ) {
-    IEnumerable<List<ProductInsert>> batches = toInsert
-      .Chunk(BatchSize)
-      .Select(batch => batch.ToList());
-
-    List<ProductSource> sources = [];
-    foreach (List<ProductInsert> batch in batches) {
-      await context.Products.AddRangeAsync(
-        batch.Select(value => value.Entity), cancellationToken);
-      await context.SaveChangesAsync(cancellationToken);
-      context.ChangeTracker.Clear();
-      sources.AddRange(batch.Select(value =>
-        new ProductSource(value.Entity.Id, value.Source)));
-    }
-
-    return sources;
-  }
-
-  private async Task<(
-    Dictionary<ProductFormatKey, Guid> FormatLookup,
-    IReadOnlyCollection<ProductFormatId> AddedProductFormatIds
-  )> ResolveProductFormatsAsync(
-    IReadOnlyCollection<ProductSource> productSources,
-    CancellationToken cancellationToken
-  ) {
-    Dictionary<ProductFormatKey, Guid> formatLookup =
-      await GetExistingProductFormatLookupAsync(
-        productSources, cancellationToken);
-    List<ProductFormatDbEntity> missingFormats = BuildMissingProductFormats(
-      productSources, formatLookup);
-    IDictionary<ProductFormatKey, Guid> newFormats = await AddProductFormatsAsync(
-      missingFormats, cancellationToken);
-
-    return (
-      formatLookup.Concat(newFormats)
-        .ToDictionary(pair => pair.Key, pair => pair.Value),
-      [.. newFormats.Values.Select(id => new ProductFormatId(id))]);
-  }
-
-  private async Task<Dictionary<ProductFormatKey, Guid>>
-    GetExistingProductFormatLookupAsync(
-      IReadOnlyCollection<ProductSource> productSources,
-      CancellationToken cancellationToken
-    ) {
-    Guid[] productIds = [
-      ..productSources.Select(source => source.ProductId).Distinct()
-    ];
-
-    return await context.ProductFormats
-      .Where(format => productIds.Contains(format.ProductId))
-      .Select(format => new {
-        format.Id,
-        format.ProductId,
-        format.Quantity,
-        format.UnitOfMeasure,
-      })
-      .ToDictionaryAsync(
-        format => new ProductFormatKey(
-          format.ProductId,
-          format.Quantity,
-          format.UnitOfMeasure),
-        format => format.Id,
-        cancellationToken);
-  }
-
-  private static List<ProductFormatDbEntity> BuildMissingProductFormats(
-    IEnumerable<ProductSource> productSources,
-    IReadOnlyDictionary<ProductFormatKey, Guid> existingFormatLookup
-  ) {
-    var missingFormats = new Dictionary<ProductFormatKey, ProductFormatDbEntity>();
-
-    foreach (ProductSource productSource in productSources) {
-      foreach (ProductFormatImport format in productSource.Source.Formats) {
-        ProductFormatKey key = ToProductFormatKey(
-          productSource.ProductId, format);
-        if (existingFormatLookup.ContainsKey(key) ||
-          missingFormats.ContainsKey(key)) {
-          continue;
-        }
-
-        missingFormats[key] = new ProductFormatDbEntity {
-          Id = Uid.Create(),
-          ProductId = key.ProductId,
-          Quantity = key.Quantity,
-          UnitOfMeasure = key.UnitOfMeasure,
-          ImageUrl = format.ImageUrl?.Value.ToString() ?? string.Empty,
-        };
-      }
-    }
-
-    return [.. missingFormats.Values];
-  }
-
-  private async Task<IDictionary<ProductFormatKey, Guid>> AddProductFormatsAsync(
-    IReadOnlyCollection<ProductFormatDbEntity> formats,
-    CancellationToken cancellationToken
-  ) {
-    var newFormatLookup = new Dictionary<ProductFormatKey, Guid>();
-    IEnumerable<List<ProductFormatDbEntity>> batches = formats
-      .Chunk(BatchSize)
-      .Select(batch => batch.ToList());
-
-    foreach (List<ProductFormatDbEntity> batch in batches) {
-      await context.ProductFormats.AddRangeAsync(batch, cancellationToken);
-      await context.SaveChangesAsync(cancellationToken);
-      context.ChangeTracker.Clear();
-
-      foreach (ProductFormatDbEntity format in batch) {
-        var key = new ProductFormatKey(
-          format.ProductId,
-          format.Quantity,
-          format.UnitOfMeasure);
-        newFormatLookup[key] = format.Id;
-      }
-    }
-
-    return newFormatLookup;
-  }
-
-  private static IReadOnlyCollection<PriceObservation> BuildPriceObservations(
-    IEnumerable<ProductSource> productSources,
-    IReadOnlyDictionary<ProductFormatKey, Guid> formatLookup,
-    DateTime observedAt
-  ) => [
-    ..productSources.SelectMany(productSource =>
-      productSource.Source.Formats.Select(format => {
-        ProductFormatKey key = ToProductFormatKey(
-          productSource.ProductId, format);
-        return new PriceObservation(
-          new ProductFormatId(formatLookup[key]),
-          format.Price,
-          observedAt);
-      }))
-  ];
-
-  private static ProductFormatKey ToProductFormatKey(
-    Guid productId,
-    ProductFormatImport format
-  ) => new(
-    productId,
-    format.Quantity.Amount,
-    format.Quantity.UnitOfMeasure.Value);
-
-  private async Task DeleteProductsByIdsAsync(
-    IReadOnlyCollection<Guid> productIds,
-    CancellationToken cancellationToken
-  ) {
-    await context.PriceSnapshots
-      .Where(snapshot => productIds.Contains(snapshot.ProductFormat.ProductId))
-      .ExecuteDeleteAsync(cancellationToken);
-    await context.ProductFormats
-      .Where(format => productIds.Contains(format.ProductId))
-      .ExecuteDeleteAsync(cancellationToken);
-    await context.Products
-      .Where(product => productIds.Contains(product.Id))
-      .ExecuteDeleteAsync(cancellationToken);
+      format.Id,
+      format.Quantity,
+      format.UnitOfMeasure,
+      snapshot.PriceAmount,
+      snapshot.CurrencyCode,
+      ToUri(format.ImageUrl),
+      snapshot.ObservedOn);
   }
 
   private static Uri? ToUri(string? value) =>
@@ -468,5 +128,131 @@ internal partial class PostgreSqlMarketProductRepository(
       .CountAsync(cancellationToken);
 
     return formatCount == ids.Length;
+  }
+
+  public async Task<IReadOnlyDictionary<ProductIdentity, Product>> GetBatchAsync(
+    IReadOnlyCollection<ProductIdentity> identities,
+    CancellationToken cancellationToken
+  ) {
+    ArgumentNullException.ThrowIfNull(identities);
+
+    if (identities.Count == 0) {
+      return new Dictionary<ProductIdentity, Product>();
+    }
+
+    ProductIdentity[] keys = [.. identities.Distinct()];
+    Guid[] marketIds = [.. keys.Select(identity => identity.MarketId.Value)];
+    Guid[] brandIds = [.. keys.Select(identity => identity.BrandId.Value)];
+    string[] names = [.. keys.Select(identity => identity.Name.Value)];
+
+    List<ProductDbEntity> entities = await context.Products.FromSqlInterpolated($"""
+        SELECT product.* FROM market.products AS product
+        JOIN unnest({marketIds}, {brandIds}, {names}) AS requested(market_id, brand_id, name)
+          ON product.super_market_id = requested.market_id
+          AND product.brand_id = requested.brand_id
+          AND product.name = requested.name
+        """)
+      .AsNoTracking()
+      .Include(product => product.Formats)
+      .ThenInclude(format => format.PriceSnapshots
+        .OrderByDescending(snapshot => snapshot.ObservedOn)
+        .ThenByDescending(snapshot => snapshot.Id)
+        .Take(1))
+      .AsSplitQuery()
+      .ToListAsync(cancellationToken);
+
+    return entities.Select(entity => entity.MapToDomain())
+      .ToDictionary(product => new ProductIdentity(product.MarketId, product.BrandId, product.Name));
+  }
+
+  public async Task SaveBatchAsync(
+    IReadOnlyCollection<Product> products,
+    CancellationToken cancellationToken
+  ) {
+    ArgumentNullException.ThrowIfNull(products);
+
+    if (products.DistinctBy(product => product.Id).Count() != products.Count) {
+      throw new ArgumentException(
+        "A batch cannot contain a Product more than once.", nameof(products));
+    }
+
+    Product[] changed = [.. products.Where(product =>
+      product.PendingFormats.Count > 0 || product.PendingSnapshots.Count > 0)];
+    if (changed.Length == 0) {
+      return;
+    }
+
+    await using IDbContextTransaction transaction = await context.Database
+      .BeginTransactionAsync(cancellationToken);
+    Guid[] ids = [.. changed.Select(product => product.Id.Value)];
+    Guid[] existingIds = await context.Products.AsNoTracking()
+      .Where(product => ids.Contains(product.Id))
+      .Select(product => product.Id)
+      .ToArrayAsync(cancellationToken);
+    HashSet<Guid> existing = [.. existingIds];
+
+    await InsertProductsAsync(
+      [.. changed.Where(product => !existing.Contains(product.Id.Value))],
+      cancellationToken);
+    await InsertFormatsAsync(changed, cancellationToken);
+    await InsertSnapshotsAsync(changed, cancellationToken);
+    await transaction.CommitAsync(cancellationToken);
+  }
+
+  private async Task InsertProductsAsync(Product[] products, CancellationToken cancellationToken) {
+    if (products.Length == 0) {
+      return;
+    }
+
+    Guid[] ids = [.. products.Select(product => product.Id.Value)];
+    string[] names = [.. products.Select(product => product.Name.Value)];
+    Guid[] marketIds = [.. products.Select(product => product.MarketId.Value)];
+    Guid[] brandIds = [.. products.Select(product => product.BrandId.Value)];
+    await context.Database.ExecuteSqlInterpolatedAsync($"""
+      INSERT INTO market.products (id, name, super_market_id, brand_id)
+      SELECT * FROM unnest({ids}, {names}, {marketIds}, {brandIds});
+      """, cancellationToken);
+  }
+
+  private async Task InsertFormatsAsync(Product[] products, CancellationToken cancellationToken) {
+    (Product Product, ProductFormat Format)[] formats = [..
+      products.SelectMany(product => product.PendingFormats
+        .Select(format => (Product: product, Format: format)))
+    ];
+    if (formats.Length == 0) {
+      return;
+    }
+
+    Guid[] ids = [.. formats.Select(value => value.Format.Id.Value)];
+    Guid[] productIds = [.. formats.Select(value => value.Product.Id.Value)];
+    decimal[] quantities = [.. formats.Select(value => value.Format.Quantity.Amount)];
+    string[] units = [.. formats.Select(value => value.Format.Quantity.UnitOfMeasure.Value)];
+    string[] images = [.. formats.Select(value => value.Format.ImageUrl?.Value.ToString() ?? string.Empty)];
+
+    await context.Database.ExecuteSqlInterpolatedAsync($"""
+      INSERT INTO market.product_formats (id, product_id, quantity, unit_of_measure, image_url)
+      SELECT * FROM unnest({ids}, {productIds}, {quantities}, {units}, {images});
+      """, cancellationToken);
+  }
+
+  private async Task InsertSnapshotsAsync(Product[] products, CancellationToken cancellationToken) {
+    (ProductFormatId FormatId, PriceSnapshot Snapshot)[] snapshots = [..
+      products.SelectMany(product => product.Formats)
+        .SelectMany(format => format.PendingSnapshots.Select(snapshot =>
+          (format.Id, snapshot)))
+    ];
+    if (snapshots.Length == 0) {
+      return;
+    }
+
+    Guid[] ids = [.. snapshots.Select(value => value.Snapshot.Id.Value)];
+    Guid[] formatIds = [.. snapshots.Select(value => value.FormatId.Value)];
+    decimal[] prices = [.. snapshots.Select(value => value.Snapshot.Price.Amount)];
+    DateOnly[] dates = [.. snapshots.Select(value => value.Snapshot.ObservedOn.Value)];
+
+    await context.Database.ExecuteSqlInterpolatedAsync($"""
+      INSERT INTO market.price_snapshots (id, product_format_id, price_amount, observed_on)
+      SELECT * FROM unnest({ids}, {formatIds}, {prices}, {dates});
+      """, cancellationToken);
   }
 }

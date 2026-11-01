@@ -1,4 +1,3 @@
-using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Shopping;
 using Metaspesa.Database.Entities;
 using Metaspesa.Database.Repositories;
@@ -8,7 +7,6 @@ using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
 using Microsoft.EntityFrameworkCore;
-using NSubstitute;
 
 namespace Metaspesa.Database.IntegrationTests.Shopping;
 
@@ -22,9 +20,7 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
 
   public PostgreSqlShoppingListRepositoryTests(DatabaseFixture fixture) {
     _context = fixture.CreateContext();
-    IClock clock = Substitute.For<IClock>();
-    clock.GetCurrentTime().Returns(RemovedAt);
-    _repository = new PostgreSqlShoppingListRepository(_context, clock);
+    _repository = new PostgreSqlShoppingListRepository(_context);
   }
 
   public async ValueTask InitializeAsync() {
@@ -43,27 +39,6 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
   public async ValueTask DisposeAsync() {
     await _context.DisposeAsync();
     GC.SuppressFinalize(this);
-  }
-
-  [Fact(DisplayName = "Persists and reconstructs named aggregate")]
-  public async Task AddAndGetAsync_PersistsTypedAggregate() {
-    UserId ownerId = await SeedUserAsync();
-    ProductFormatId formatId = await SeedProductFormatAsync("Milk");
-    var list = ShoppingList.Create(ownerId, new ShoppingListName("Weekly"));
-    list.AddItem(formatId, new PositiveAmount(2), true);
-
-    Guid id = await _repository.AddAsync(list, TestContext.Current.CancellationToken);
-    ShoppingList? result = await _repository.GetAsync(ownerId.Value, id,
-      TestContext.Current.CancellationToken);
-
-    Assert.NotNull(result);
-    Assert.Equal(new ShoppingListName("Weekly"), result.Name);
-    Assert.False(result.IsTemporary);
-    Assert.Equal(ownerId, Assert.Single(result.OwnerIds));
-    ShoppingItem item = Assert.Single(result.Items);
-    Assert.Equal(formatId, item.ProductFormatId);
-    Assert.Equal(2, item.Amount.Value);
-    Assert.True(item.IsChecked);
   }
 
   [Fact(DisplayName = "Round trips shopping item identity")]
@@ -103,27 +78,13 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
     Assert.Equal(RemovedAt, Assert.Single(result.Items).DeletedAt);
   }
 
-  [Fact(DisplayName = "Persists temporary empty aggregate")]
-  public async Task AddAndGetAsync_PersistsTemporaryEmptyList() {
-    UserId ownerId = await SeedUserAsync();
-    Guid id = await _repository.AddAsync(ShoppingList.Create(ownerId, null),
-      TestContext.Current.CancellationToken);
-
-    ShoppingList? result = await _repository.GetAsync(ownerId.Value, id, TestContext.Current.CancellationToken);
-
-    Assert.NotNull(result);
-    Assert.True(result.IsTemporary);
-    Assert.Null(result.Name);
-    Assert.Empty(result.Items);
-  }
-
   [Fact(DisplayName = "Returns only owner-accessible lists")]
   public async Task GetByOwnerAsync_IsolatesOwners() {
     UserId ownerId = await SeedUserAsync();
     UserId otherOwnerId = await SeedUserAsync();
-    await _repository.AddAsync(ShoppingList.Create(ownerId,
+    await _repository.SaveAsync(ShoppingList.Create(ownerId,
       new ShoppingListName("Mine")), TestContext.Current.CancellationToken);
-    await _repository.AddAsync(ShoppingList.Create(otherOwnerId,
+    await _repository.SaveAsync(ShoppingList.Create(otherOwnerId,
       new ShoppingListName("Other")), TestContext.Current.CancellationToken);
 
     IReadOnlyCollection<ShoppingList> result = await _repository.GetByOwnerAsync(
@@ -137,11 +98,10 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
   public async Task GetAsync_IsolatesOwners() {
     UserId ownerId = await SeedUserAsync();
     UserId otherOwnerId = await SeedUserAsync();
-    Guid id = await _repository.AddAsync(ShoppingList.Create(
-      otherOwnerId, new ShoppingListName("Weekly")),
-      TestContext.Current.CancellationToken);
+    var list = ShoppingList.Create(otherOwnerId, new ShoppingListName("Weekly"));
+    await _repository.SaveAsync(list, TestContext.Current.CancellationToken);
 
-    ShoppingList? result = await _repository.GetAsync(ownerId.Value, id,
+    ShoppingList? result = await _repository.GetAsync(ownerId.Value, list.Id.Value,
       TestContext.Current.CancellationToken);
 
     Assert.Null(result);
@@ -151,32 +111,20 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
   public async Task GetAsync_ByIdIsolatesOwners() {
     UserId ownerId = await SeedUserAsync();
     UserId otherOwnerId = await SeedUserAsync();
-    Guid id = await _repository.AddAsync(ShoppingList.Create(ownerId,
-      new ShoppingListName("Rest list")), TestContext.Current.CancellationToken);
+    var list = ShoppingList.Create(ownerId, new ShoppingListName("Rest list"));
+    await _repository.SaveAsync(list, TestContext.Current.CancellationToken);
 
-    ShoppingList? result = await _repository.GetAsync(otherOwnerId.Value, id, TestContext.Current.CancellationToken);
+    ShoppingList? result = await _repository.GetAsync(otherOwnerId.Value, list.Id.Value, TestContext.Current.CancellationToken);
 
     Assert.Null(result);
-  }
-
-  [Fact(DisplayName = "Create returns persisted shopping list ID")]
-  public async Task AddAsync_ReturnsPersistedId() {
-    UserId ownerId = await SeedUserAsync();
-    Guid id = await _repository.AddAsync(ShoppingList.Create(ownerId,
-      new ShoppingListName("Rest list")), TestContext.Current.CancellationToken);
-
-    ShoppingList? result = await _repository.GetAsync(ownerId.Value, id, TestContext.Current.CancellationToken);
-
-    Assert.NotNull(result);
-    Assert.Equal(id, result.Id.Value);
   }
 
   [Fact(DisplayName = "Orders named lists before temporary list")]
   public async Task GetByOwnerAsync_OrdersNamedListsBeforeTemporaryList() {
     UserId ownerId = await SeedUserAsync();
-    await _repository.AddAsync(ShoppingList.Create(ownerId, null),
+    await _repository.SaveAsync(ShoppingList.Create(ownerId, null),
       TestContext.Current.CancellationToken);
-    await _repository.AddAsync(ShoppingList.Create(ownerId,
+    await _repository.SaveAsync(ShoppingList.Create(ownerId,
       new ShoppingListName("Weekly")), TestContext.Current.CancellationToken);
 
     IReadOnlyCollection<ShoppingList> result = await _repository.GetByOwnerAsync(
@@ -191,7 +139,7 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
   [Fact(DisplayName = "Doesn't find named list case-insensitively")]
   public async Task ExistsAsync_DoesNotMatchNamedList_WithDifferentCase() {
     UserId ownerId = await SeedUserAsync();
-    await _repository.AddAsync(ShoppingList.Create(ownerId,
+    await _repository.SaveAsync(ShoppingList.Create(ownerId,
       new ShoppingListName("Weekly")), TestContext.Current.CancellationToken);
 
     bool exists = await _repository.ExistsAsync(
@@ -205,7 +153,7 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
   [Fact(DisplayName = "Finds named list trimming name")]
   public async Task ExistsAsync_MatchesNamedList_TrimmingName() {
     UserId ownerId = await SeedUserAsync();
-    await _repository.AddAsync(ShoppingList.Create(ownerId,
+    await _repository.SaveAsync(ShoppingList.Create(ownerId,
       new ShoppingListName("Weekly")), TestContext.Current.CancellationToken);
 
     bool exists = await _repository.ExistsAsync(
@@ -220,7 +168,7 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
   public async Task ExistsAsync_IsolatesOwners() {
     UserId ownerId = await SeedUserAsync();
     UserId otherOwnerId = await SeedUserAsync();
-    await _repository.AddAsync(ShoppingList.Create(otherOwnerId, null),
+    await _repository.SaveAsync(ShoppingList.Create(otherOwnerId, null),
       TestContext.Current.CancellationToken);
 
     bool exists = await _repository.ExistsAsync(
@@ -656,12 +604,12 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
         new PriceSnapshotDbEntity {
           Id = Uid.Create(),
           PriceAmount = 4.25m,
-          ObservedAt = RemovedAt.AddDays(-2),
+          ObservedOn = DateOnly.FromDateTime(RemovedAt.AddDays(-2)),
         },
         new PriceSnapshotDbEntity {
           Id = Uid.Create(),
           PriceAmount = 4.75m,
-          ObservedAt = RemovedAt.AddDays(-1),
+          ObservedOn = DateOnly.FromDateTime(RemovedAt.AddDays(-1)),
         },
       ],
     };
@@ -753,100 +701,6 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
     Assert.Null(result);
   }
 
-  [Fact(DisplayName = "Updates aggregate state")]
-  public async Task UpdateAsync_PersistsRenameAddAndUpdate() {
-    UserId ownerId = await SeedUserAsync();
-    ProductFormatId milkId = await SeedProductFormatAsync("Milk");
-    ProductFormatId breadId = await SeedProductFormatAsync("Bread");
-    var list = ShoppingList.Create(ownerId, null);
-    list.AddItem(milkId, new PositiveAmount(1), false);
-    Guid id = await _repository.AddAsync(list, TestContext.Current.CancellationToken);
-    ShoppingList persisted = Assert.IsType<ShoppingList>(await _repository.GetAsync(ownerId.Value, id, TestContext.Current.CancellationToken));
-
-    persisted.Update("Weekly");
-    persisted.UpdateItem(
-      persisted.Items.Single(item => item.ProductFormatId == milkId).Id.Value,
-      3, true);
-    persisted.AddItem(breadId, new PositiveAmount(1), false);
-    await _repository.UpdateAsync(persisted, TestContext.Current.CancellationToken);
-    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-    ShoppingList result = Assert.IsType<ShoppingList>(await _repository.GetAsync(ownerId.Value, id,
-      TestContext.Current.CancellationToken));
-
-    Assert.False(result.IsTemporary);
-    Assert.Equal(2, result.Items.Count);
-    ShoppingItem milk = result.Items.Single(item => item.ProductFormatId == milkId);
-    Assert.Equal(3, milk.Amount.Value);
-    Assert.True(milk.IsChecked);
-  }
-
-  [Fact(DisplayName = "Soft deletes removed item")]
-  public async Task UpdateAsync_SoftDeletesRemovedItem() {
-    UserId ownerId = await SeedUserAsync();
-    ProductFormatId formatId = await SeedProductFormatAsync("Milk");
-    var list = ShoppingList.Create(ownerId, new ShoppingListName("Weekly"));
-    list.AddItem(formatId, new PositiveAmount(1), false);
-    Guid id = await _repository.AddAsync(list, TestContext.Current.CancellationToken);
-    ShoppingList persisted = Assert.IsType<ShoppingList>(await _repository.GetAsync(ownerId.Value, id,
-      TestContext.Current.CancellationToken));
-
-    var replacement = ShoppingList.Rehydrate(
-      persisted.Id, persisted.OwnerIds, persisted.Name, persisted.DeletedAt, []);
-    await _repository.UpdateAsync(
-      replacement, TestContext.Current.CancellationToken);
-    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-    ShoppingItemDbEntity row = await _context.ShoppingItems
-      .AsNoTracking()
-      .SingleAsync(
-        item => item.ProductFormatId == formatId.Value &&
-          item.ShoppingListId == persisted.Id.Value,
-        TestContext.Current.CancellationToken);
-    Assert.Equal(RemovedAt, row.DeletedAt);
-    ShoppingList result = Assert.IsType<ShoppingList>(await _repository.GetAsync(ownerId.Value, id,
-      TestContext.Current.CancellationToken));
-    Assert.Equal(RemovedAt, Assert.Single(result.Items).DeletedAt);
-  }
-
-  [Fact(DisplayName = "Re-adding removed format creates active replacement")]
-  public async Task UpdateAsync_ReAddsPreviouslyRemovedFormat() {
-    UserId ownerId = await SeedUserAsync();
-    ProductFormatId formatId = await SeedProductFormatAsync("Milk");
-    var list = ShoppingList.Create(ownerId.Value, "Weekly");
-    list.AddItems([
-      new AddItemsParams(formatId.Value, 1, false)
-    ]);
-    await _repository.SaveAsync(list, TestContext.Current.CancellationToken);
-    var withoutItem = ShoppingList.Rehydrate(
-      list.Id, list.OwnerIds, list.Name, list.DeletedAt, []);
-    await _repository.UpdateAsync(
-      withoutItem, TestContext.Current.CancellationToken);
-    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-    var activeReplacement = ShoppingList.Rehydrate(
-      list.Id,
-      list.OwnerIds,
-      list.Name,
-      list.DeletedAt,
-      [ShoppingItem.Create(formatId.Value, 4, true)]);
-    await _repository.UpdateAsync(
-      activeReplacement, TestContext.Current.CancellationToken);
-    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-    ShoppingList result = Assert.IsType<ShoppingList>(await _repository.GetAsync(ownerId.Value, list.Id.Value,
-      TestContext.Current.CancellationToken));
-    ShoppingItem activeItem = Assert.Single(
-      result.Items, item => item.DeletedAt is null);
-    ShoppingItem deletedItem = Assert.Single(
-      result.Items, item => item.DeletedAt is not null);
-    Assert.Equal(4, activeItem.Amount.Value);
-    Assert.True(activeItem.IsChecked);
-    Assert.Equal(RemovedAt, deletedItem.DeletedAt);
-    Assert.Equal(2, await _context.ShoppingItems.CountAsync(
-      row => row.ProductFormatId == formatId.Value,
-      TestContext.Current.CancellationToken));
-  }
-
   [Fact(DisplayName = "Throws exact exception for invalid persisted name")]
   public async Task GetAsync_ThrowsExactException_WhenPersistedNameIsInvalid() {
     UserId ownerId = await SeedUserAsync();
@@ -874,21 +728,20 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
   }
 
   [Fact(DisplayName = "Resets temporary list selected by ID")]
-  public async Task Reset_UpdatesTemporaryList_WhenSelectedById() {
+  public async Task SaveAsync_PersistsCheckoutResetForTemporaryList() {
     UserId ownerId = await SeedUserAsync();
     ProductFormatId formatId = await SeedProductFormatAsync("Milk");
     var list = ShoppingList.Create(ownerId, null);
     list.AddItem(formatId, new PositiveAmount(1), true);
-    Guid id = await _repository.AddAsync(list, TestContext.Current.CancellationToken);
+    await _repository.SaveAsync(list, TestContext.Current.CancellationToken);
 
-    ShoppingList persisted = Assert.IsType<ShoppingList>(await _repository.GetAsync(ownerId.Value, id, TestContext.Current.CancellationToken));
+    ShoppingList persisted = Assert.IsType<ShoppingList>(await _repository.GetAsync(ownerId.Value, list.Id.Value, TestContext.Current.CancellationToken));
     persisted.Checkout(ownerId.Value,
       new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
-    await _repository.UpdateAsync(
+    await _repository.SaveAsync(
       persisted, TestContext.Current.CancellationToken);
-    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
-    ShoppingList result = Assert.IsType<ShoppingList>(await _repository.GetAsync(ownerId.Value, id, TestContext.Current.CancellationToken));
+    ShoppingList result = Assert.IsType<ShoppingList>(await _repository.GetAsync(ownerId.Value, list.Id.Value, TestContext.Current.CancellationToken));
     Assert.False(result.Items.Single().IsChecked);
   }
 
@@ -930,7 +783,7 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
       Id = Uid.Create(),
       ProductFormat = format,
       PriceAmount = 1.25m,
-      ObservedAt = RemovedAt.AddDays(-1),
+      ObservedOn = DateOnly.FromDateTime(RemovedAt.AddDays(-1)),
     });
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     return new ProductFormatId(format.Id);

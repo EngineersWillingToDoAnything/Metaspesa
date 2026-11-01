@@ -32,7 +32,7 @@ Copy `.env.example` to `.env` and replace its password placeholders. Create
 Keep these files private; they are ignored by Git. Preserve existing values.
 
 ```sh
-docker compose up --build -d
+docker compose up -d db
 ```
 
 No collector endpoint is configured in this default mode: client and scraper
@@ -43,9 +43,32 @@ password, not the Grafana administrator password.
 Run migrations explicitly for a fresh database or a release with schema changes:
 
 ```sh
-docker compose run --rm migrations
+docker compose run --rm --build migrations
 ```
 
+Start the API and client:
+
+```sh
+docker compose up --build -d server client
+```
+
+Before starting catalogue ingestion, create any missing Markets and Brands;
+ingestion does not create them automatically. Register a dedicated account and
+assign it the `CatalogAdmin` role in PostgreSQL (`identity.users.role_id`, using
+the role ID from `identity.roles`).
+
+After assigning the role, request a fresh token with
+`POST /api/v1/auth/tokens` and `{"username":"...","password":"..."}`.
+Send the returned `accessToken` as `Authorization: Bearer <accessToken>` to:
+
+- `POST /api/v1/markets` with `{"name":"Mercadona","logoUrl":null}`.
+- `POST /api/v1/brands` with `{"name":"Hacendado"}`.
+
+Then start the scraper:
+
+```sh
+docker compose up --build -d scraper
+```
 The API waits for a healthy database, not the migration runner. Open the client at
 http://localhost:3000 and the API at http://localhost:4001.
 

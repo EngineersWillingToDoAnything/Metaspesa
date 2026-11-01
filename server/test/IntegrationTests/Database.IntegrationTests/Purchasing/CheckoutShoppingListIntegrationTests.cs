@@ -26,7 +26,7 @@ public class CheckoutShoppingListIntegrationTests : IAsyncLifetime {
     _context = fixture.CreateContext();
     IClock clock = Substitute.For<IClock>();
     clock.GetCurrentTime().Returns(PurchasedAt);
-    _shoppingRepository = new PostgreSqlShoppingListRepository(_context, clock);
+    _shoppingRepository = new PostgreSqlShoppingListRepository(_context);
     _handler = new CheckoutShoppingList.Handler(
       _shoppingRepository,
       clock,

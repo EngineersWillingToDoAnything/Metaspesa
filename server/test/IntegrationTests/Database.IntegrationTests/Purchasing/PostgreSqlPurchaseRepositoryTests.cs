@@ -114,11 +114,11 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     };
     var first = new PriceSnapshotDbEntity {
       Id = Guid.CreateVersion7(), ProductFormat = format, PriceAmount = 1m,
-      ObservedAt = new DateTime(2026, 8, 18, 12, 0, 0, DateTimeKind.Utc),
+      ObservedOn = new DateOnly(2026, 8, 18),
     };
     var second = new PriceSnapshotDbEntity {
       Id = Guid.CreateVersion7(), ProductFormat = format, PriceAmount = 2m,
-      ObservedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc),
+      ObservedOn = new DateOnly(2026, 8, 19),
     };
     _context.PriceSnapshots.AddRange(first, second);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -166,7 +166,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -215,7 +215,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -264,7 +264,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -313,7 +313,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -362,7 +362,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -411,7 +411,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -460,7 +460,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -509,7 +509,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -565,7 +565,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -619,7 +619,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -672,7 +672,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -699,7 +699,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     await _repository.SaveAsync(original, TestContext.Current.CancellationToken);
     var addition = new PriceSnapshotDbEntity {
       Id = Guid.CreateVersion7(), ProductFormatId = snapshots[0].ProductFormatId,
-      PriceAmount = 3m, ObservedAt = purchasedAt,
+      PriceAmount = 3m, ObservedOn = DateOnly.FromDateTime(purchasedAt),
     };
     _context.PriceSnapshots.Add(addition);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -735,7 +735,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -784,7 +784,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -839,7 +839,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -894,7 +894,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -953,7 +953,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -1008,7 +1008,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -1062,7 +1062,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -1115,7 +1115,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -1169,7 +1169,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",
@@ -1220,7 +1220,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     foreach (string name in new[] { "Milk", "Bread" }) {
       var snapshot = new PriceSnapshotDbEntity {
         Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedAt = purchasedAt.AddDays(-1),
+        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
         ProductFormat = new ProductFormatDbEntity {
           Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
           UnitOfMeasure = "unit",

@@ -25,6 +25,35 @@ export type CheckoutResponse = {
 };
 
 /**
+ * Display name for a new Brand. The server assigns its ID.
+ */
+export type CreateBrandRequest = {
+    name: string;
+};
+
+/**
+ * Server-generated identity of the created Brand.
+ */
+export type CreateBrandResponse = {
+    id: string;
+};
+
+/**
+ * Display information for a new Market. The server assigns its ID.
+ */
+export type CreateMarketRequest = {
+    name: string;
+    logoUrl?: null | string;
+};
+
+/**
+ * Server-generated identity of the created Market.
+ */
+export type CreateMarketResponse = {
+    id: string;
+};
+
+/**
  * Details for a new named or temporary shopping list.
  */
 export type CreateShoppingListRequest = {
@@ -65,9 +94,9 @@ export type FormatResponse = {
      */
     currentPrice: MoneyResponse;
     /**
-     * UTC instant of the latest price observation.
+     * Calendar date of the latest price observation (YYYY-MM-DD).
      */
-    observedAt: string;
+    observedOn: string;
     /**
      * Absolute product image URL when available; otherwise omitted.
      */
@@ -629,6 +658,50 @@ export type GetMarketsResponses = {
 
 export type GetMarketsResponse = GetMarketsResponses[keyof GetMarketsResponses];
 
+export type CreateMarketData = {
+    /**
+     * Display information for a new Market. The server assigns its ID.
+     */
+    body: CreateMarketRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/markets';
+};
+
+export type CreateMarketErrors = {
+    /**
+     * Invalid name, logo URL, or request properties.
+     */
+    400: ProblemDetails;
+    /**
+     * A valid bearer token or session cookie is required.
+     */
+    401: unknown;
+    /**
+     * The CatalogAdmin role is missing, or the session-cookie origin is not allowed.
+     */
+    403: unknown;
+    /**
+     * A Market with this name already exists.
+     */
+    409: ProblemDetails;
+    /**
+     * An unexpected server or database failure occurred.
+     */
+    500: ProblemDetails;
+};
+
+export type CreateMarketError = CreateMarketErrors[keyof CreateMarketErrors];
+
+export type CreateMarketResponses = {
+    /**
+     * Market created with a server-generated ID.
+     */
+    201: CreateMarketResponse;
+};
+
+export type CreateMarketResponse2 = CreateMarketResponses[keyof CreateMarketResponses];
+
 export type AddMarketSnapshotData = {
     /**
      * Batch of market product observations.
@@ -662,6 +735,14 @@ export type AddMarketSnapshotErrors = {
      */
     403: unknown;
     /**
+     * The market is not configured in master data.
+     */
+    409: ProblemDetails;
+    /**
+     * A product references an unknown brand.
+     */
+    422: ProblemDetails;
+    /**
      * An unexpected server or database failure occurred.
      */
     500: ProblemDetails;
@@ -677,6 +758,50 @@ export type AddMarketSnapshotResponses = {
 };
 
 export type AddMarketSnapshotResponse = AddMarketSnapshotResponses[keyof AddMarketSnapshotResponses];
+
+export type CreateBrandData = {
+    /**
+     * Display name for a new Brand. The server assigns its ID.
+     */
+    body: CreateBrandRequest;
+    path?: never;
+    query?: never;
+    url: '/api/v1/brands';
+};
+
+export type CreateBrandErrors = {
+    /**
+     * Invalid name or request properties.
+     */
+    400: ProblemDetails;
+    /**
+     * A valid bearer token or session cookie is required.
+     */
+    401: unknown;
+    /**
+     * The CatalogAdmin role is missing, or the session-cookie origin is not allowed.
+     */
+    403: unknown;
+    /**
+     * A Brand with this name already exists.
+     */
+    409: ProblemDetails;
+    /**
+     * An unexpected server or database failure occurred.
+     */
+    500: ProblemDetails;
+};
+
+export type CreateBrandError = CreateBrandErrors[keyof CreateBrandErrors];
+
+export type CreateBrandResponses = {
+    /**
+     * Brand created with a server-generated ID.
+     */
+    201: CreateBrandResponse;
+};
+
+export type CreateBrandResponse2 = CreateBrandResponses[keyof CreateBrandResponses];
 
 export type GetShoppingListsData = {
     body?: never;

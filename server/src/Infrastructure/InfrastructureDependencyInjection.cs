@@ -24,7 +24,7 @@ public static class InfrastructureDependencyInjection {
     services.AddSingleton<ITokenProvider, JwtTokenProvider>();
     services.AddSingleton<IHasher, Pbkdf2Hasher>();
 
-    return services.AddSession()
+    return services.AddTokenAuthentication()
       .AddEventHandling();
   }
 
@@ -40,7 +40,7 @@ public static class InfrastructureDependencyInjection {
     return services.AddHostedService<DomainEventDispatcher>();
   }
 
-  private static IServiceCollection AddSession(
+  public static IServiceCollection AddTokenAuthentication(
     this IServiceCollection services
   ) {
     services.AddOptionsWithValidateOnStart<JwtOptions>()

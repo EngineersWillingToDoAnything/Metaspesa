@@ -74,6 +74,7 @@ internal static class ServiceCollectionExtensions {
       });
     });
     services.AddExceptionHandler<RestExceptionHandler>();
+    services.AddTransient<AllowedOriginFilter>();
     services.AddRequestDecompression();
     services.AddOptionsWithValidateOnStart<BrowserSecurityOptions>()
       .BindConfiguration("BrowserSecurity")

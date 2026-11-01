@@ -15,6 +15,8 @@ internal static class SnapshotEndpoint {
       .ProducesProblem(StatusCodes.Status400BadRequest)
       .Produces(StatusCodes.Status401Unauthorized)
       .Produces(StatusCodes.Status403Forbidden)
+      .ProducesProblem(StatusCodes.Status409Conflict)
+      .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
       .ProducesProblem(StatusCodes.Status500InternalServerError)
       .RequireAuthorization(policy => policy
         .RequireAuthenticatedUser()
@@ -33,6 +35,8 @@ internal static class SnapshotEndpoint {
   /// <response code="400">The date or a product observation is invalid.</response>
   /// <response code="401">No valid authentication token was provided.</response>
   /// <response code="403">The authenticated user lacks the ProductManager role.</response>
+  /// <response code="409">The market is not configured in master data.</response>
+  /// <response code="422">A product references an unknown brand.</response>
   /// <response code="500">An unexpected server or database failure occurred.</response>
   internal static async Task<IResult> HandleAsync(
     string marketName,

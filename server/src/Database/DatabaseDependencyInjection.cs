@@ -31,10 +31,8 @@ public static class DatabaseDependencyInjection {
 
     services.AddScoped<IUserRepository, PostgreSqlUserRepository>();
     services.AddScoped<IMarketRepository, PostgreSqlMarketRepository>();
+    services.AddScoped<IBrandRepository, PostgreSqlBrandRepository>();
     services.AddScoped<IProductRepository, PostgreSqlMarketProductRepository>();
-    services.AddScoped<
-      IPriceSnapshotRepository,
-      PostgreSqlPriceSnapshotRepository>();
     services.AddScoped<PostgreSqlShoppingListRepository>();
     services.AddScoped<IShoppingListRepository>(sp =>
       sp.GetRequiredService<PostgreSqlShoppingListRepository>());

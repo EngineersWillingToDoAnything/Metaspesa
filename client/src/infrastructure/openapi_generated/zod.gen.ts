@@ -10,6 +10,35 @@ export const zCheckoutResponse = z.object({
 });
 
 /**
+ * Display name for a new Brand. The server assigns its ID.
+ */
+export const zCreateBrandRequest = z.object({
+    name: z.string()
+});
+
+/**
+ * Server-generated identity of the created Brand.
+ */
+export const zCreateBrandResponse = z.object({
+    id: z.uuid()
+});
+
+/**
+ * Display information for a new Market. The server assigns its ID.
+ */
+export const zCreateMarketRequest = z.object({
+    name: z.string(),
+    logoUrl: z.url().nullish()
+});
+
+/**
+ * Server-generated identity of the created Market.
+ */
+export const zCreateMarketResponse = z.object({
+    id: z.uuid()
+});
+
+/**
  * Details for a new named or temporary shopping list.
  */
 export const zCreateShoppingListRequest = z.object({
@@ -95,7 +124,7 @@ export const zFormatResponse = z.object({
     id: z.uuid(),
     quantity: zQuantityResponse,
     currentPrice: zMoneyResponse,
-    observedAt: z.iso.datetime(),
+    observedOn: z.iso.date(),
     imageUrl: z.string().nullish()
 });
 
@@ -276,6 +305,16 @@ export const zCreateMachineTokenResponse = zTokenResponse;
 export const zGetMarketsResponse = zMarketListResponse;
 
 /**
+ * Display information for a new Market. The server assigns its ID.
+ */
+export const zCreateMarketBody = zCreateMarketRequest;
+
+/**
+ * Market created with a server-generated ID.
+ */
+export const zCreateMarketResponse2 = zCreateMarketResponse;
+
+/**
  * Batch of market product observations.
  */
 export const zAddMarketSnapshotBody = zSnapshotRequest;
@@ -289,6 +328,16 @@ export const zAddMarketSnapshotPath = z.object({
  * Snapshot imported; no response body.
  */
 export const zAddMarketSnapshotResponse = z.void();
+
+/**
+ * Display name for a new Brand. The server assigns its ID.
+ */
+export const zCreateBrandBody = zCreateBrandRequest;
+
+/**
+ * Brand created with a server-generated ID.
+ */
+export const zCreateBrandResponse2 = zCreateBrandResponse;
 
 /**
  * Shopping list summaries; the collection can be empty.

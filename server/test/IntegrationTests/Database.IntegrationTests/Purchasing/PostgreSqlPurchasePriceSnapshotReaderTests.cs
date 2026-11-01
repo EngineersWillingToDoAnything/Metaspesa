@@ -34,6 +34,19 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
 
 
   [Fact]
+  public async Task GetSnapshotsIdAsync_IncludesObservationOnPurchaseDate() {
+    ProductFormatId formatId = await SeedFormatAsync("Milk");
+    PriceSnapshotId expected = await SeedSnapshotAsync(formatId, new DateOnly(2026, 8, 19), 2m);
+    await SeedSnapshotAsync(formatId, new DateOnly(2026, 8, 20), 3m);
+    var purchasedAt = new DateTime(2026, 8, 19, 23, 59, 59, DateTimeKind.Utc);
+
+    IReadOnlyDictionary<Guid, Guid> actual = await _reader.GetSnapshotsIdAsync(
+      [formatId.Value], purchasedAt, TestContext.Current.CancellationToken);
+
+    Assert.Equal(expected.Value, actual[formatId.Value]);
+  }
+
+  [Fact]
   public async Task GetSnapshotsIdAsync_ReturnsEmpty_WhenInputIsEmpty() {
     IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
       [], UtcDate(2026, 8, 19), TestContext.Current.CancellationToken);
@@ -44,10 +57,10 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
   [Fact]
   public async Task GetSnapshotsIdAsync_ReturnsLatestEligibleSnapshot() {
     ProductFormatId formatId = await SeedFormatAsync("Milk");
-    await SeedSnapshotAsync(formatId, UtcDate(2026, 8, 17), 1m);
+    await SeedSnapshotAsync(formatId, new DateOnly(2026, 8, 17), 1m);
     PriceSnapshotId eligible = await SeedSnapshotAsync(
-      formatId, UtcDate(2026, 8, 18), 2m);
-    await SeedSnapshotAsync(formatId, UtcDate(2026, 8, 20), 3m);
+      formatId, new DateOnly(2026, 8, 18), 2m);
+    await SeedSnapshotAsync(formatId, new DateOnly(2026, 8, 20), 3m);
 
     IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
       [formatId.Value], UtcDate(2026, 8, 19), TestContext.Current.CancellationToken);
@@ -56,10 +69,10 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
   }
 
   [Fact]
-  public async Task GetSnapshotsIdAsync_IncludesSnapshotAtExactCheckoutTime() {
+  public async Task GetSnapshotsIdAsync_IncludesSnapshotOnCheckoutDate() {
     ProductFormatId formatId = await SeedFormatAsync("Milk");
     DateTime checkoutAt = UtcDate(2026, 8, 19);
-    PriceSnapshotId snapshot = await SeedSnapshotAsync(formatId, checkoutAt, 2m);
+    PriceSnapshotId snapshot = await SeedSnapshotAsync(formatId, DateOnly.FromDateTime(checkoutAt), 2m);
 
     IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
       [formatId.Value], checkoutAt, TestContext.Current.CancellationToken);
@@ -71,8 +84,8 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
   public async Task GetSnapshotsIdAsync_BreaksEqualTimeTieWithHighestId() {
     ProductFormatId formatId = await SeedFormatAsync("Milk");
     DateTime checkoutAt = UtcDate(2026, 8, 19);
-    PriceSnapshotId first = await SeedSnapshotAsync(formatId, checkoutAt, 1m);
-    PriceSnapshotId second = await SeedSnapshotAsync(formatId, checkoutAt, 2m);
+    PriceSnapshotId first = await SeedSnapshotAsync(formatId, DateOnly.FromDateTime(checkoutAt), 1m);
+    PriceSnapshotId second = await SeedSnapshotAsync(formatId, DateOnly.FromDateTime(checkoutAt), 2m);
     Guid expected = first.Value.CompareTo(second.Value) > 0
       ? first.Value : second.Value;
 
@@ -95,7 +108,7 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
   [Fact]
   public async Task GetSnapshotsIdAsync_OmitsFormatWithOnlyFutureSnapshots() {
     ProductFormatId formatId = await SeedFormatAsync("Milk");
-    await SeedSnapshotAsync(formatId, UtcDate(2026, 8, 20), 3m);
+    await SeedSnapshotAsync(formatId, new DateOnly(2026, 8, 20), 3m);
 
     IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
       [formatId.Value], UtcDate(2026, 8, 19), TestContext.Current.CancellationToken);
@@ -108,9 +121,9 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
     ProductFormatId milk = await SeedFormatAsync("Milk");
     ProductFormatId bread = await SeedFormatAsync("Bread");
     PriceSnapshotId milkSnapshot = await SeedSnapshotAsync(
-      milk, UtcDate(2026, 8, 18), 1m);
+      milk, new DateOnly(2026, 8, 18), 1m);
     PriceSnapshotId breadSnapshot = await SeedSnapshotAsync(
-      bread, UtcDate(2026, 8, 18), 2m);
+      bread, new DateOnly(2026, 8, 18), 2m);
 
     IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
       [milk.Value, bread.Value], UtcDate(2026, 8, 19),
@@ -123,7 +136,7 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
   [Fact]
   public async Task GetSnapshotsIdAsync_DeduplicatesRequestedFormats() {
     ProductFormatId formatId = await SeedFormatAsync("Milk");
-    await SeedSnapshotAsync(formatId, UtcDate(2026, 8, 18), 1m);
+    await SeedSnapshotAsync(formatId, new DateOnly(2026, 8, 18), 1m);
 
     IReadOnlyDictionary<Guid, Guid> result = await _reader.GetSnapshotsIdAsync(
       [formatId.Value, formatId.Value], UtcDate(2026, 8, 19),
@@ -171,14 +184,14 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
 
   private async Task<PriceSnapshotId> SeedSnapshotAsync(
     ProductFormatId formatId,
-    DateTime observedAt,
+    DateOnly observedOn,
     decimal price
   ) {
     var snapshot = new PriceSnapshotDbEntity {
       Id = Guid.CreateVersion7(),
       ProductFormatId = formatId.Value,
       PriceAmount = price,
-      ObservedAt = observedAt,
+      ObservedOn = observedOn,
     };
     _context.PriceSnapshots.Add(snapshot);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);

@@ -1,29 +1,43 @@
-using Metaspesa.Domain.Markets.Errors;
 using Metaspesa.Domain.SharedKernel;
 
 namespace Metaspesa.Domain.Markets;
 
 public sealed class PriceSnapshot {
   public PriceSnapshotId Id { get; }
-  public ProductFormatId ProductFormatId { get; }
   public Money Price { get; }
-  public DateTime ObservedAt { get; }
+  public ObservationDate ObservedOn { get; }
 
   public bool HasSamePrice(Money price) => Price == price;
 
-  public PriceSnapshot(
+  private PriceSnapshot(
     PriceSnapshotId id,
-    ProductFormatId productFormatId,
     Money price,
-    DateTime observedAt
+    ObservationDate observedOn
   ) {
-    if (observedAt == default || observedAt.Kind != DateTimeKind.Utc) {
-      throw new InvalidPriceSnapshotObservedAtException(observedAt);
-    }
-
     Id = id;
-    ProductFormatId = productFormatId;
     Price = price;
-    ObservedAt = observedAt;
+    ObservedOn = observedOn;
   }
+
+  public static PriceSnapshot Create(
+    Money price, ObservationDate observedOn
+  ) {
+    var id = new PriceSnapshotId(Uid.Create());
+    return new(id, price, observedOn);
+  }
+
+  public static PriceSnapshot Rehydrate(
+    PriceSnapshotId id,
+    Money price,
+    ObservationDate observedOn
+  ) {
+    return new(id, price, observedOn);
+  }
+
+  public bool IsConflictingWith(Money price, ObservationDate observedOn) =>
+    WasObservedOn(observedOn) && !HasSamePrice(price);
+
+  public bool IsLaterThan(ObservationDate observedOn) => ObservedOn > observedOn;
+
+  private bool WasObservedOn(ObservationDate observedOn) => ObservedOn == observedOn;
 }

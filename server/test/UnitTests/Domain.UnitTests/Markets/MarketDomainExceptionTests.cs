@@ -8,12 +8,22 @@ public static class MarketDomainExceptionTests {
   public static void MarketException_DerivesFromDomainException(
     Exception exception
   ) {
-    Assert.IsType<MarketDomainException>(exception, exactMatch: false);
+    // Arrange
+    Type expectedBaseType = typeof(MarketDomainException);
+
+    // Act
+    bool isMarketDomainException = expectedBaseType.IsInstanceOfType(exception);
+
+    // Assert
+    Assert.True(isMarketDomainException);
   }
 
   private sealed class MarketExceptions() : TheoryData<Exception>(
-    (Exception)new DuplicateMarketProductException(),
-    (Exception)new DuplicateProductFormatException(),
+    (Exception)new BrandAlreadyExistsException(),
+    (Exception)new MarketAlreadyExistsException(),
+    (Exception)new UnknownMarketException(),
+    (Exception)new UnknownProductBrandException(),
+    (Exception)new InvalidBrandIdException(),
     (Exception)new EmptyMarketProductsException(),
     (Exception)new InvalidBrandNameException(),
     (Exception)new InvalidImageUrlException(),
@@ -21,11 +31,15 @@ public static class MarketDomainExceptionTests {
     (Exception)new InvalidMarketNameException(),
     (Exception)new InvalidMarketProductsRegisteredAtException(),
     (Exception)new InvalidPriceSnapshotIdException(),
-    (Exception)new InvalidPriceSnapshotObservedAtException(),
+    (Exception)new InvalidPriceSnapshotObservedOnException(),
     (Exception)new InvalidProductFormatIdException(),
     (Exception)new InvalidProductIdException(),
     (Exception)new InvalidProductNameException(),
-    (Exception)new ProductFormatNotFoundException(),
-    (Exception)new UnsupportedUnitOfMeasureException()
+    (Exception)new UnsupportedUnitOfMeasureException(),
+    (Exception)new EmptyProductObservationException(),
+    (Exception)new DuplicateObservedProductFormatException(),
+    (Exception)new ProductObservationIdentityMismatchException(),
+    (Exception)new EarlierPriceObservationException(),
+    (Exception)new ConflictingPriceObservationException()
   );
 }

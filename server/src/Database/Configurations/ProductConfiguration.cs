@@ -17,6 +17,7 @@ internal class ProductConfiguration : IEntityTypeConfiguration<ProductDbEntity> 
 
     builder.Property(e => e.Name)
       .HasColumnName("name")
+      .UseCollation("reference_name")
       .IsRequired();
 
     builder.Property(e => e.SuperMarketId)

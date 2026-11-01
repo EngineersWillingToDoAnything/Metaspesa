@@ -18,6 +18,10 @@ internal sealed partial class RestExceptionHandler(
     CancellationToken cancellationToken
   ) {
     (int status, string code, string title, string problemType) = exception switch {
+      MarketAlreadyExistsException market => (
+        StatusCodes.Status409Conflict, market.Code, market.Message, "market-already-exists"),
+      BrandAlreadyExistsException brand => (
+        StatusCodes.Status409Conflict, brand.Code, brand.Message, "brand-already-exists"),
       UsernameAlreadyExistsException identity => (
         StatusCodes.Status409Conflict,
         identity.Code,
@@ -65,6 +69,10 @@ internal sealed partial class RestExceptionHandler(
         "Server.DatabaseError",
         "Database error",
         "database-error"),
+      UnknownMarketException market => (
+        StatusCodes.Status409Conflict, market.Code, market.Message, "unknown-market"),
+      UnknownProductBrandException brand => (
+        StatusCodes.Status422UnprocessableEntity, brand.Code, brand.Message, "unknown-brand"),
       MarketDomainException market => (
         StatusCodes.Status400BadRequest, market.Code, market.Message, "market-validation"),
       DomainException domain => (
@@ -84,18 +92,26 @@ internal sealed partial class RestExceptionHandler(
     }
 
     httpContext.Response.StatusCode = status;
+    var problem = new ProblemDetails {
+      Type = $"https://metaspesa.app/problems/{problemType}",
+      Title = title,
+      Status = status,
+      Extensions = {
+        ["code"] = code,
+        ["traceId"] = httpContext.TraceIdentifier,
+      },
+    };
+    if (exception is UnknownProductBrandException unknownBrand) {
+      problem.Extensions["marketName"] = unknownBrand.MarketName.Value;
+      problem.Extensions["productName"] = unknownBrand.ProductName.Value;
+      problem.Extensions["brandName"] = unknownBrand.BrandName.Value;
+    } else if (exception is UnknownMarketException unknownMarket) {
+      problem.Extensions["marketName"] = unknownMarket.MarketName.Value;
+    }
     await problemDetailsService.WriteAsync(new ProblemDetailsContext {
       HttpContext = httpContext,
       Exception = exception,
-      ProblemDetails = new ProblemDetails {
-        Type = $"https://metaspesa.app/problems/{problemType}",
-        Title = title,
-        Status = status,
-        Extensions = {
-          ["code"] = code,
-          ["traceId"] = httpContext.TraceIdentifier,
-        },
-      },
+      ProblemDetails = problem,
     });
     return true;
   }

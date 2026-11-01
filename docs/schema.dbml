@@ -276,13 +276,13 @@ Table market.price_snapshots {
   product_format_id guid [not null]
   price_amount decimal(10, 2) [not null]
   currency_code char(3) [not null, default: 'EUR']
-  observed_at timestamp [not null, default: `now()`]
+  observed_on date [not null, default: `(now() AT TIME ZONE 'UTC')::date`]
 
   indexes {
     product_format_id [name: 'idx_price_snapshot_product_format_id']
-    observed_at [name: 'idx_price_snapshot_observed_at']
-    (product_format_id, observed_at) [
-      name: 'idx_price_snapshot_format_observed_at'
+    observed_on [name: 'idx_price_snapshot_observed_on']
+    (product_format_id, observed_on) [
+      name: 'idx_price_snapshot_format_observed_on'
     ]
   }
 

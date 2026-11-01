@@ -25,6 +25,8 @@ public static class ApplicationDependencyInjection {
     }
 
     private IServiceCollection AddMarketUseCases() {
+      services.AddScoped<CreateMarket.Handler>();
+      services.AddScoped<CreateBrand.Handler>();
       services.AddScoped<AddMarketProducts.Handler>();
       services.AddScoped<GetMarketProducts.Handler>();
       services.AddScoped<GetMarkets.Handler>();

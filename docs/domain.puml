@@ -8,16 +8,16 @@ package "Shared Kernel" {
   }
 
   class Quantity <<value object>> {
-    + Value: decimal
+    + Amount: decimal
   }
 
-  class UnitOfMeasureCode <<value object>>
+  class UnitOfMeasure <<value object>>
 
   class PositiveAmount <<value object>> {
     + Value: int
   }
 
-  Quantity *-- UnitOfMeasureCode : Unit
+  Quantity *-- UnitOfMeasure
 }
 
 package "Identity Module" {
@@ -31,8 +31,10 @@ package "Identity Module" {
   class PasswordHash <<value object>>
 
   enum Role {
+    None
     Shopper
     ProductManager
+    CatalogAdmin
   }
 
   User *-- UserId : Id
@@ -45,16 +47,25 @@ package "Markets Module" {
   class Market <<aggregate root>>
   class MarketId <<value object>>
   class MarketName <<value object>>
+  class Brand <<aggregate root>>
+  class BrandId <<value object>>
 
   class Product <<aggregate root>> {
-    + AddFormat(quantity, imageUrl)
-    + UpdateFormat(formatId, quantity, imageUrl)
+    + RegisterObservation(observation)
   }
 
-  class ProductFormat <<entity>>
+  class ProductIdentity <<value object>>
+
+  class ProductFormat <<entity>> {
+    + RecordSnapshot(price, observedOn): bool
+  }
 
   class PriceSnapshot <<entity>> {
-    + ObservedAt: DateTime
+  }
+
+  class ObservationDate <<value object>> {
+    + Value: DateOnly
+    + CompareTo(other): int
   }
 
   class ProductId <<value object>>
@@ -67,24 +78,30 @@ package "Markets Module" {
   Market *--> MarketId : Id
   Market *--> MarketName : Name
   Market *--> "?" ImageUrl : LogoUrl
+  Brand *--> BrandId : Id
+  Brand *--> BrandName : Name
 
   Product *--> ProductId : Id
-  Product *--> ProductName : Name
-  Product *--> BrandName : Brand
-  Product --> MarketId
-  Product *-- ProductFormat : Formats
+  Product *--> ProductIdentity : Identity
+  ProductIdentity --> MarketId
+  ProductIdentity --> BrandId
+  ProductIdentity *--> ProductName : Name
+  Product *-- "1..*" ProductFormat : Formats
 
   ProductFormat *--> ProductFormatId : Id
   ProductFormat *--> Quantity
   ProductFormat *--> ImageUrl
+  ProductFormat *--> PriceSnapshot : LatestSnapshot
 
   PriceSnapshot *--> PriceSnapshotId : Id
-  PriceSnapshot --> ProductFormatId
   PriceSnapshot *--> Money : Price
+  PriceSnapshot *--> ObservationDate : ObservedOn
 
   note right of PriceSnapshot
-    Append-only market price observation.
-    Do not load price history as part of the Product aggregate.
+    Append-only market price observation with a domain-generated ID.
+    Each format loads only its latest snapshot.
+    Historical snapshots remain in persistence for catalogue
+    projections and Purchase references.
   end note
 }
 
@@ -96,10 +113,6 @@ package "Shopping Module" {
     + UpdateItem(productFormatId, amount?, checked?)
     + RemoveItem(productFormatId)
     + Rename(name)
-    + MarkAsTemporary()
-    + SoftDelete()
-    + CheckedItems()
-    + ResetCheckedItems()
   }
 
   class ShoppingItem <<entity>> {
@@ -125,7 +138,6 @@ package "Shopping Module" {
 
   class Purchase <<aggregate root>> {
     + PurchasedAt: DateTime
-    + Create(userId?, shoppingListId?, lines, purchasedAt)
   }
 
   class PurchaseItem <<entity>>

@@ -22,6 +22,11 @@ internal class MainContext(
   public DbSet<PriceSnapshotDbEntity> PriceSnapshots { get; set; } = null!;
 
   protected override void OnModelCreating(ModelBuilder modelBuilder) {
+    modelBuilder.HasCollation(
+      "reference_name",
+      locale: "und-u-ks-level2",
+      provider: "icu",
+      deterministic: false);
     modelBuilder.ApplyConfigurationsFromAssembly(typeof(MainContext).Assembly);
   }
 }
