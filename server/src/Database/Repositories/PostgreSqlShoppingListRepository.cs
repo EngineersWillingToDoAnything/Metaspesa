@@ -12,8 +12,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace Metaspesa.Database.Repositories;
 
 internal class PostgreSqlShoppingListRepository(
-  MainContext context,
-  IClock clock
+  MainContext context
 ) : IShoppingListRepository {
   public async Task<IReadOnlyCollection<ShoppingList>> GetByOwnerAsync(
     UserId ownerId, CancellationToken cancellationToken
@@ -61,53 +60,6 @@ internal class PostgreSqlShoppingListRepository(
       ),
       cancellationToken);
   }
-
-  public async Task<Guid> AddAsync(
-    ShoppingList shoppingList, CancellationToken cancellationToken
-  ) => await PostgreSqlExceptionMapper.MapAsync(async () => {
-    var entity = new ShoppingListDbEntity {
-      Id = shoppingList.Id.Value,
-      Name = shoppingList.Name?.Value,
-      IsTemporary = shoppingList.IsTemporary,
-      DeletedAt = shoppingList.DeletedAt,
-      Ownerships = [.. shoppingList.OwnerIds.Select(ownerId =>
-          new ShoppingListOwnershipDbEntity { UserUid = ownerId.Value })],
-      Items = [.. shoppingList.Items.Select(ToEntity)],
-    };
-    context.ShoppingLists.Add(entity);
-    await context.SaveChangesAsync(cancellationToken);
-    return entity.Id;
-  }, "Couldn't add shopping list.");
-
-  public async Task UpdateAsync(
-    ShoppingList shoppingList, CancellationToken cancellationToken
-  ) => await PostgreSqlExceptionMapper.MapAsync(async () => {
-    ShoppingListId id = shoppingList.Id;
-    ShoppingListDbEntity entity = await context.ShoppingLists
-      .Include(list => list.Items)
-      .SingleAsync(list => list.Id == id.Value, cancellationToken);
-
-    entity.Name = shoppingList.Name?.Value;
-    entity.IsTemporary = shoppingList.IsTemporary;
-    entity.DeletedAt = shoppingList.DeletedAt;
-
-    var desiredItems = shoppingList.Items.ToDictionary(
-      item => item.ProductFormatId.Value);
-    foreach (ShoppingItemDbEntity existing in entity.Items.Where(
-      item => item.DeletedAt == null)) {
-      if (!desiredItems.Remove(existing.ProductFormatId, out ShoppingItem? desired)) {
-        existing.DeletedAt = clock.GetCurrentTime();
-        continue;
-      }
-
-      existing.Amount = desired.Amount.Value;
-      existing.IsChecked = desired.IsChecked;
-    }
-
-    foreach (ShoppingItem addition in desiredItems.Values) {
-      entity.Items.Add(ToEntity(addition));
-    }
-  }, "Couldn't update shopping list.");
 
   public async Task SaveAsync(
     ShoppingList shoppingList, CancellationToken cancellationToken
@@ -185,13 +137,6 @@ internal class PostgreSqlShoppingListRepository(
         item.Amount,
         item.IsChecked,
         item.DeletedAt)));
-
-  private static ShoppingItemDbEntity ToEntity(ShoppingItem item) => new() {
-    Id = item.Id.Value,
-    ProductFormatId = item.ProductFormatId.Value,
-    Amount = item.Amount.Value,
-    IsChecked = item.IsChecked,
-  };
 
   private static string EscapeLike(string value) => value
     .Replace("\\", "\\\\", StringComparison.Ordinal)
