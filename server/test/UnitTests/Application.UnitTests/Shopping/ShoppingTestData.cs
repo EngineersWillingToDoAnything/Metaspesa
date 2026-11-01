@@ -1,4 +1,3 @@
-using Metaspesa.Application.Abstractions.Markets;
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Markets;
 using Metaspesa.Domain.SharedKernel;
@@ -22,13 +21,4 @@ internal static class ShoppingTestData {
 
   public static ShoppingItem Item(Guid formatId, int amount = 1, bool isChecked = false) =>
     new(new ProductFormatId(formatId), new PositiveAmount(amount), isChecked);
-
-  public static MarketProduct MarketProduct(Guid formatId) => new(
-    "Milk",
-    "Brand",
-    [new MarketProductFormat(
-      Quantity.Create(1, "ml"),
-      new Money(1.25m),
-      new Uri($"https://example.test/{formatId}"),
-      formatId)]);
 }

@@ -1,10 +1,6 @@
-using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Markets;
 using Metaspesa.Domain.Markets;
 using Metaspesa.Domain.Markets.Errors;
-using Metaspesa.Domain.SharedKernel;
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
 
 namespace Metaspesa.Application.Markets;
 
@@ -22,50 +18,26 @@ public static class AddMarketProducts {
   public record Command(
     IReadOnlyCollection<CommandProduct> Products,
     DateOnly RegisteredAt
-  ) {
-    internal List<MarketImport> ToMarkets() => [
-      ..Products.GroupBy(product => new MarketName(product.MarketName!))
-        .Select(marketGroup => new MarketImport(
-          marketGroup.Key,
-          [
-            ..marketGroup.GroupBy(product => (
-              Name: ProductName.Create(product.Name!),
-              Brand: new BrandName(product.BrandName!)))
-              .Select(productGroup => new ProductImport(
-                productGroup.Key.Name,
-                productGroup.Key.Brand,
-                [
-                  ..productGroup.Select(product => new ProductFormatImport(
-                    Quantity.Create(
-                      product.Quantity,
-                      UnitOfMeasureNormalizer.Normalize(product.UnitOfMeasure)!),
-                    Money.Create(product.Price),
-                    product.ImageUrl is null ? null : new ImageUrl(product.ImageUrl)))
-                ]))
-          ]))
-    ];
-  }
+  );
 
-  public class Handler(
+  public sealed class Handler(
     IMarketRepository marketRepository,
     IBrandRepository brandRepository,
-    IProductRepository productRepository,
-    IPriceSnapshotRepository priceSnapshotRepository,
-    IServiceScopeFactory scopeFactory,
-    ILogger<Handler> logger
-  ) : CancellableCommandHandler<Command>(scopeFactory, logger) {
-    private readonly List<ProductId> _addedProductIds = [];
-    private readonly List<ProductFormatId> _addedProductFormatIds = [];
-    private readonly List<MarketName> _completedMarkets = [];
+    IProductRepository productRepository
+  ) {
+    private const int BatchSize = 1_000;
 
-    protected override bool HasRollbackWork =>
-      _completedMarkets.Count > 0 ||
-      _addedProductIds.Count > 0 ||
-      _addedProductFormatIds.Count > 0;
+    private sealed record NamedProduct(
+      CommandProduct Source,
+      MarketName Market,
+      BrandName Brand,
+      ProductName Name);
 
-    protected override async Task ExecuteAsync(
-      Command command,
-      CancellationToken cancellationToken
+    private sealed record ObservationGroup(
+      ProductIdentity Identity, ProductObservationParams Observation);
+
+    public async Task Handle(
+      Command command, CancellationToken cancellationToken = default
     ) {
       ArgumentNullException.ThrowIfNull(command);
       ArgumentNullException.ThrowIfNull(command.Products);
@@ -74,135 +46,117 @@ public static class AddMarketProducts {
         throw new EmptyMarketProductsException();
       }
       if (command.RegisteredAt < new DateOnly(2023, 1, 1)) {
-        throw new InvalidMarketProductsRegisteredAtException(
-          command.RegisteredAt);
+        throw new InvalidMarketProductsRegisteredAtException(command.RegisteredAt);
       }
 
-      List<MarketImport> markets = command.ToMarkets();
-      EnsureProductsAreUnique(markets);
+      NamedProduct[] products = MapNamedProducts(command);
 
-      await EnsureMarketsExistAsync(markets, cancellationToken);
-      await EnsureBrandsExistAsync(markets, cancellationToken);
+      Dictionary<MarketName, Guid> markets = await ResolveMarketsAsync(
+        products, cancellationToken);
+      Dictionary<BrandName, Guid> brands = await ResolveBrandsAsync(
+        products, cancellationToken);
 
-      await AddProductsAndSnapshotsAsync(command, markets, cancellationToken);
-    }
+      var observedAt = command.RegisteredAt.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
 
-    private static void EnsureProductsAreUnique(IEnumerable<MarketImport> markets) {
-      var identities = new HashSet<(MarketName Market, string Name, BrandName Brand, Quantity Quantity)>();
-      foreach (MarketImport market in markets) {
-        foreach (ProductImport product in market.Products) {
-          ProductFormatImport? duplicate = product.Formats.FirstOrDefault(format =>
-            !identities.Add((market.Name,
-              product.Name.Value.ToUpperInvariant(), product.Brand,
-              format.Quantity)));
-          if (duplicate is not null) {
-            throw new DuplicateMarketProductException(
-              product.Name.Value, market.Name.Value, product.Brand.Value,
-              (float)duplicate.Quantity.Amount, duplicate.Quantity.UnitOfMeasure.Value);
-          }
-        }
+      ObservationGroup[] groups = GroupObservations(
+        products, markets, brands, observedAt);
+
+      foreach (ObservationGroup[] batch in groups.Chunk(BatchSize)) {
+        await ProcessBatchAsync(batch, cancellationToken);
       }
     }
 
-    private async Task EnsureBrandsExistAsync(
-      IReadOnlyCollection<MarketImport> markets,
-      CancellationToken cancellationToken
+    private static NamedProduct[] MapNamedProducts(Command command) {
+      return [.. command.Products.Select(product => new NamedProduct(
+        product,
+        new MarketName(product.MarketName!),
+        new BrandName(product.BrandName!),
+        ProductName.Create(product.Name!)))
+      ];
+    }
+
+    private async Task ProcessBatchAsync(
+      ObservationGroup[] observations, CancellationToken cancellationToken
     ) {
-      IReadOnlyDictionary<string, Guid> brandIds =
-        await brandRepository.ResolveBrandsAsync([..
-          markets.SelectMany(market => market.Products)
-            .Select(product => product.Brand.Value)
-            .Distinct(StringComparer.InvariantCultureIgnoreCase)
-        ], cancellationToken);
+      IReadOnlyDictionary<ProductIdentity, Product> existingBatch = await productRepository
+        .GetBatchAsync([.. observations.Select(group => group.Identity)], cancellationToken);
+      var batch = new List<Product>(observations.Length);
 
-      foreach (MarketImport market in markets) {
-        ProductImport? unknownProduct = market.Products.FirstOrDefault(
-          product => !brandIds.ContainsKey(product.Brand.Value));
-        if (unknownProduct is not null) {
-          throw new UnknownProductBrandException(
-            market.Name, unknownProduct.Name, unknownProduct.Brand);
+      foreach (ObservationGroup group in observations) {
+        if (existingBatch.TryGetValue(group.Identity, out Product? product)) {
+          product.RegisterObservation(group.Observation);
+        } else {
+          product = Product.Create(group.Observation);
         }
+        batch.Add(product);
       }
+
+      await productRepository.SaveBatchAsync(batch, cancellationToken);
     }
 
-    private async Task EnsureMarketsExistAsync(
-      IReadOnlyCollection<MarketImport> markets,
-      CancellationToken cancellationToken
+    private static ObservationGroup[] GroupObservations(
+      NamedProduct[] products,
+      Dictionary<MarketName, Guid> markets,
+      Dictionary<BrandName, Guid> brands,
+      DateTime observedAt
     ) {
-      IReadOnlyDictionary<string, Guid> marketIds =
-        await marketRepository.ResolveMarketsAsync(
-          [.. markets.Select(market => market.Name.Value)], cancellationToken);
+      return [..products
+        .GroupBy(product => new ProductIdentity(
+          new MarketId(markets[product.Market]),
+          new BrandId(brands[product.Brand]),
+          product.Name))
+        .Select(group => new ObservationGroup(
+          group.Key,
+          new ProductObservationParams(
+            group.Key.MarketId.Value,
+            group.Key.BrandId.Value,
+            group.Key.Name.Value,
+            observedAt,
+            [.. group.Select(product => new ProductFormatObservationParams(
+              product.Source.Quantity,
+              UnitOfMeasureNormalizer.Normalize(product.Source.UnitOfMeasure)!,
+              product.Source.Price,
+              product.Source.ImageUrl!))
+            ]
+        )))
+      ];
+    }
 
-      MarketImport? unknownMarket = markets.FirstOrDefault(market =>
-        !marketIds.ContainsKey(market.Name.Value));
+    private async Task<Dictionary<MarketName, Guid>> ResolveMarketsAsync(
+      IReadOnlyCollection<NamedProduct> products, CancellationToken cancellationToken
+    ) {
+      IReadOnlyDictionary<string, Guid> resolvedMarkets = await marketRepository.ResolveMarketsAsync(
+        [.. products.Select(product => product.Market.Value).Distinct(StringComparer.InvariantCultureIgnoreCase)],
+        cancellationToken);
+      var markets = resolvedMarkets.ToDictionary(
+        pair => new MarketName(pair.Key), pair => pair.Value);
+
+      NamedProduct? unknownMarket = products.FirstOrDefault(product =>
+        !markets.ContainsKey(product.Market));
       if (unknownMarket is not null) {
-        throw new UnknownMarketException(unknownMarket.Name);
+        throw new UnknownMarketException(unknownMarket.Market);
       }
+
+      return markets;
     }
 
-    private async Task AddProductsAndSnapshotsAsync(
-      Command command,
-      IReadOnlyCollection<MarketImport> markets,
-      CancellationToken cancellationToken
+    private async Task<Dictionary<BrandName, Guid>> ResolveBrandsAsync(
+      IReadOnlyCollection<NamedProduct> products, CancellationToken cancellationToken
     ) {
-      var observedAt = command.RegisteredAt.ToDateTime(
-        TimeOnly.MinValue,
-        DateTimeKind.Utc);
+      IReadOnlyDictionary<string, Guid> resolvedBrands = await brandRepository.ResolveBrandsAsync(
+        [.. products.Select(product => product.Brand.Value).Distinct(StringComparer.InvariantCultureIgnoreCase)],
+        cancellationToken);
+      var brands = resolvedBrands.ToDictionary(
+        pair => new BrandName(pair.Key), pair => pair.Value);
 
-      foreach (MarketImport market in markets) {
-        ProductImportResult result = await productRepository.ResolveProductsAsync(
-          market,
-          observedAt,
-          cancellationToken);
-        _addedProductIds.AddRange(result.AddedProductIds);
-        _addedProductFormatIds.AddRange(result.AddedProductFormatIds);
-        _completedMarkets.Add(market.Name);
-        IReadOnlyCollection<PriceSnapshot> latestSnapshots =
-          await priceSnapshotRepository.GetLatestForFormatsAsync(
-            [.. result.PriceObservations.Select(observation => observation.ProductFormatId)],
-            cancellationToken);
-        var snapshotsByFormat = latestSnapshots.ToDictionary(snapshot => snapshot.ProductFormatId);
-        List<PriceObservation> changedPrices = [
-          .. result.PriceObservations.Where(observation =>
-            !snapshotsByFormat.TryGetValue(observation.ProductFormatId, out PriceSnapshot? latest) ||
-            !latest.HasSamePrice(observation.Price))
-        ];
-        await priceSnapshotRepository.AppendAsync(
-          changedPrices,
-          cancellationToken);
+      NamedProduct? unknownBrand = products.FirstOrDefault(product =>
+        !brands.ContainsKey(product.Brand));
+      if (unknownBrand is not null) {
+        throw new UnknownProductBrandException(
+          unknownBrand.Market, unknownBrand.Name, unknownBrand.Brand);
       }
-    }
 
-    protected override async Task RollbackAsync(
-      Command command,
-      IServiceProvider services,
-      CancellationToken cancellationToken
-    ) {
-      ArgumentNullException.ThrowIfNull(command);
-
-      IProductRepository productRepo = services.GetRequiredService<IProductRepository>();
-      IPriceSnapshotRepository snapshotRepo =
-        services.GetRequiredService<IPriceSnapshotRepository>();
-
-      if (_completedMarkets.Count > 0) {
-        var observedAt = command.RegisteredAt.ToDateTime(
-          TimeOnly.MinValue,
-          DateTimeKind.Utc);
-        await snapshotRepo.DeleteForMarketsAsync(
-          _completedMarkets,
-          observedAt,
-          cancellationToken);
-      }
-      if (_addedProductFormatIds.Count > 0) {
-        await productRepo.DeleteProductFormatsAsync(
-          _addedProductFormatIds,
-          cancellationToken);
-      }
-      if (_addedProductIds.Count > 0) {
-        await productRepo.DeleteProductsAsync(
-          _addedProductIds,
-          cancellationToken);
-      }
+      return brands;
     }
   }
 }

@@ -13,13 +13,6 @@ public interface IProductRepository {
     IReadOnlyCollection<Product> products, CancellationToken cancellationToken);
   Task<PagedResult<CatalogProduct>> GetProductsAsync(
     GetMarketProductsFilter filter, CancellationToken cancellationToken);
-  Task<ProductImportResult> ResolveProductsAsync(
-    MarketImport market, DateTime observedAt, CancellationToken cancellationToken);
-  Task DeleteProductsAsync(
-    IReadOnlyCollection<ProductId> productIds, CancellationToken cancellationToken);
-  Task DeleteProductFormatsAsync(
-    IReadOnlyCollection<ProductFormatId> productFormatIds,
-    CancellationToken cancellationToken);
   Task<bool> CheckFormatsExistAsync(
     IEnumerable<Guid> formatIds, CancellationToken cancellationToken);
 }

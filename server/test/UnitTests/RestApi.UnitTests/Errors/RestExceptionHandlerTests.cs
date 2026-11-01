@@ -83,6 +83,50 @@ public class RestExceptionHandlerTests {
     Assert.Equal(expected, _problems.Written!.ProblemDetails.Extensions[field]);
   }
 
+  [Fact]
+  public async Task ConflictingObservation_ReturnsBadRequest() {
+    var http = new DefaultHttpContext();
+    var failure = new ConflictingPriceObservationException(
+      new ProductFormatId(Guid.CreateVersion7()),
+      ObservationTime.Create(new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc)));
+
+    await _handler.TryHandleAsync(http, failure, TestContext.Current.CancellationToken);
+
+    Assert.Equal(StatusCodes.Status400BadRequest, http.Response.StatusCode);
+  }
+
+  [Fact]
+  public async Task ConflictingObservation_PreservesDomainErrorCode() {
+    var http = new DefaultHttpContext();
+    var failure = new ConflictingPriceObservationException(
+      new ProductFormatId(Guid.CreateVersion7()),
+      ObservationTime.Create(new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc)));
+
+    await _handler.TryHandleAsync(http, failure, TestContext.Current.CancellationToken);
+
+    Assert.Equal(failure.Code, _problems.Written!.ProblemDetails.Extensions["code"]);
+  }
+
+  [Fact]
+  public async Task InfrastructureFailure_ReturnsServerError() {
+    var http = new DefaultHttpContext();
+    var failure = new TimeoutException("Database unavailable.");
+
+    await _handler.TryHandleAsync(http, failure, TestContext.Current.CancellationToken);
+
+    Assert.Equal(StatusCodes.Status500InternalServerError, http.Response.StatusCode);
+  }
+
+  [Fact]
+  public async Task InfrastructureFailure_ReturnsServerErrorCode() {
+    var http = new DefaultHttpContext();
+    var failure = new TimeoutException("Database unavailable.");
+
+    await _handler.TryHandleAsync(http, failure, TestContext.Current.CancellationToken);
+
+    Assert.Equal("Server.InternalError", _problems.Written!.ProblemDetails.Extensions["code"]);
+  }
+
   private sealed class CapturingProblems : IProblemDetailsService {
     public ProblemDetailsContext? Written { get; private set; }
 
