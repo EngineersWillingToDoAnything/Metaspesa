@@ -107,7 +107,8 @@ namespace Metaspesa.Database.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text")
-                        .HasColumnName("name");
+                        .HasColumnName("name")
+                        .UseCollation("reference_name");
 
                     b.Property<Guid>("SuperMarketId")
                         .HasColumnType("uuid")
