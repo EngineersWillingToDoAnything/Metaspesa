@@ -1,6 +1,7 @@
 using System.Data.Common;
 using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Markets;
+using Metaspesa.Application.Markets;
 using Metaspesa.Database.Entities;
 using Metaspesa.Database.Repositories;
 using Metaspesa.Domain.Markets;
