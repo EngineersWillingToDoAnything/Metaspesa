@@ -65,6 +65,5 @@ internal static class GetProductsEndpoint {
     [.. product.Formats.Select(format => new FormatResponse(
       format.Id, new QuantityResponse(format.Quantity, format.Unit),
       new MoneyResponse(format.Price, format.Currency),
-      format.ObservedAt) { ImageUrl = format.ImageUrl?.ToString() })]);
-
+      format.ObservedOn) { ImageUrl = format.ImageUrl?.ToString() })]);
 }

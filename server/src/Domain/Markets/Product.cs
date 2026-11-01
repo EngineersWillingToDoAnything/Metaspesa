@@ -50,7 +50,7 @@ public sealed class Product {
     ArgumentNullException.ThrowIfNull(observation);
     EnsureHasSameIdentity(observation);
 
-    var observedAt = ObservationTime.Create(observation.ObservedAt);
+    var observedOn = ObservationDate.Create(observation.ObservedOn);
     List<PreparedFormatObservation> prepared = PrepareFormats(observation);
     var existing = _formats.ToDictionary(format => format.Quantity);
     var additions = new List<ProductFormat>();
@@ -60,7 +60,7 @@ public sealed class Product {
       if (existing.TryGetValue(incoming.Quantity, out ProductFormat? format)) {
         updates.Add((format, incoming.Price));
       } else {
-        additions.Add(ProductFormat.Create(incoming, observedAt));
+        additions.Add(ProductFormat.Create(incoming, observedOn));
       }
     }
 
@@ -68,7 +68,7 @@ public sealed class Product {
     _pendingFormats.AddRange(additions);
     _pendingSnapshots.AddRange(additions.Select(format => format.LatestSnapshot));
     foreach ((ProductFormat format, Money price) in updates) {
-      if (format.RecordSnapshot(price, observedAt)) {
+      if (format.RecordSnapshot(price, observedOn)) {
         _pendingSnapshots.Add(format.LatestSnapshot);
       }
     }

@@ -36,11 +36,11 @@ namespace Metaspesa.Database.Migrations
                         .HasDefaultValue("EUR")
                         .HasColumnName("currency_code");
 
-                    b.Property<DateTime>("ObservedAt")
+                    b.Property<DateOnly>("ObservedOn")
                         .ValueGeneratedOnAdd()
-                        .HasColumnType("timestamp with time zone")
-                        .HasColumnName("observed_at")
-                        .HasDefaultValueSql("now()");
+                        .HasColumnType("date")
+                        .HasColumnName("observed_on")
+                        .HasDefaultValueSql("(now() AT TIME ZONE 'UTC')::date");
 
                     b.Property<decimal>("PriceAmount")
                         .HasPrecision(10, 2)
@@ -54,9 +54,9 @@ namespace Metaspesa.Database.Migrations
                     b.HasKey("Id")
                         .HasName("pk_price_snapshot");
 
-                    b.HasIndex(new[] { "ProductFormatId", "ObservedAt" }, "idx_price_snapshot_format_observed_at");
+                    b.HasIndex(new[] { "ProductFormatId", "ObservedOn" }, "idx_price_snapshot_format_observed_on");
 
-                    b.HasIndex(new[] { "ObservedAt" }, "idx_price_snapshot_observed_at");
+                    b.HasIndex(new[] { "ObservedOn" }, "idx_price_snapshot_observed_on");
 
                     b.HasIndex(new[] { "ProductFormatId" }, "idx_price_snapshot_product_format_id");
 

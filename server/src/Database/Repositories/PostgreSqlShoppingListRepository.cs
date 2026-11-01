@@ -225,7 +225,7 @@ internal class PostgreSqlShoppingListRepository(
             UnitOfMeasureCode = item.ProductFormat.UnitOfMeasure,
             item.ProductFormat.ImageUrl,
             Price = item.ProductFormat.PriceSnapshots
-              .OrderByDescending(snapshot => snapshot.ObservedAt)
+              .OrderByDescending(snapshot => snapshot.ObservedOn)
               .ThenByDescending(snapshot => snapshot.Id)
               .Select(snapshot => snapshot.PriceAmount)
               .First(),

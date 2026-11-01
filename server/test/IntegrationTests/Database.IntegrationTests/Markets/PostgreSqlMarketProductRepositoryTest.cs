@@ -60,14 +60,14 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
 
     Product loaded = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
     loaded.RegisterObservation(observation with {
-      ObservedAt = observation.ObservedAt.AddDays(1),
+      ObservedOn = observation.ObservedOn.AddDays(1),
       Formats = [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png"))],
     });
     await _productRepository.SaveBatchAsync([loaded], TestContext.Current.CancellationToken);
@@ -85,7 +85,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -103,7 +103,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -122,7 +122,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -143,7 +143,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -167,7 +167,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -191,7 +191,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -209,7 +209,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -233,7 +233,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -259,7 +259,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -271,7 +271,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     await _productRepository.SaveBatchAsync([other], TestContext.Current.CancellationToken);
     Product loaded = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
     loaded.RegisterObservation(observation with {
-      ObservedAt = observation.ObservedAt.AddDays(1),
+      ObservedOn = observation.ObservedOn.AddDays(1),
       Formats = [new ProductFormatObservationParams(1, "l", 3.49m, new Uri("https://example.com/milk.png"))],
     });
     await _productRepository.SaveBatchAsync([loaded], TestContext.Current.CancellationToken);
@@ -289,7 +289,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -307,7 +307,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -325,7 +325,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -356,7 +356,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
-      new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -376,7 +376,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
 
@@ -393,7 +393,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
 
@@ -410,7 +410,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
 
@@ -427,7 +427,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
 
@@ -438,20 +438,20 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
   }
 
   [Fact]
-  public async Task SaveBatchAsync_PersistsSnapshotTime() {
+  public async Task SaveBatchAsync_PersistsSnapshotDate() {
     var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
     var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
 
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    DateTime actual = await _context.PriceSnapshots.Select(value => value.ObservedAt).SingleAsync(TestContext.Current.CancellationToken);
+    DateOnly actual = await _context.PriceSnapshots.Select(value => value.ObservedOn).SingleAsync(TestContext.Current.CancellationToken);
 
-    Assert.Equal(product.PendingSnapshots.Single().ObservedAt.Value, actual);
+    Assert.Equal(new DateOnly(2026, 7, 28), actual);
   }
 
   [Fact]
@@ -461,7 +461,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     brand.Name = "Unflushed";
@@ -479,19 +479,19 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     Product aggregate = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
     Guid initialId = product.PendingSnapshots.Single().Id.Value;
     aggregate.RegisterObservation(observation with {
-      ObservedAt = observation.ObservedAt.AddDays(1),
+      ObservedOn = observation.ObservedOn.AddDays(1),
       Formats = [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/new.png"))],
     });
 
     await _productRepository.SaveBatchAsync([aggregate], TestContext.Current.CancellationToken);
-    Guid[] ids = await _context.PriceSnapshots.OrderBy(value => value.ObservedAt).Select(value => value.Id).ToArrayAsync(TestContext.Current.CancellationToken);
+    Guid[] ids = await _context.PriceSnapshots.OrderBy(value => value.ObservedOn).Select(value => value.Id).ToArrayAsync(TestContext.Current.CancellationToken);
 
     Assert.Equal([initialId, aggregate.PendingSnapshots.Single().Id.Value], ids);
   }
@@ -503,13 +503,13 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     Product aggregate = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
     aggregate.RegisterObservation(observation with {
-      ObservedAt = observation.ObservedAt.AddDays(1),
+      ObservedOn = observation.ObservedOn.AddDays(1),
       Formats = [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/new.png"))],
     });
 
@@ -526,13 +526,13 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     Product aggregate = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
     aggregate.RegisterObservation(observation with {
-      ObservedAt = observation.ObservedAt.AddDays(1),
+      ObservedOn = observation.ObservedOn.AddDays(1),
       Formats = [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/new.png"))],
     });
 
@@ -549,13 +549,13 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     Product aggregate = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
     aggregate.RegisterObservation(observation with {
-      ObservedAt = observation.ObservedAt.AddDays(1),
+      ObservedOn = observation.ObservedOn.AddDays(1),
       Formats = [new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))],
     });
 
@@ -572,12 +572,12 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     Product aggregate = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
-    aggregate.RegisterObservation(observation with { ObservedAt = observation.ObservedAt.AddDays(1) });
+    aggregate.RegisterObservation(observation with { ObservedOn = observation.ObservedOn.AddDays(1) });
     var commands = new CommandCounter();
     await using MainContext observed = _fixture.CreateContext(commands);
     var repository = new PostgreSqlMarketProductRepository(observed);
@@ -594,7 +594,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -615,7 +615,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var valid = Product.Create(observation);
     var invalid = Product.Create(observation with {
@@ -636,7 +636,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var valid = Product.Create(observation);
     var invalid = Product.Create(observation with {
@@ -657,7 +657,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var valid = Product.Create(observation);
     var invalid = Product.Create(observation with {
@@ -678,7 +678,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var valid = Product.Create(observation);
     var invalid = Product.Create(observation with {
@@ -699,7 +699,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -718,7 +718,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
 
@@ -734,20 +734,20 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     Product aggregate = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
     Guid initialSnapshotId = product.PendingSnapshots.Single().Id.Value;
     var purchase = new PurchaseDbEntity {
-      Id = Guid.CreateVersion7(), PurchasedAt = observation.ObservedAt,
+      Id = Guid.CreateVersion7(), PurchasedAt = observation.ObservedOn.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
       Items = [new PurchaseItemDbEntity { Id = Guid.CreateVersion7(), PriceSnapshotId = initialSnapshotId, Amount = 1 }],
     };
     _context.Purchases.Add(purchase);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     aggregate.RegisterObservation(observation with {
-      ObservedAt = observation.ObservedAt.AddDays(1),
+      ObservedOn = observation.ObservedOn.AddDays(1),
       Formats = [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/new.png"))],
     });
 
@@ -764,7 +764,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -776,7 +776,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     });
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     aggregate.RegisterObservation(observation with {
-      ObservedAt = observation.ObservedAt.AddDays(1),
+      ObservedOn = observation.ObservedOn.AddDays(1),
       Formats = [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/new.png"))],
     });
 
@@ -793,7 +793,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -811,7 +811,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -831,7 +831,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -859,7 +859,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation with { ProductName = storedName });
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -877,7 +877,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -895,7 +895,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -914,7 +914,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     product.RegisterObservation(observation with {
@@ -937,12 +937,12 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     for (int day = 1; day <= 30; day++) {
       product.RegisterObservation(observation with {
-        ObservedAt = observation.ObservedAt.AddDays(day),
+        ObservedOn = observation.ObservedOn.AddDays(day),
         Formats = [new ProductFormatObservationParams(1, "l", 1.99m + day, new Uri("https://example.com/milk.png"))],
       });
     }
@@ -961,7 +961,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -979,11 +979,11 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     product.RegisterObservation(observation with {
-      ObservedAt = observation.ObservedAt.AddDays(1),
+      ObservedOn = observation.ObservedOn.AddDays(1),
       Formats = [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png"))],
     });
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -1000,7 +1000,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     var identity = new ProductIdentity(product.MarketId, product.BrandId, product.Name);
@@ -1040,7 +1040,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     Product[] products = [.. Enumerable.Range(0, productCount)
       .Select(index => Product.Create(observation with { ProductName = $"Product {index}" }))];
@@ -1059,7 +1059,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     Product[] products = [.. Enumerable.Range(0, productCount)
       .Select(index => Product.Create(observation with { ProductName = $"Product {index}" }))];
@@ -1134,7 +1134,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     Product[] products = [.. Enumerable.Range(0, productCount)
       .Select(index => Product.Create(observation with { ProductName = $"Product {index}" }))];
@@ -1156,7 +1156,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -1181,7 +1181,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -1206,7 +1206,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
@@ -1231,13 +1231,13 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     Product loaded = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
     loaded.RegisterObservation(observation with {
-      ObservedAt = observation.ObservedAt.AddDays(1),
+      ObservedOn = observation.ObservedOn.AddDays(1),
       Formats = [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png"))],
     });
     var invalid = Product.Create(observation with {
@@ -1260,7 +1260,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     const int productCount = 1_001;
     Product[] products = [.. Enumerable.Range(0, productCount)
@@ -1270,14 +1270,14 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     }
     Guid[] expected = [.. products.Select(product => product.PendingSnapshots.Single().Id.Value).Order()];
 
-    foreach (DateTime observedAt in new[] { observation.ObservedAt, observation.ObservedAt.AddDays(1) }) {
+    foreach (DateOnly observedOn in new[] { observation.ObservedOn, observation.ObservedOn.AddDays(1) }) {
       foreach (Product[] batch in products.Chunk(1000)) {
         ProductIdentity[] identities = [.. batch.Select(product =>
           new ProductIdentity(product.MarketId, product.BrandId, product.Name))];
         IReadOnlyDictionary<ProductIdentity, Product> loaded =
           await _productRepository.GetBatchAsync(identities, TestContext.Current.CancellationToken);
         foreach (Product product in loaded.Values) {
-          product.RegisterObservation(observation with { ProductName = product.Name.Value, ObservedAt = observedAt });
+          product.RegisterObservation(observation with { ProductName = product.Name.Value, ObservedOn = observedOn });
         }
         await _productRepository.SaveBatchAsync([.. loaded.Values], TestContext.Current.CancellationToken);
       }
@@ -1295,14 +1295,14 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     Product[] products = [.. Enumerable.Range(0, 1_001)
       .Select(index => Product.Create(observation with { ProductName = $"Product {index}" }))];
     foreach (Product product in products) {
       product.RegisterObservation(observation with {
         ProductName = product.Name.Value,
-        ObservedAt = observation.ObservedAt.AddDays(1),
+        ObservedOn = observation.ObservedOn.AddDays(1),
         Formats = [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png"))],
       });
     }
@@ -1317,7 +1317,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       foreach (Product product in loaded.Values) {
         product.RegisterObservation(observation with {
           ProductName = product.Name.Value,
-          ObservedAt = observation.ObservedAt.AddDays(2),
+          ObservedOn = observation.ObservedOn.AddDays(2),
           Formats = [new ProductFormatObservationParams(1, "l", 2.99m, new Uri("https://example.com/milk.png"))],
         });
       }
@@ -1338,7 +1338,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
-      market.Id, brand.Id, "Milk", new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var committed = Product.Create(observation);
     await _productRepository.SaveBatchAsync([committed], TestContext.Current.CancellationToken);

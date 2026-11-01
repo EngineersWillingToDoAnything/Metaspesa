@@ -91,6 +91,32 @@ public static class GetProductsEndpointTests {
   }
 
   [Fact]
+  public static async Task GetProducts_SerializesObservationAsCalendarDate() {
+    IProductRepository repository = Substitute.For<IProductRepository>();
+    repository.GetProductsAsync(Arg.Any<GetMarketProductsFilter>(), Arg.Any<CancellationToken>())
+      .Returns(new PagedResult<CatalogProduct>([
+        new CatalogProduct(ProductId, "Whole milk", "Hacendado",
+          new MarketSummary(MarketId, "Mercadona", null), [
+            new CatalogFormat(FormatId, 1, "l", 1.04m, "EUR", null, new DateOnly(2026, 8, 20)),
+          ]),
+      ], 1));
+    var context = new DefaultHttpContext {
+      RequestServices = new ServiceCollection().AddLogging().BuildServiceProvider(),
+    };
+    context.Response.Body = new MemoryStream();
+
+    IResult response = await GetProductsEndpoint.GetProductsAsync(
+      new GetProductsRequest(), new GetMarketProducts.Handler(repository), TestContext.Current.CancellationToken);
+    await response.ExecuteAsync(context);
+    context.Response.Body.Position = 0;
+    using JsonDocument json = await JsonDocument.ParseAsync(context.Response.Body,
+      cancellationToken: TestContext.Current.CancellationToken);
+
+    Assert.Equal("2026-08-20", json.RootElement.GetProperty("items")[0]
+      .GetProperty("formats")[0].GetProperty("observedOn").GetString());
+  }
+
+  [Fact]
   public static async Task GetProducts_ReturnsFlatPageAndOmitsMissingImages() {
     IProductRepository repository = Substitute.For<IProductRepository>();
     repository.GetProductsAsync(Arg.Any<GetMarketProductsFilter>(), Arg.Any<CancellationToken>())
@@ -98,7 +124,7 @@ public static class GetProductsEndpointTests {
         new CatalogProduct(ProductId, "Whole milk", "Hacendado",
           new MarketSummary(MarketId, "Mercadona", null), [
             new CatalogFormat(FormatId, 1, "l", 1.04m, "EUR", null,
-              new DateTime(2026, 8, 20, 0, 0, 0, DateTimeKind.Utc)),
+              new DateOnly(2026, 8, 20)),
           ]),
       ], 25));
     var context = new DefaultHttpContext {

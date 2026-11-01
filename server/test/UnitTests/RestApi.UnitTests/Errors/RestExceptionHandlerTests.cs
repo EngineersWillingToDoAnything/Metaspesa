@@ -88,7 +88,7 @@ public class RestExceptionHandlerTests {
     var http = new DefaultHttpContext();
     var failure = new ConflictingPriceObservationException(
       new ProductFormatId(Guid.CreateVersion7()),
-      ObservationTime.Create(new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc)));
+      ObservationDate.Create(new DateOnly(2026, 7, 28)));
 
     await _handler.TryHandleAsync(http, failure, TestContext.Current.CancellationToken);
 
@@ -100,7 +100,7 @@ public class RestExceptionHandlerTests {
     var http = new DefaultHttpContext();
     var failure = new ConflictingPriceObservationException(
       new ProductFormatId(Guid.CreateVersion7()),
-      ObservationTime.Create(new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc)));
+      ObservationDate.Create(new DateOnly(2026, 7, 28)));
 
     await _handler.TryHandleAsync(http, failure, TestContext.Current.CancellationToken);
 

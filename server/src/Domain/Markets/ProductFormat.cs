@@ -32,14 +32,14 @@ public sealed class ProductFormat {
   }
 
   internal static ProductFormat Create(
-    PreparedFormatObservation observation, ObservationTime observedAt
+    PreparedFormatObservation observation, ObservationDate observedOn
   ) {
     var id = new ProductFormatId(Uid.Create());
     return new ProductFormat(
       id,
       observation.Quantity,
       observation.ImageUrl,
-      PriceSnapshot.Create(id, observation.Price, observedAt));
+      PriceSnapshot.Create(id, observation.Price, observedOn));
   }
 
   public static ProductFormat Rehydrate(
@@ -51,30 +51,30 @@ public sealed class ProductFormat {
     return new ProductFormat(id, quantity, imageUrl, latestSnapshot);
   }
 
-  internal bool RecordSnapshot(Money price, ObservationTime observedAt) {
-    EnsureIsLaterObservation(observedAt);
-    EnsureDoesNotConflictCurrentObservation(price, observedAt);
+  internal bool RecordSnapshot(Money price, ObservationDate observedOn) {
+    EnsureIsLaterObservation(observedOn);
+    EnsureDoesNotConflictCurrentObservation(price, observedOn);
 
     if (LatestSnapshot.HasSamePrice(price)) {
       return false;
     }
 
-    LatestSnapshot = PriceSnapshot.Create(Id, price, observedAt);
+    LatestSnapshot = PriceSnapshot.Create(Id, price, observedOn);
     return true;
   }
 
   private void EnsureDoesNotConflictCurrentObservation(
-    Money price, ObservationTime observedAt
+    Money price, ObservationDate observedOn
   ) {
-    if (LatestSnapshot.IsConflictingWith(price, observedAt)) {
-      throw new ConflictingPriceObservationException(Id, observedAt);
+    if (LatestSnapshot.IsConflictingWith(price, observedOn)) {
+      throw new ConflictingPriceObservationException(Id, observedOn);
     }
   }
 
-  private void EnsureIsLaterObservation(ObservationTime observedAt) {
-    if (LatestSnapshot.IsLaterThan(observedAt)) {
+  private void EnsureIsLaterObservation(ObservationDate observedOn) {
+    if (LatestSnapshot.IsLaterThan(observedOn)) {
       throw new EarlierPriceObservationException(
-        Id, observedAt, LatestSnapshot.ObservedAt);
+        Id, observedOn, LatestSnapshot.ObservedOn);
     }
   }
 }

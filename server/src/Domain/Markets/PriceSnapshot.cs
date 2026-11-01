@@ -6,7 +6,7 @@ public sealed class PriceSnapshot {
   public PriceSnapshotId Id { get; }
   public ProductFormatId ProductFormatId { get; }
   public Money Price { get; }
-  public ObservationTime ObservedAt { get; }
+  public ObservationDate ObservedOn { get; }
 
   public bool HasSamePrice(Money price) => Price == price;
 
@@ -14,34 +14,34 @@ public sealed class PriceSnapshot {
     PriceSnapshotId id,
     ProductFormatId productFormatId,
     Money price,
-    ObservationTime observedAt
+    ObservationDate observedOn
   ) {
     Id = id;
     ProductFormatId = productFormatId;
     Price = price;
-    ObservedAt = observedAt;
+    ObservedOn = observedOn;
   }
 
   public static PriceSnapshot Create(
-    ProductFormatId formatId, Money price, ObservationTime observedAt
+    ProductFormatId formatId, Money price, ObservationDate observedOn
   ) {
     var id = new PriceSnapshotId(Uid.Create());
-    return new(id, formatId, price, observedAt);
+    return new(id, formatId, price, observedOn);
   }
 
   public static PriceSnapshot Rehydrate(
     PriceSnapshotId id,
     ProductFormatId formatId,
     Money price,
-    ObservationTime observedAt
+    ObservationDate observedOn
   ) {
-    return new(id, formatId, price, observedAt);
+    return new(id, formatId, price, observedOn);
   }
 
-  public bool IsConflictingWith(Money price, ObservationTime observedAt) =>
-    WasObservedAt(observedAt) && !HasSamePrice(price);
+  public bool IsConflictingWith(Money price, ObservationDate observedOn) =>
+    WasObservedOn(observedOn) && !HasSamePrice(price);
 
-  public bool IsLaterThan(ObservationTime observedAt) => ObservedAt > observedAt;
+  public bool IsLaterThan(ObservationDate observedOn) => ObservedOn > observedOn;
 
-  private bool WasObservedAt(ObservationTime observedAt) => ObservedAt == observedAt;
+  private bool WasObservedOn(ObservationDate observedOn) => ObservedOn == observedOn;
 }

@@ -31,7 +31,7 @@ public static class MarketDomainExceptionTests {
     (Exception)new InvalidMarketNameException(),
     (Exception)new InvalidMarketProductsRegisteredAtException(),
     (Exception)new InvalidPriceSnapshotIdException(),
-    (Exception)new InvalidPriceSnapshotObservedAtException(),
+    (Exception)new InvalidPriceSnapshotObservedOnException(),
     (Exception)new InvalidProductFormatIdException(),
     (Exception)new InvalidProductIdException(),
     (Exception)new InvalidProductNameException(),

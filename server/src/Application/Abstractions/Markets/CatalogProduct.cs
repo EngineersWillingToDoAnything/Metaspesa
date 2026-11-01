@@ -14,4 +14,4 @@ public sealed record CatalogFormat(
   decimal Price,
   string Currency,
   Uri? ImageUrl,
-  DateTime ObservedAt);
+  DateOnly ObservedOn);

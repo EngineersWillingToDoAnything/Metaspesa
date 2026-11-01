@@ -32,9 +32,10 @@ internal class PriceSnapshotConfiguration : IEntityTypeConfiguration<PriceSnapsh
       .HasDefaultValue("EUR")
       .IsRequired();
 
-    builder.Property(e => e.ObservedAt)
-      .HasColumnName("observed_at")
-      .HasDefaultValueSql("now()")
+    builder.Property(e => e.ObservedOn)
+      .HasColumnName("observed_on")
+      .HasColumnType("date")
+      .HasDefaultValueSql("(now() AT TIME ZONE 'UTC')::date")
       .IsRequired();
 
     builder.ToTable(t => t.HasCheckConstraint(
@@ -43,10 +44,10 @@ internal class PriceSnapshotConfiguration : IEntityTypeConfiguration<PriceSnapsh
       "chk_price_snapshot_currency_code", "currency_code ~ '^[A-Z]{3}$'"));
 
     builder.HasIndex(e => e.ProductFormatId, "idx_price_snapshot_product_format_id");
-    builder.HasIndex(e => e.ObservedAt, "idx_price_snapshot_observed_at");
+    builder.HasIndex(e => e.ObservedOn, "idx_price_snapshot_observed_on");
     builder.HasIndex(
-      e => new { e.ProductFormatId, e.ObservedAt },
-      "idx_price_snapshot_format_observed_at");
+      e => new { e.ProductFormatId, e.ObservedOn },
+      "idx_price_snapshot_format_observed_on");
 
     builder.HasOne(e => e.ProductFormat)
       .WithMany(e => e.PriceSnapshots)

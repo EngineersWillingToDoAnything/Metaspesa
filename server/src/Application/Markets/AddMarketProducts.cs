@@ -56,10 +56,8 @@ public static class AddMarketProducts {
       Dictionary<BrandName, Guid> brands = await ResolveBrandsAsync(
         products, cancellationToken);
 
-      var observedAt = command.RegisteredAt.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc);
-
       ObservationGroup[] groups = GroupObservations(
-        products, markets, brands, observedAt);
+        products, markets, brands, command.RegisteredAt);
 
       foreach (ObservationGroup[] batch in groups.Chunk(BatchSize)) {
         await ProcessBatchAsync(batch, cancellationToken);
@@ -98,7 +96,7 @@ public static class AddMarketProducts {
       NamedProduct[] products,
       Dictionary<MarketName, Guid> markets,
       Dictionary<BrandName, Guid> brands,
-      DateTime observedAt
+      DateOnly observedOn
     ) {
       return [..products
         .GroupBy(product => new ProductIdentity(
@@ -111,7 +109,7 @@ public static class AddMarketProducts {
             group.Key.MarketId.Value,
             group.Key.BrandId.Value,
             group.Key.Name.Value,
-            observedAt,
+            observedOn,
             [.. group.Select(product => new ProductFormatObservationParams(
               product.Source.Quantity,
               UnitOfMeasureNormalizer.Normalize(product.Source.UnitOfMeasure)!,

@@ -60,7 +60,7 @@ describe('product grid component', () => {
             {
               currentPrice: { amount: 1.29, currency: 'EUR' },
               id: '10',
-              observedAt: '2026-08-20T00:00:00Z',
+              observedOn: '2026-08-20',
               quantity: { amount: 1, unit: 'l' },
             },
           ],
@@ -103,13 +103,13 @@ describe('product grid component', () => {
               {
                 currentPrice: { amount: 1.29, currency: 'EUR' },
                 id: '10',
-                observedAt: '2026-08-20T00:00:00Z',
+                observedOn: '2026-08-20',
                 quantity: { amount: 1, unit: 'l' },
               },
               {
                 currentPrice: { amount: 2.29, currency: 'EUR' },
                 id: '11',
-                observedAt: '2026-08-20T00:00:00Z',
+                observedOn: '2026-08-20',
                 quantity: { amount: 2, unit: 'l' },
               },
             ],

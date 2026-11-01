@@ -7,8 +7,8 @@ using Microsoft.EntityFrameworkCore.Storage;
 namespace Metaspesa.MigrationService;
 
 internal sealed class IntegrationSeeder(MainContext context) {
-  private static readonly DateTime ObservedAt =
-    new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+  private static readonly DateOnly ObservedOn =
+    new(2026, 1, 1);
 
   private static readonly Fixture[] Fixtures = [
     new("Integration Market A", "Integration Milk 1L", 1000m, "ml", 1.25m),
@@ -82,7 +82,7 @@ internal sealed class IntegrationSeeder(MainContext context) {
     }
 
     List<PriceSnapshotDbEntity> snapshots = await context.PriceSnapshots
-      .Where(value => value.ProductFormatId == format.Id && value.ObservedAt == ObservedAt)
+      .Where(value => value.ProductFormatId == format.Id && value.ObservedOn == ObservedOn)
       .ToListAsync(cancellationToken);
     if (snapshots.Any(value => value.PriceAmount != fixture.Price ||
       value.CurrencyCode != "EUR")) {
@@ -94,7 +94,7 @@ internal sealed class IntegrationSeeder(MainContext context) {
       context.PriceSnapshots.Add(new PriceSnapshotDbEntity {
         Id = Uid.Create(),
         ProductFormatId = format.Id, PriceAmount = fixture.Price,
-        CurrencyCode = "EUR", ObservedAt = ObservedAt,
+        CurrencyCode = "EUR", ObservedOn = ObservedOn,
       });
       await context.SaveChangesAsync(cancellationToken);
     }

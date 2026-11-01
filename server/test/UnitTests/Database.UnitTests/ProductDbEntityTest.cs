@@ -12,7 +12,7 @@ public static class ProductDbEntityTest {
       Id = Guid.Parse("00000000-0000-7000-8000-000000000008"),
       ProductFormatId = Guid.Parse("00000000-0000-7000-8000-000000000007"),
       PriceAmount = 1.99m,
-      ObservedAt = new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+      ObservedOn = new DateOnly(2026, 7, 28),
     });
 
     Product product = entity.MapToDomain();
@@ -45,13 +45,13 @@ public static class ProductDbEntityTest {
         Id = Guid.Parse("00000000-0000-7000-8000-000000000008"),
         ProductFormatId = format.Id,
         PriceAmount = 2.49m,
-        ObservedAt = new DateTime(2026, 7, 29, 0, 0, 0, DateTimeKind.Utc),
+        ObservedOn = new DateOnly(2026, 7, 29),
       },
       new PriceSnapshotDbEntity {
         Id = Guid.Parse("00000000-0000-7000-8000-000000000009"),
         ProductFormatId = format.Id,
         PriceAmount = 1.99m,
-        ObservedAt = new DateTime(2026, 7, 28, 0, 0, 0, DateTimeKind.Utc),
+        ObservedOn = new DateOnly(2026, 7, 28),
       },
     ];
 

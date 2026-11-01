@@ -4,7 +4,7 @@ public sealed record ProductObservationParams(
   Guid MarketId,
   Guid BrandId,
   string ProductName,
-  DateTime ObservedAt,
+  DateOnly ObservedOn,
   IReadOnlyCollection<ProductFormatObservationParams> Formats
 );
 

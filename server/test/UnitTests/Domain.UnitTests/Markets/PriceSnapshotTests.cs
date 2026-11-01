@@ -7,9 +7,9 @@ public class PriceSnapshotTests {
   [Fact]
   public void Create_GeneratesVersion7Id() {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
 
-    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedAt);
+    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedOn);
 
     Assert.Equal(7, snapshot.Id.Value.Version);
   }
@@ -17,9 +17,9 @@ public class PriceSnapshotTests {
   [Fact]
   public void Create_PreservesFormatId() {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
 
-    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedAt);
+    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedOn);
 
     Assert.Equal(formatId, snapshot.ProductFormatId);
   }
@@ -27,30 +27,30 @@ public class PriceSnapshotTests {
   [Fact]
   public void Create_PreservesPrice() {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
 
-    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedAt);
+    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedOn);
 
     Assert.Equal(Money.Create(3.45m), snapshot.Price);
   }
 
   [Fact]
-  public void Create_PreservesObservationTime() {
+  public void Create_PreservesObservationDate() {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
 
-    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedAt);
+    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedOn);
 
-    Assert.Equal(observedAt, snapshot.ObservedAt);
+    Assert.Equal(observedOn, snapshot.ObservedOn);
   }
 
   [Fact]
   public void Create_GeneratesDistinctIdentifiers() {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
-    var first = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedAt);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
+    var first = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedOn);
 
-    var second = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedAt);
+    var second = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedOn);
 
     Assert.NotEqual(first.Id, second.Id);
   }
@@ -58,10 +58,10 @@ public class PriceSnapshotTests {
   [Fact]
   public void Rehydrate_PreservesSnapshotId() {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var snapshotId = new PriceSnapshotId(Guid.Parse("00000000-0000-7000-8000-000000000005"));
 
-    var snapshot = PriceSnapshot.Rehydrate(snapshotId, formatId, Money.Create(3.45m), observedAt);
+    var snapshot = PriceSnapshot.Rehydrate(snapshotId, formatId, Money.Create(3.45m), observedOn);
 
     Assert.Equal(snapshotId, snapshot.Id);
   }
@@ -69,10 +69,10 @@ public class PriceSnapshotTests {
   [Fact]
   public void Rehydrate_PreservesFormatId() {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var snapshotId = new PriceSnapshotId(Guid.Parse("00000000-0000-7000-8000-000000000005"));
 
-    var snapshot = PriceSnapshot.Rehydrate(snapshotId, formatId, Money.Create(3.45m), observedAt);
+    var snapshot = PriceSnapshot.Rehydrate(snapshotId, formatId, Money.Create(3.45m), observedOn);
 
     Assert.Equal(formatId, snapshot.ProductFormatId);
   }
@@ -80,41 +80,41 @@ public class PriceSnapshotTests {
   [Fact]
   public void Rehydrate_PreservesPrice() {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var snapshotId = new PriceSnapshotId(Guid.Parse("00000000-0000-7000-8000-000000000005"));
 
-    var snapshot = PriceSnapshot.Rehydrate(snapshotId, formatId, Money.Create(3.45m), observedAt);
+    var snapshot = PriceSnapshot.Rehydrate(snapshotId, formatId, Money.Create(3.45m), observedOn);
 
     Assert.Equal(Money.Create(3.45m), snapshot.Price);
   }
 
   [Fact]
-  public void Rehydrate_PreservesObservationTime() {
+  public void Rehydrate_PreservesObservationDate() {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var snapshotId = new PriceSnapshotId(Guid.Parse("00000000-0000-7000-8000-000000000005"));
 
-    var snapshot = PriceSnapshot.Rehydrate(snapshotId, formatId, Money.Create(3.45m), observedAt);
+    var snapshot = PriceSnapshot.Rehydrate(snapshotId, formatId, Money.Create(3.45m), observedOn);
 
-    Assert.Equal(observedAt, snapshot.ObservedAt);
+    Assert.Equal(observedOn, snapshot.ObservedOn);
   }
 
   [Fact]
   public void Rehydrate_RestoresRawTimeWithoutValidation() {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
     var snapshotId = new PriceSnapshotId(Guid.Parse("00000000-0000-7000-8000-000000000005"));
-    var rawTime = new ObservationTime(default);
+    var rawTime = new ObservationDate(default);
 
     var snapshot = PriceSnapshot.Rehydrate(snapshotId, formatId, Money.Create(3.45m), rawTime);
 
-    Assert.Equal(rawTime, snapshot.ObservedAt);
+    Assert.Equal(rawTime, snapshot.ObservedOn);
   }
 
   [Fact]
   public void HasSamePrice_ReturnsTrue_WhenPriceMatches() {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
-    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedAt);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
+    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedOn);
 
     bool matches = snapshot.HasSamePrice(Money.Create(3.45m));
 
@@ -126,8 +126,8 @@ public class PriceSnapshotTests {
   [InlineData(3.46)]
   public void HasSamePrice_ReturnsFalse_WhenPriceDiffers(decimal amount) {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
-    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedAt);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
+    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedOn);
 
     bool matches = snapshot.HasSamePrice(Money.Create(amount));
 
@@ -137,10 +137,10 @@ public class PriceSnapshotTests {
   [Fact]
   public void IsConflictingWith_ReturnsTrue_WhenSameTimeHasDifferentPrice() {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
-    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedAt);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
+    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedOn);
 
-    bool conflicting = snapshot.IsConflictingWith(Money.Create(3.46m), observedAt);
+    bool conflicting = snapshot.IsConflictingWith(Money.Create(3.46m), observedOn);
 
     Assert.True(conflicting);
   }
@@ -155,9 +155,9 @@ public class PriceSnapshotTests {
     int offset, decimal amount
   ) {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
-    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedAt);
-    var incoming = ObservationTime.Create(observedAt.Value.AddTicks(offset));
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
+    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedOn);
+    var incoming = ObservationDate.Create(observedOn.Value.AddDays(offset));
 
     bool conflicting = snapshot.IsConflictingWith(Money.Create(amount), incoming);
 
@@ -170,9 +170,9 @@ public class PriceSnapshotTests {
   [InlineData(1, false)]
   public void IsLaterThan_ComparesStoredTimeToIncomingTime(int offset, bool expected) {
     var formatId = new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
-    var observedAt = ObservationTime.Create(new DateTime(2026, 7, 28, 12, 0, 0, DateTimeKind.Utc));
-    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedAt);
-    var incoming = ObservationTime.Create(observedAt.Value.AddTicks(offset));
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
+    var snapshot = PriceSnapshot.Create(formatId, Money.Create(3.45m), observedOn);
+    var incoming = ObservationDate.Create(observedOn.Value.AddDays(offset));
 
     bool later = snapshot.IsLaterThan(incoming);
 

@@ -9,7 +9,7 @@ public class ProductIdentityTests {
     var marketId = Guid.Parse("00000000-0000-7000-8000-000000000001");
     var brandId = Guid.Parse("00000000-0000-7000-8000-000000000002");
     var observation = new ProductObservationParams(
-      marketId, brandId, " Milk ", DateTime.UtcNow, []);
+      marketId, brandId, " Milk ", new DateOnly(2026, 7, 28), []);
 
     var identity = ProductIdentity.Create(observation);
 
@@ -21,7 +21,7 @@ public class ProductIdentityTests {
     var marketId = Guid.Parse("00000000-0000-7000-8000-000000000001");
     var brandId = Guid.Parse("00000000-0000-7000-8000-000000000002");
     var observation = new ProductObservationParams(
-      marketId, brandId, " Milk ", DateTime.UtcNow, []);
+      marketId, brandId, " Milk ", new DateOnly(2026, 7, 28), []);
 
     var identity = ProductIdentity.Create(observation);
 

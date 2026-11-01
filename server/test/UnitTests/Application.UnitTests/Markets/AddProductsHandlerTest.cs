@@ -132,7 +132,7 @@ public sealed class AddProductsHandlerTest {
       identity.MarketId.Value,
       identity.BrandId.Value,
       identity.Name.Value,
-      command.RegisteredAt.AddDays(-1).ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
+      command.RegisteredAt.AddDays(-1),
       [new ProductFormatObservationParams(1, "l", 1.49m, item.ImageUrl!)]);
     var product = Product.Create(observation);
     _productsRepo.GetBatchAsync(

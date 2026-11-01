@@ -27,7 +27,7 @@ internal class ProductDbEntity {
         ? null
         : new ImageUrl(new Uri(format.ImageUrl, UriKind.Absolute)),
       format.PriceSnapshots
-        .OrderByDescending(snapshot => snapshot.ObservedAt)
+        .OrderByDescending(snapshot => snapshot.ObservedOn)
         .ThenByDescending(snapshot => snapshot.Id)
         .First().MapToDomain())));
 }

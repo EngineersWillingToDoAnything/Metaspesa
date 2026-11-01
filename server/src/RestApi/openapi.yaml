@@ -750,7 +750,7 @@ components:
         - id
         - quantity
         - currentPrice
-        - observedAt
+        - observedOn
       type: object
       properties:
         id:
@@ -763,10 +763,10 @@ components:
         currentPrice:
           description: Latest observed price for this format.
           $ref: '#/components/schemas/MoneyResponse'
-        observedAt:
+        observedOn:
           type: string
-          description: UTC instant of the latest price observation.
-          format: date-time
+          description: Calendar date of the latest price observation (YYYY-MM-DD).
+          format: date
         imageUrl:
           type:
             - 'null'

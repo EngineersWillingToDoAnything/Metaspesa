@@ -81,6 +81,74 @@ describe('RestMarketApiService', () => {
     );
   });
 
+  it('reads calendar observation dates from product responses', async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      Response.json({
+        items: [
+          {
+            brand: 'Hacendado',
+            formats: [
+              {
+                currentPrice: { amount: 1.25, currency: 'EUR' },
+                id: '00000000-0000-7000-8000-000000000003',
+                observedOn: '2026-08-20',
+                quantity: { amount: 1000, unit: 'ml' },
+              },
+            ],
+            id: '00000000-0000-7000-8000-000000000002',
+            market: { id: marketId, name: 'Mercadona' },
+            name: 'Whole milk',
+          },
+        ],
+        page: 1,
+        pageSize: 24,
+        totalItems: 1,
+        totalPages: 1,
+      }),
+    );
+    const service = new RestMarketApiService(
+      'https://api.example/api/v1',
+      fetcher,
+    );
+
+    const products = await service.getMarketProducts();
+
+    expect(products.items[0].formats[0].observedOn).toBe('2026-08-20');
+  });
+
+  it('rejects timestamps in calendar observation date fields', async () => {
+    const fetcher = vi.fn().mockResolvedValue(
+      Response.json({
+        items: [
+          {
+            brand: 'Hacendado',
+            formats: [
+              {
+                currentPrice: { amount: 1.25, currency: 'EUR' },
+                id: '00000000-0000-7000-8000-000000000003',
+                observedOn: '2026-08-20T00:00:00Z',
+                quantity: { amount: 1000, unit: 'ml' },
+              },
+            ],
+            id: '00000000-0000-7000-8000-000000000002',
+            market: { id: marketId, name: 'Mercadona' },
+            name: 'Whole milk',
+          },
+        ],
+        page: 1,
+        pageSize: 24,
+        totalItems: 1,
+        totalPages: 1,
+      }),
+    );
+    const service = new RestMarketApiService(
+      'https://api.example/api/v1',
+      fetcher,
+    );
+
+    await expect(service.getMarketProducts()).rejects.toBeInstanceOf(ZodError);
+  });
+
   it('rejects a successful response that breaks the OpenAPI schema', async () => {
     const fetcher = vi
       .fn()

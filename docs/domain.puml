@@ -57,14 +57,14 @@ package "Markets Module" {
   class ProductIdentity <<value object>>
 
   class ProductFormat <<entity>> {
-    + RecordSnapshot(price, observedAt): bool
+    + RecordSnapshot(price, observedOn): bool
   }
 
   class PriceSnapshot <<entity>> {
   }
 
-  class ObservationTime <<value object>> {
-    + Value: DateTime
+  class ObservationDate <<value object>> {
+    + Value: DateOnly
     + CompareTo(other): int
   }
 
@@ -96,7 +96,7 @@ package "Markets Module" {
   PriceSnapshot *--> PriceSnapshotId : Id
   PriceSnapshot --> ProductFormatId
   PriceSnapshot *--> Money : Price
-  PriceSnapshot *--> ObservationTime : ObservedAt
+  PriceSnapshot *--> ObservationDate : ObservedOn
 
   note right of PriceSnapshot
     Append-only market price observation with a domain-generated ID.

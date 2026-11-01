@@ -656,12 +656,12 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
         new PriceSnapshotDbEntity {
           Id = Uid.Create(),
           PriceAmount = 4.25m,
-          ObservedAt = RemovedAt.AddDays(-2),
+          ObservedOn = DateOnly.FromDateTime(RemovedAt.AddDays(-2)),
         },
         new PriceSnapshotDbEntity {
           Id = Uid.Create(),
           PriceAmount = 4.75m,
-          ObservedAt = RemovedAt.AddDays(-1),
+          ObservedOn = DateOnly.FromDateTime(RemovedAt.AddDays(-1)),
         },
       ],
     };
@@ -930,7 +930,7 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
       Id = Uid.Create(),
       ProductFormat = format,
       PriceAmount = 1.25m,
-      ObservedAt = RemovedAt.AddDays(-1),
+      ObservedOn = DateOnly.FromDateTime(RemovedAt.AddDays(-1)),
     });
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     return new ProductFormatId(format.Id);

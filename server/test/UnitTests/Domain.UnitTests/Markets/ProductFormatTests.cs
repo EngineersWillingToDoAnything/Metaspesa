@@ -14,64 +14,64 @@ public class ProductFormatTests {
 
   [Fact]
   public void Create_GeneratesVersion7FormatId() {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
 
-    var format = ProductFormat.Create(prepared, observedAt);
+    var format = ProductFormat.Create(prepared, observedOn);
 
     Assert.Equal(7, format.Id.Value.Version);
   }
 
   [Fact]
   public void Create_PreservesPreparedQuantity() {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
 
-    var format = ProductFormat.Create(prepared, observedAt);
+    var format = ProductFormat.Create(prepared, observedOn);
 
     Assert.Equal(prepared.Quantity, format.Quantity);
   }
 
   [Fact]
   public void Create_PreservesPreparedImage() {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
 
-    var format = ProductFormat.Create(prepared, observedAt);
+    var format = ProductFormat.Create(prepared, observedOn);
 
     Assert.Equal(prepared.ImageUrl, format.ImageUrl);
   }
 
   [Fact]
   public void Create_CreatesInitialSnapshotForFormat() {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
 
-    var format = ProductFormat.Create(prepared, observedAt);
+    var format = ProductFormat.Create(prepared, observedOn);
 
     Assert.Equal(format.Id, format.LatestSnapshot.ProductFormatId);
   }
 
   [Fact]
   public void Rehydrate_PreservesFormatId() {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
-    var original = ProductFormat.Create(prepared, observedAt);
+    var original = ProductFormat.Create(prepared, observedOn);
 
     var format = ProductFormat.Rehydrate(
       original.Id, original.Quantity, original.ImageUrl, original.LatestSnapshot);
@@ -81,12 +81,12 @@ public class ProductFormatTests {
 
   [Fact]
   public void Rehydrate_PreservesQuantity() {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
-    var original = ProductFormat.Create(prepared, observedAt);
+    var original = ProductFormat.Create(prepared, observedOn);
 
     var format = ProductFormat.Rehydrate(
       original.Id, original.Quantity, original.ImageUrl, original.LatestSnapshot);
@@ -96,12 +96,12 @@ public class ProductFormatTests {
 
   [Fact]
   public void Rehydrate_PreservesImage() {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
-    var original = ProductFormat.Create(prepared, observedAt);
+    var original = ProductFormat.Create(prepared, observedOn);
 
     var format = ProductFormat.Rehydrate(
       original.Id, original.Quantity, original.ImageUrl, original.LatestSnapshot);
@@ -111,12 +111,12 @@ public class ProductFormatTests {
 
   [Fact]
   public void Rehydrate_PreservesLatestSnapshot() {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
-    var original = ProductFormat.Create(prepared, observedAt);
+    var original = ProductFormat.Create(prepared, observedOn);
 
     var format = ProductFormat.Rehydrate(
       original.Id, original.Quantity, original.ImageUrl, original.LatestSnapshot);
@@ -126,12 +126,12 @@ public class ProductFormatTests {
 
   [Fact]
   public void Rehydrate_AcceptsMissingPersistedImage() {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
-    var original = ProductFormat.Create(prepared, observedAt);
+    var original = ProductFormat.Create(prepared, observedOn);
 
     var format = ProductFormat.Rehydrate(
       original.Id, original.Quantity, null, original.LatestSnapshot);
@@ -141,12 +141,12 @@ public class ProductFormatTests {
 
   [Fact]
   public void Rehydrate_DoesNotValidatePersistedQuantity() {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
-    var original = ProductFormat.Create(prepared, observedAt);
+    var original = ProductFormat.Create(prepared, observedOn);
     var legacyQuantity = new Quantity(0, new UnitOfMeasure("legacy"));
 
     var format = ProductFormat.Rehydrate(
@@ -157,13 +157,13 @@ public class ProductFormatTests {
 
   [Fact]
   public void RecordSnapshot_ReturnsTrue_WhenPriceChanges() {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
-    var format = ProductFormat.Create(prepared, observedAt);
-    var later = ObservationTime.Create(observedAt.Value.AddTicks(1));
+    var format = ProductFormat.Create(prepared, observedOn);
+    var later = ObservationDate.Create(observedOn.Value.AddDays(1));
 
     bool recorded = format.RecordSnapshot(Money.Create(2.49m), later);
 
@@ -172,14 +172,14 @@ public class ProductFormatTests {
 
   [Fact]
   public void RecordSnapshot_ReplacesLatestSnapshot_WhenPriceChanges() {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
-    var format = ProductFormat.Create(prepared, observedAt);
+    var format = ProductFormat.Create(prepared, observedOn);
     PriceSnapshot initial = format.LatestSnapshot;
-    var later = ObservationTime.Create(observedAt.Value.AddTicks(1));
+    var later = ObservationDate.Create(observedOn.Value.AddDays(1));
 
     _ = format.RecordSnapshot(Money.Create(2.49m), later);
 
@@ -190,13 +190,13 @@ public class ProductFormatTests {
   [InlineData(0)]
   [InlineData(1)]
   public void RecordSnapshot_ReturnsFalse_WhenPriceIsUnchanged(int daysLater) {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
-    var format = ProductFormat.Create(prepared, observedAt);
-    var incoming = ObservationTime.Create(observedAt.Value.AddDays(daysLater));
+    var format = ProductFormat.Create(prepared, observedOn);
+    var incoming = ObservationDate.Create(observedOn.Value.AddDays(daysLater));
 
     bool recorded = format.RecordSnapshot(prepared.Price, incoming);
 
@@ -207,14 +207,14 @@ public class ProductFormatTests {
   [InlineData(0)]
   [InlineData(1)]
   public void RecordSnapshot_PreservesLatestSnapshot_WhenPriceIsUnchanged(int daysLater) {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
-    var format = ProductFormat.Create(prepared, observedAt);
+    var format = ProductFormat.Create(prepared, observedOn);
     PriceSnapshot initial = format.LatestSnapshot;
-    var incoming = ObservationTime.Create(observedAt.Value.AddDays(daysLater));
+    var incoming = ObservationDate.Create(observedOn.Value.AddDays(daysLater));
 
     _ = format.RecordSnapshot(prepared.Price, incoming);
 
@@ -225,13 +225,13 @@ public class ProductFormatTests {
   [InlineData(1.99)] // Same price
   [InlineData(2.49)] // Different price
   public void RecordSnapshot_RejectsEarlierObservation(decimal price) {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
-    var format = ProductFormat.Create(prepared, observedAt);
-    var earlier = ObservationTime.Create(observedAt.Value.AddTicks(-1));
+    var format = ProductFormat.Create(prepared, observedOn);
+    var earlier = ObservationDate.Create(observedOn.Value.AddDays(-1));
 
     void action() => format.RecordSnapshot(Money.Create(price), earlier);
 
@@ -240,14 +240,14 @@ public class ProductFormatTests {
 
   [Fact]
   public void RecordSnapshot_RejectsConflictingPriceAtSameTime() {
-    var observedAt = ObservationTime.Create(DateTime.UtcNow);
+    var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
       new ImageUrl(new Uri("https://example.com/milk.png")));
-    var format = ProductFormat.Create(prepared, observedAt);
+    var format = ProductFormat.Create(prepared, observedOn);
 
-    void action() => format.RecordSnapshot(Money.Create(2.49m), observedAt);
+    void action() => format.RecordSnapshot(Money.Create(2.49m), observedOn);
 
     Assert.Throws<ConflictingPriceObservationException>(action);
   }

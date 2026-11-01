@@ -17,7 +17,7 @@ internal class PostgreSqlMarketProductRepository(
       .AsNoTracking()
       .Include(product => product.Formats)
       .ThenInclude(format => format.PriceSnapshots
-        .OrderByDescending(snapshot => snapshot.ObservedAt)
+        .OrderByDescending(snapshot => snapshot.ObservedOn)
         .ThenByDescending(snapshot => snapshot.Id)
         .Take(1))
       .SingleOrDefaultAsync(
@@ -52,13 +52,13 @@ internal class PostgreSqlMarketProductRepository(
       CatalogSort.PriceAsc => query.OrderBy(product => product.Formats
         .Where(format => format.PriceSnapshots.Count > 0)
         .Min(format => format.PriceSnapshots
-          .OrderByDescending(snapshot => snapshot.ObservedAt)
+          .OrderByDescending(snapshot => snapshot.ObservedOn)
           .ThenByDescending(snapshot => snapshot.Id)
           .Select(snapshot => snapshot.PriceAmount).First())),
       CatalogSort.PriceDesc => query.OrderByDescending(product => product.Formats
         .Where(format => format.PriceSnapshots.Count > 0)
         .Min(format => format.PriceSnapshots
-          .OrderByDescending(snapshot => snapshot.ObservedAt)
+          .OrderByDescending(snapshot => snapshot.ObservedOn)
           .ThenByDescending(snapshot => snapshot.Id)
           .Select(snapshot => snapshot.PriceAmount).First())),
       _ => query.OrderBy(product => product.Name),
@@ -93,13 +93,17 @@ internal class PostgreSqlMarketProductRepository(
 
   private static CatalogFormat ToCatalogFormat(ProductFormatDbEntity format) {
     PriceSnapshotDbEntity snapshot = format.PriceSnapshots
-      .OrderByDescending(value => value.ObservedAt)
+      .OrderByDescending(value => value.ObservedOn)
       .ThenByDescending(value => value.Id)
       .First();
     return new CatalogFormat(
-      format.Id, format.Quantity, format.UnitOfMeasure,
-      snapshot.PriceAmount, snapshot.CurrencyCode, ToUri(format.ImageUrl),
-      DateTime.SpecifyKind(snapshot.ObservedAt, DateTimeKind.Utc));
+      format.Id,
+      format.Quantity,
+      format.UnitOfMeasure,
+      snapshot.PriceAmount,
+      snapshot.CurrencyCode,
+      ToUri(format.ImageUrl),
+      snapshot.ObservedOn);
   }
 
   private static Uri? ToUri(string? value) =>
@@ -151,7 +155,7 @@ internal class PostgreSqlMarketProductRepository(
       .AsNoTracking()
       .Include(product => product.Formats)
       .ThenInclude(format => format.PriceSnapshots
-        .OrderByDescending(snapshot => snapshot.ObservedAt)
+        .OrderByDescending(snapshot => snapshot.ObservedOn)
         .ThenByDescending(snapshot => snapshot.Id)
         .Take(1))
       .AsSplitQuery()
@@ -242,11 +246,11 @@ internal class PostgreSqlMarketProductRepository(
     Guid[] ids = [.. snapshots.Select(snapshot => snapshot.Id.Value)];
     Guid[] formatIds = [.. snapshots.Select(snapshot => snapshot.ProductFormatId.Value)];
     decimal[] prices = [.. snapshots.Select(snapshot => snapshot.Price.Amount)];
-    DateTime[] times = [.. snapshots.Select(snapshot => snapshot.ObservedAt.Value)];
+    DateOnly[] dates = [.. snapshots.Select(snapshot => snapshot.ObservedOn.Value)];
 
     await context.Database.ExecuteSqlInterpolatedAsync($"""
-      INSERT INTO market.price_snapshots (id, product_format_id, price_amount, observed_at)
-      SELECT * FROM unnest({ids}, {formatIds}, {prices}, {times});
+      INSERT INTO market.price_snapshots (id, product_format_id, price_amount, observed_on)
+      SELECT * FROM unnest({ids}, {formatIds}, {prices}, {dates});
       """, cancellationToken);
   }
 }
