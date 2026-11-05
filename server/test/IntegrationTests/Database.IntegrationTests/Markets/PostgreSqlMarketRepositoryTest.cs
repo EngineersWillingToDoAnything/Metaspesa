@@ -147,9 +147,12 @@ public sealed class PostgreSqlMarketRepositoryTest : IAsyncLifetime {
   [Fact]
   public async Task SaveAsync_UpdatesExistingAggregateName() {
     // Arrange
-    var aggregate = Market.Create("Original");
-    await _repository.SaveAsync(aggregate, TestContext.Current.CancellationToken);
-    var updated = Market.Rehydrate(aggregate.Id, new MarketName("Updated"), null);
+    var updated = Market.Create("Updated");
+    _context.SuperMarkets.Add(new SuperMarketDbEntity {
+      Id = updated.Id.Value,
+      Name = "Original",
+    });
+    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
     // Act
     await _repository.SaveAsync(updated, TestContext.Current.CancellationToken);
@@ -214,10 +217,13 @@ public sealed class PostgreSqlMarketRepositoryTest : IAsyncLifetime {
   [Fact]
   public async Task SaveAsync_UpdatesLogo() {
     // Arrange
-    var aggregate = Market.Create("Name");
-    await _repository.SaveAsync(aggregate, TestContext.Current.CancellationToken);
-    var logo = new ImageUrl(new Uri("https://example.test/updated.png"));
-    var updated = Market.Rehydrate(aggregate.Id, aggregate.Name, logo);
+    var logo = new Uri("https://example.test/updated.png");
+    var updated = Market.Create("Name", logo);
+    _context.SuperMarkets.Add(new SuperMarketDbEntity {
+      Id = updated.Id.Value,
+      Name = updated.Name.Value,
+    });
+    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
     // Act
     await _repository.SaveAsync(updated, TestContext.Current.CancellationToken);
@@ -225,6 +231,6 @@ public sealed class PostgreSqlMarketRepositoryTest : IAsyncLifetime {
     // Assert
     string? actual = await _context.SuperMarkets.Select(value => value.LogoUrl)
       .SingleAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(logo.Value.ToString(), actual);
+    Assert.Equal(logo.ToString(), actual);
   }
 }

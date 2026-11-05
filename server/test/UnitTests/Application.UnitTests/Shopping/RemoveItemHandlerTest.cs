@@ -58,7 +58,7 @@ public class RemoveItemHandlerTest {
   [Fact(DisplayName = "Does not save when shopping item does not exist")]
   public async Task Handle_DoesNotSave_WhenShoppingItemDoesNotExist() {
     var ownerId = Guid.CreateVersion7();
-    ShoppingList list = ShoppingTestData.List(ownerId);
+    var list = ShoppingList.Create(ownerId, "Weekly");
     _shoppingListRepository.GetAsync(
         ownerId, list.Id.Value, TestContext.Current.CancellationToken)
       .Returns(list);

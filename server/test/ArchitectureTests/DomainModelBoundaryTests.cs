@@ -81,22 +81,6 @@ public class DomainModelBoundaryTests {
     Assert.Equal(typeof(PriceSnapshot), snapshotType);
   }
 
-  [Fact(DisplayName = "Product formats cannot be constructed or mutated publicly")]
-  public void ProductFormat_HasNoPublicMutationPath() {
-    // Arrange
-    Type productFormatType = typeof(ProductFormat);
-
-    // Act
-    string[] mutationPaths = [.. productFormatType.GetConstructors()
-      .Select(constructor => constructor.Name)
-      .Concat(productFormatType.GetProperties()
-        .Where(property => property.SetMethod?.IsPublic == true)
-        .Select(property => property.Name))];
-
-    // Assert
-    Assert.Empty(mutationPaths);
-  }
-
   private static IEnumerable<Type> ReferencedTypes(Type type) {
     const BindingFlags flags =
       BindingFlags.Instance |

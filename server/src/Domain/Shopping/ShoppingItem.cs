@@ -4,28 +4,35 @@ using Metaspesa.Domain.Shopping.Errors;
 
 namespace Metaspesa.Domain.Shopping;
 
-public sealed class ShoppingItem(
-  ProductFormatId productFormatId,
-  PositiveAmount amount,
-  bool isChecked,
-  ShoppingItemId? id = null,
-  DateTime? deletedAt = null
-) {
+public sealed class ShoppingItem {
+  public ShoppingItemId Id { get; }
+  public ProductFormatId ProductFormatId { get; }
+  public PositiveAmount Amount { get; private set; }
+  public bool IsChecked { get; private set; }
+  public DateTime? DeletedAt { get; private set; }
 
-  public ShoppingItemId Id { get; } = id ?? new ShoppingItemId(Uid.Create());
-  public ProductFormatId ProductFormatId { get; } = productFormatId;
-  public PositiveAmount Amount { get; private set; } = amount;
-  public bool IsChecked { get; private set; } = isChecked;
-  public DateTime? DeletedAt { get; private set; } = deletedAt;
+  private ShoppingItem(
+    ShoppingItemId id,
+    ProductFormatId productFormatId,
+    PositiveAmount amount,
+    bool isChecked,
+    DateTime? deletedAt
+  ) {
+    Id = id;
+    ProductFormatId = productFormatId;
+    Amount = amount;
+    IsChecked = isChecked;
+    DeletedAt = deletedAt;
+  }
 
-  public static ShoppingItem Create(
+  internal static ShoppingItem Create(
     Guid productFormatId, int amount, bool isChecked
   ) {
     return new(
+      new ShoppingItemId(Uid.Create()),
       new ProductFormatId(productFormatId),
       new PositiveAmount(amount),
       isChecked,
-      new ShoppingItemId(Uid.Create()),
       null
     );
   }
@@ -34,10 +41,10 @@ public sealed class ShoppingItem(
     Guid id, Guid productFormatId, int amount, bool isChecked, DateTime? deletedAt
   ) {
     return new(
+      new ShoppingItemId(id),
       new ProductFormatId(productFormatId),
       new PositiveAmount(amount),
       isChecked,
-      new ShoppingItemId(id),
       deletedAt
     );
   }

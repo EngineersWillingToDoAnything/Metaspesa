@@ -33,8 +33,9 @@ public class UpdateItemHandlerTest {
   [Fact(DisplayName = "Saves aggregate after updating item by ID")]
   public async Task Handle_SavesAggregateAfterUpdatingItemById() {
     var ownerId = Guid.CreateVersion7();
-    ShoppingItem item = ShoppingTestData.Item(Guid.CreateVersion7());
-    ShoppingList list = ShoppingTestData.List(ownerId, "Weekly", item);
+    var list = ShoppingList.Create(ownerId, "Weekly");
+    list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 1, false)]);
+    ShoppingItem item = list.Items.Single();
     var command = new Command(
       ownerId, list.Id.Value, item.Id.Value, 4, true);
     _shoppingListRepository.GetAsync(
@@ -51,7 +52,7 @@ public class UpdateItemHandlerTest {
   [Fact(DisplayName = "Does not save when shopping item does not exist")]
   public async Task Handle_DoesNotSave_WhenShoppingItemDoesNotExist() {
     var ownerId = Guid.CreateVersion7();
-    ShoppingList list = ShoppingTestData.List(ownerId);
+    var list = ShoppingList.Create(ownerId, "Weekly");
     _shoppingListRepository.GetAsync(
         ownerId, list.Id.Value, TestContext.Current.CancellationToken)
       .Returns(list);

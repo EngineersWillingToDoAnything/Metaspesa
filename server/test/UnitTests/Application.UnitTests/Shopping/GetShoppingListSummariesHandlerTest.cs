@@ -13,8 +13,8 @@ public class GetShoppingListSummariesHandlerTest {
     IShoppingListRepository repository = Substitute.For<IShoppingListRepository>();
     repository.GetByOwnerAsync(Arg.Any<UserId>(), Arg.Any<CancellationToken>())
       .Returns([
-        ShoppingTestData.List(ownerId, "Weekly"),
-        ShoppingTestData.List(ownerId, null),
+        ShoppingList.Create(ownerId, "Weekly"),
+        ShoppingList.Create(ownerId, null),
       ]);
     var handler = new Handler(repository);
 

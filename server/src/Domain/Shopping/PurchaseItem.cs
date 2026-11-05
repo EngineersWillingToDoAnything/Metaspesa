@@ -18,7 +18,7 @@ public sealed class PurchaseItem {
     PriceSnapshotId = priceSnapshotId;
   }
 
-  public static PurchaseItem Create(
+  internal static PurchaseItem Create(
     Guid priceSnapshotId,
     int amount
   ) {

@@ -47,14 +47,16 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
   [InlineData(false)]
   [InlineData(true)]
   public async Task SaveAsync_ConcurrentSameIdPreservesFirstPurchase(bool differentPayload) {
-    (Guid firstSnapshot, Guid secondSnapshot) = await SeedConcurrentSaveSnapshotsAsync();
+    (Guid firstSnapshot, Guid secondSnapshot, Guid buyerId, Guid listId) = await SeedPurchaseReferencesAsync();
     var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
-    var purchase = Purchase.Rehydrate(Guid.CreateVersion7(), null, null, purchasedAt,
-      [PurchaseItem.Create(firstSnapshot, 2)]);
-    var duplicate = Purchase.Rehydrate(purchase.Id.Value, null, null,
+    var purchase = Purchase.Create(new CreatePurchaseParams(
+      Guid.CreateVersion7(), buyerId, listId, purchasedAt,
+      [new CreatePurchaseItem(firstSnapshot, 2)]));
+    var duplicate = Purchase.Create(new CreatePurchaseParams(
+      purchase.Id.Value, buyerId, listId,
       differentPayload ? purchasedAt.AddHours(1) : purchasedAt,
-      [PurchaseItem.Create(differentPayload ? secondSnapshot : firstSnapshot,
-        differentPayload ? 9 : 2)]);
+      [new CreatePurchaseItem(differentPayload ? secondSnapshot : firstSnapshot,
+        differentPayload ? 9 : 2)]));
     var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
     var firstGate = new SaveCommandInterceptor(release.Task);
     var secondGate = new SaveCommandInterceptor(Task.CompletedTask);
@@ -86,10 +88,12 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveAsync_RollsBackAllLines_WhenNewPurchaseHasMissingSnapshot() {
-    (Guid firstSnapshot, _) = await SeedConcurrentSaveSnapshotsAsync();
-    var purchase = Purchase.Rehydrate(Guid.CreateVersion7(), null, null,
+    (Guid firstSnapshot, _, Guid buyerId, Guid listId) = await SeedPurchaseReferencesAsync();
+    var purchase = Purchase.Create(new CreatePurchaseParams(
+      Guid.CreateVersion7(), buyerId, listId,
       new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc),
-      [PurchaseItem.Create(firstSnapshot, 2), PurchaseItem.Create(Guid.CreateVersion7(), 3)]);
+      [new CreatePurchaseItem(firstSnapshot, 2),
+       new CreatePurchaseItem(Guid.CreateVersion7(), 3)]));
 
     _ = await Record.ExceptionAsync(() =>
       _repository.SaveAsync(purchase, TestContext.Current.CancellationToken));
@@ -98,7 +102,15 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
       .ToArrayAsync(TestContext.Current.CancellationToken));
   }
 
-  private async Task<(Guid First, Guid Second)> SeedConcurrentSaveSnapshotsAsync() {
+  private async Task<(Guid FirstSnapshot, Guid SecondSnapshot, Guid BuyerId, Guid ListId)> SeedPurchaseReferencesAsync() {
+    var buyer = User.Create($"buyer_{Guid.CreateVersion7():N}", "hashed");
+    var userRepository = new PostgreSqlUserRepository(_context);
+    await userRepository.SaveAsync(buyer, TestContext.Current.CancellationToken);
+
+    var list = ShoppingList.Create(buyer.Id.Value, "Weekly");
+    var listRepository = new PostgreSqlShoppingListRepository(_context);
+    await listRepository.SaveAsync(list, TestContext.Current.CancellationToken);
+
     var format = new ProductFormatDbEntity {
       Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
       UnitOfMeasure = "unit",
@@ -122,7 +134,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     };
     _context.PriceSnapshots.AddRange(first, second);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-    return (first.Id, second.Id);
+    return (first.Id, second.Id, buyer.Id.Value, list.Id.Value);
   }
 
   private sealed class SaveCommandInterceptor(Task release) : DbCommandInterceptor {

@@ -27,22 +27,25 @@ public static class GetShoppingListsEndpointTests {
 
   [Fact]
   public static async Task List_ReturnsNamedAndTemporaryListIds() {
-    var temporaryListId = Guid.CreateVersion7();
+    // Arrange
+    var namedList = ShoppingList.Create(OwnerUid, "Weekly");
+    var temporaryList = ShoppingList.Create(OwnerUid, null);
     IShoppingListRepository repository = Substitute.For<IShoppingListRepository>();
     repository.GetByOwnerAsync(new UserId(OwnerUid),
       TestContext.Current.CancellationToken).Returns([
-        PersistedList("Weekly"),
-        ShoppingList.Rehydrate(new ShoppingListId(temporaryListId),
-          [new UserId(OwnerUid)], null, null, []),
+        namedList,
+        temporaryList,
       ]);
 
+    // Act
     IResult result = await GetShoppingListsEndpoint.ListAsync(
       ShopperContext(), new GetShoppingListSummaries.Handler(repository),
       TestContext.Current.CancellationToken);
 
+    // Assert
     Assert.Equal([
-      new ShoppingListSummaryResponse(ListId, "Weekly", false),
-      new ShoppingListSummaryResponse(temporaryListId, null, true),
+      new ShoppingListSummaryResponse(namedList.Id.Value, "Weekly", false),
+      new ShoppingListSummaryResponse(temporaryList.Id.Value, null, true),
     ], Assert.IsType<Ok<ShoppingListCollectionResponse>>(result).Value!.Items);
   }
 
