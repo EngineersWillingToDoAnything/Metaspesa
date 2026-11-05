@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Metaspesa.Domain.SharedKernel.Errors;
 
 namespace Metaspesa.Domain.SharedKernel;
@@ -5,7 +6,7 @@ namespace Metaspesa.Domain.SharedKernel;
 public readonly record struct UnitOfMeasure(
   string Value
 ) {
-  private static readonly string[] SupportedUnits = [
+  private static readonly ImmutableArray<string> SupportedUnits = [
     "unit",
     "wash",
     "dose",

@@ -7,6 +7,7 @@ namespace Metaspesa.ArchitectureTests;
 public class DomainModelBoundaryTests {
   [Fact(DisplayName = "Shopping references no Markets aggregates")]
   public void Shopping_DoesNotReferenceMarketsAggregates() {
+    // Arrange
     var forbiddenTypes = new HashSet<Type> {
       typeof(Market),
       typeof(Product),
@@ -14,6 +15,7 @@ public class DomainModelBoundaryTests {
       typeof(PriceSnapshot),
     };
 
+    // Act
     Type[] violations = typeof(ShoppingList).Assembly.GetTypes()
       .Where(type => type.Namespace?.StartsWith(
         "Metaspesa.Domain.Shopping",
@@ -21,46 +23,77 @@ public class DomainModelBoundaryTests {
       .Where(type => ReferencedTypes(type).Any(forbiddenTypes.Contains))
       .ToArray();
 
+    // Assert
     Assert.Empty(violations);
   }
 
   [Fact(DisplayName = "Product exposes only pending snapshots as a collection")]
   public void Product_ExposesOnlyPendingSnapshotCollection() {
-    IEnumerable<string> snapshotCollections = typeof(Product).GetProperties()
-      .Where(property => typeof(IEnumerable<PriceSnapshot>).IsAssignableFrom(property.PropertyType))
-      .Select(property => property.Name);
+    // Arrange
+    Type productType = typeof(Product);
+    string[] expectedCollections = [nameof(Product.PendingSnapshots)];
 
-    Assert.Equal([nameof(Product.PendingSnapshots)], snapshotCollections);
+    // Act
+    string[] snapshotCollections = [.. productType.GetProperties()
+      .Where(property => typeof(IEnumerable<PriceSnapshot>).IsAssignableFrom(property.PropertyType))
+      .Select(property => property.Name)];
+
+    // Assert
+    Assert.Equal(expectedCollections, snapshotCollections);
   }
 
   [Fact(DisplayName = "Product format exposes only pending snapshots as a collection")]
   public void ProductFormat_ExposesOnlyPendingSnapshotCollection() {
-    IEnumerable<string> snapshotCollections = typeof(ProductFormat).GetProperties()
-      .Where(property => typeof(IEnumerable<PriceSnapshot>).IsAssignableFrom(property.PropertyType))
-      .Select(property => property.Name);
+    // Arrange
+    Type productFormatType = typeof(ProductFormat);
+    string[] expectedCollections = [nameof(ProductFormat.PendingSnapshots)];
 
-    Assert.Equal([nameof(ProductFormat.PendingSnapshots)], snapshotCollections);
+    // Act
+    string[] snapshotCollections = [.. productFormatType.GetProperties()
+      .Where(property => typeof(IEnumerable<PriceSnapshot>).IsAssignableFrom(property.PropertyType))
+      .Select(property => property.Name)];
+
+    // Assert
+    Assert.Equal(expectedCollections, snapshotCollections);
   }
 
   [Fact(DisplayName = "Price snapshot has no ProductFormat back-reference")]
   public void PriceSnapshot_DoesNotReferenceProductFormatId() {
-    Assert.DoesNotContain(typeof(ProductFormatId), ReferencedTypes(typeof(PriceSnapshot)));
+    // Arrange
+    Type snapshotType = typeof(PriceSnapshot);
+
+    // Act
+    Type[] referencedTypes = [.. ReferencedTypes(snapshotType)];
+
+    // Assert
+    Assert.DoesNotContain(typeof(ProductFormatId), referencedTypes);
   }
 
   [Fact(DisplayName = "Product format exposes its latest snapshot")]
   public void ProductFormat_ExposesLatestSnapshot() {
-    Assert.Equal(typeof(PriceSnapshot),
-      typeof(ProductFormat).GetProperty(nameof(ProductFormat.LatestSnapshot))!.PropertyType);
+    // Arrange
+    Type productFormatType = typeof(ProductFormat);
+
+    // Act
+    Type? snapshotType = productFormatType.GetProperty(nameof(ProductFormat.LatestSnapshot))?.PropertyType;
+
+    // Assert
+    Assert.Equal(typeof(PriceSnapshot), snapshotType);
   }
 
   [Fact(DisplayName = "Product formats cannot be constructed or mutated publicly")]
   public void ProductFormat_HasNoPublicMutationPath() {
-    IEnumerable<string> mutationPaths = typeof(ProductFormat).GetConstructors()
-      .Select(constructor => constructor.Name)
-      .Concat(typeof(ProductFormat).GetProperties()
-        .Where(property => property.SetMethod?.IsPublic == true)
-        .Select(property => property.Name));
+    // Arrange
+    Type productFormatType = typeof(ProductFormat);
 
+    // Act
+    string[] mutationPaths = [.. productFormatType.GetConstructors()
+      .Select(constructor => constructor.Name)
+      .Concat(productFormatType.GetProperties()
+        .Where(property => property.SetMethod?.IsPublic == true)
+        .Select(property => property.Name))];
+
+    // Assert
     Assert.Empty(mutationPaths);
   }
 
