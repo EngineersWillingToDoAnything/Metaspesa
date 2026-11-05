@@ -4,6 +4,19 @@ namespace Metaspesa.Domain.UnitTests.Markets;
 
 public static class BrandTests {
   [Fact]
+  public static void Rehydrate_DoesNotRaiseDomainEvents() {
+    // Arrange
+    var id = new BrandId(Guid.Parse("00000000-0000-7000-8000-000000000001"));
+    var name = new BrandName("Brand");
+
+    // Act
+    var brand = Brand.Rehydrate(id, name);
+
+    // Assert
+    Assert.Empty(brand.DomainEvents);
+  }
+
+  [Fact]
   public static void Create_GeneratesVersion7Id() {
     // Arrange
     string name = "Brand";

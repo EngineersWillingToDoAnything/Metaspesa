@@ -148,6 +148,19 @@ public class PurchaseTests {
   }
 
   [Fact]
+  public void Rehydrate_DoesNotRaiseDomainEvents() {
+    // Arrange
+    var id = Guid.Parse("00000000-0000-7000-8000-000000000001");
+    var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
+
+    // Act
+    var purchase = Purchase.Rehydrate(id, null, null, purchasedAt, []);
+
+    // Assert
+    Assert.Empty(purchase.DomainEvents);
+  }
+
+  [Fact]
   public void Rehydrate_AcceptsDeletedBuyerReference() {
     var purchase = Purchase.Rehydrate(
       Guid.CreateVersion7(),

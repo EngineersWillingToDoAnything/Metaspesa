@@ -3,7 +3,7 @@ using Metaspesa.Domain.SharedKernel;
 
 namespace Metaspesa.Domain.Identity;
 
-public class User {
+public class User : AggregateRoot {
   public UserId Id { get; }
   public Username Username { get; }
   public PasswordHash PasswordHash { get; private set; }

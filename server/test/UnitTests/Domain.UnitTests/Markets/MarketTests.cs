@@ -5,6 +5,20 @@ namespace Metaspesa.Domain.UnitTests.Markets;
 
 public static class MarketTests {
   [Fact]
+  public static void Rehydrate_DoesNotRaiseDomainEvents() {
+    // Arrange
+    var id = new MarketId(Guid.Parse("00000000-0000-7000-8000-000000000001"));
+    var name = new MarketName("Market");
+    var logo = new ImageUrl(new Uri("https://example.test/logo.png"));
+
+    // Act
+    var market = Market.Rehydrate(id, name, logo);
+
+    // Assert
+    Assert.Empty(market.DomainEvents);
+  }
+
+  [Fact]
   public static void Create_GeneratesVersion7Id() {
     // Arrange
     string name = "Market";
@@ -35,7 +49,7 @@ public static class MarketTests {
     var name = new MarketName("Market");
 
     // Act
-    var aggregate = Market.Hydrate(id, name, null);
+    var aggregate = Market.Rehydrate(id, name, null);
 
     // Assert
     Assert.Equal(id, aggregate.Id);

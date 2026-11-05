@@ -2,7 +2,7 @@ using Metaspesa.Domain.SharedKernel;
 
 namespace Metaspesa.Domain.Markets;
 
-public sealed class Market {
+public sealed class Market : AggregateRoot {
   public MarketId Id { get; }
   public MarketName Name { get; }
   public ImageUrl? LogoUrl { get; }
@@ -23,7 +23,7 @@ public sealed class Market {
     return new(id, name, logoUrl);
   }
 
-  public static Market Hydrate(
+  public static Market Rehydrate(
     MarketId id, MarketName name, ImageUrl? logoUrl
   ) {
     return new(id, name, logoUrl);

@@ -4,6 +4,20 @@ using Metaspesa.Domain.Identity.Errors;
 namespace Metaspesa.Domain.UnitTests.Identity;
 
 public static class UserTest {
+  [Fact]
+  public static void Rehydrate_DoesNotRaiseDomainEvents() {
+    // Arrange
+    var id = new UserId(Guid.Parse("00000000-0000-7000-8000-000000000001"));
+    var username = new Username("estela");
+    var passwordHash = new PasswordHash("hashed");
+
+    // Act
+    var user = User.Rehydrate(id, username, passwordHash, Role.Shopper);
+
+    // Assert
+    Assert.Empty(user.DomainEvents);
+  }
+
   [Fact(DisplayName = "Creates shopper user")]
   public static void User_CreatedAsShopper_WhenValuesAreValid() {
     // Act

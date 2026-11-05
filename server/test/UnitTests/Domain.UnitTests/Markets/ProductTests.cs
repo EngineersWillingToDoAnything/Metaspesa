@@ -6,6 +6,21 @@ namespace Metaspesa.Domain.UnitTests.Markets;
 
 public class ProductTests {
   [Fact]
+  public void Rehydrate_DoesNotRaiseDomainEvents() {
+    // Arrange
+    var id = new ProductId(Guid.Parse("00000000-0000-7000-8000-000000000001"));
+    var brandId = new BrandId(Guid.Parse("00000000-0000-7000-8000-000000000002"));
+    var marketId = new MarketId(Guid.Parse("00000000-0000-7000-8000-000000000003"));
+    var name = new ProductName("Milk");
+
+    // Act
+    var product = Product.Rehydrate(id, name, brandId, marketId, []);
+
+    // Assert
+    Assert.Empty(product.DomainEvents);
+  }
+
+  [Fact]
   public void Create_GeneratesVersion7Id() {
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();

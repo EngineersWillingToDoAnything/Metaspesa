@@ -2,7 +2,7 @@ using Metaspesa.Domain.SharedKernel;
 
 namespace Metaspesa.Domain.Markets;
 
-public sealed class Brand {
+public sealed class Brand : AggregateRoot {
   public BrandId Id { get; }
   public BrandName Name { get; }
 

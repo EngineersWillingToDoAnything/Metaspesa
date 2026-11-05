@@ -149,7 +149,7 @@ public sealed class PostgreSqlMarketRepositoryTest : IAsyncLifetime {
     // Arrange
     var aggregate = Market.Create("Original");
     await _repository.SaveAsync(aggregate, TestContext.Current.CancellationToken);
-    var updated = Market.Hydrate(aggregate.Id, new MarketName("Updated"), null);
+    var updated = Market.Rehydrate(aggregate.Id, new MarketName("Updated"), null);
 
     // Act
     await _repository.SaveAsync(updated, TestContext.Current.CancellationToken);
@@ -217,7 +217,7 @@ public sealed class PostgreSqlMarketRepositoryTest : IAsyncLifetime {
     var aggregate = Market.Create("Name");
     await _repository.SaveAsync(aggregate, TestContext.Current.CancellationToken);
     var logo = new ImageUrl(new Uri("https://example.test/updated.png"));
-    var updated = Market.Hydrate(aggregate.Id, aggregate.Name, logo);
+    var updated = Market.Rehydrate(aggregate.Id, aggregate.Name, logo);
 
     // Act
     await _repository.SaveAsync(updated, TestContext.Current.CancellationToken);

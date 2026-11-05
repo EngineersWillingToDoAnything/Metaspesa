@@ -3,7 +3,7 @@ using Metaspesa.Domain.SharedKernel;
 
 namespace Metaspesa.Domain.Markets;
 
-public sealed class Product {
+public sealed class Product : AggregateRoot {
   private readonly List<ProductFormat> _formats;
   private readonly List<ProductFormat> _pendingFormats = [];
   private readonly ProductIdentity _identity;
