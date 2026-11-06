@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Metaspesa.Domain.Markets.Errors;
 using Metaspesa.Domain.SharedKernel;
 
@@ -44,6 +45,18 @@ public sealed class Product : AggregateRoot {
     IEnumerable<ProductFormat> formats
   ) {
     return new Product(id, new ProductIdentity(marketId, brandId, name), formats);
+  }
+
+  public ProductPrimitives ToPrimitives() {
+    ImmutableArray<ProductFormatPrimitives> formats = [..
+      _formats.Select(format => format.ToPrimitives())
+    ];
+    ImmutableArray<Guid> pendingFormatIds = [..
+      _pendingFormats.Select(format => format.Id.Value)
+    ];
+
+    return new ProductPrimitives(
+      Id.Value, Name.Value, BrandId.Value, MarketId.Value, formats, pendingFormatIds);
   }
 
   public void RegisterObservation(ProductObservationParams observation) {
@@ -103,3 +116,12 @@ public sealed class Product : AggregateRoot {
     }
   }
 }
+
+public sealed record ProductPrimitives(
+  Guid Id,
+  string Name,
+  Guid BrandId,
+  Guid MarketId,
+  ImmutableArray<ProductFormatPrimitives> Formats,
+  ImmutableArray<Guid> PendingFormatIds
+);

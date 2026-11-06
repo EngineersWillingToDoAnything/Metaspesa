@@ -37,9 +37,16 @@ public class User : AggregateRoot {
     Role role
   ) => new(id, username, passwordHash, role);
 
+  public UserPrimitives ToPrimitives() {
+    return new UserPrimitives(
+      Id.Value, Username.Value, PasswordHash.Value, (int)Role);
+  }
+
   private static void EnsureValidRole(Role role) {
     if (role is Role.None || !Enum.IsDefined(role)) {
       throw new InvalidRoleException(role);
     }
   }
 }
+
+public sealed record UserPrimitives(Guid Id, string Username, string PasswordHash, int Role);

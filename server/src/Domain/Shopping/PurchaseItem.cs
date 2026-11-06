@@ -40,4 +40,10 @@ public sealed class PurchaseItem {
       new PositiveAmount(amount)
     );
   }
+
+  public PurchaseItemPrimitives ToPrimitives() {
+    return new PurchaseItemPrimitives(Id.Value, PriceSnapshotId.Value, Amount.Value);
+  }
 }
+
+public sealed record PurchaseItemPrimitives(Guid Id, Guid PriceSnapshotId, int Amount);

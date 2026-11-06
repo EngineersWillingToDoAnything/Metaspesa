@@ -49,6 +49,10 @@ public sealed class ShoppingItem {
     );
   }
 
+  public ShoppingItemPrimitives ToPrimitives() {
+    return new ShoppingItemPrimitives(Id.Value, ProductFormatId.Value, Amount.Value, IsChecked, DeletedAt);
+  }
+
   internal void Delete(DateTime deletedAt) {
     if (DeletedAt.HasValue) {
       throw new ShoppingItemAlreadyDeletedException(Id);
@@ -72,3 +76,7 @@ public sealed class ShoppingItem {
 
   public bool CanBeCheckedOut() => DeletedAt is null && IsChecked;
 }
+
+public sealed record ShoppingItemPrimitives(
+  Guid Id, Guid ProductFormatId, int Amount, bool IsChecked, DateTime? DeletedAt
+);

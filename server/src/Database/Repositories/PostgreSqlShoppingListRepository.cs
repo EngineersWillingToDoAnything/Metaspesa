@@ -64,10 +64,9 @@ internal class PostgreSqlShoppingListRepository(
   public async Task SaveAsync(
     ShoppingList shoppingList, CancellationToken cancellationToken
   ) {
-    Guid listId = shoppingList.Id.Value;
-    string? name = shoppingList.Name?.Value;
-    Guid[] ownerIds = [.. shoppingList.OwnerIds.Select(owner => owner.Value)];
-    ShoppingItem[] items = [.. shoppingList.Items];
+    ShoppingListPrimitives state = shoppingList.ToPrimitives();
+    Guid[] ownerIds = [.. state.OwnerIds];
+    ShoppingItemPrimitives[] items = [.. state.Items];
 
     var itemIds = new Guid[items.Length];
     var productFormatIds = new Guid[items.Length];
@@ -76,11 +75,11 @@ internal class PostgreSqlShoppingListRepository(
     var deletedStates = new DateTime?[items.Length];
 
     for (int i = 0; i < items.Length; i++) {
-      ShoppingItem item = items[i];
+      ShoppingItemPrimitives item = items[i];
 
-      itemIds[i] = item.Id.Value;
-      productFormatIds[i] = item.ProductFormatId.Value;
-      amounts[i] = item.Amount.Value;
+      itemIds[i] = item.Id;
+      productFormatIds[i] = item.ProductFormatId;
+      amounts[i] = item.Amount;
       checkedStates[i] = item.IsChecked;
       deletedStates[i] = item.DeletedAt;
     }
@@ -93,7 +92,7 @@ internal class PostgreSqlShoppingListRepository(
         id, name, is_temporary, deleted_at
       )
       VALUES (
-        {listId}, {name}, {shoppingList.IsTemporary}, {shoppingList.DeletedAt}
+        {state.Id}, {state.Name}, {state.IsTemporary}, {state.DeletedAt}
       )
       ON CONFLICT (id) DO UPDATE SET
         name = EXCLUDED.name,
@@ -101,22 +100,22 @@ internal class PostgreSqlShoppingListRepository(
         deleted_at = EXCLUDED.deleted_at;
 
       DELETE FROM shopping.shopping_list_ownerships
-      WHERE shopping_list_id = {listId};
+      WHERE shopping_list_id = {state.Id};
 
       INSERT INTO shopping.shopping_list_ownerships (
         shopping_list_id, user_uid
       )
-      SELECT {listId}, owner_id
+      SELECT {state.Id}, owner_id
       FROM unnest({ownerIds}) AS owners(owner_id);
 
       DELETE FROM shopping.shopping_items
-      WHERE shopping_list_id = {listId};
+      WHERE shopping_list_id = {state.Id};
 
       INSERT INTO shopping.shopping_items (
         id, shopping_list_id, product_format_id, amount, is_checked, deleted_at
       )
       SELECT
-        item_id, {listId}, product_format_id, amount, is_checked, deleted_at
+        item_id, {state.Id}, product_format_id, amount, is_checked, deleted_at
       FROM unnest(
         {itemIds}, {productFormatIds}, {amounts}, {checkedStates}, {deletedStates}
       ) AS items(item_id, product_format_id, amount, is_checked, deleted_at);

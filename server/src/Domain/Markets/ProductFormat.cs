@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Metaspesa.Domain.Markets.Errors;
 using Metaspesa.Domain.SharedKernel;
 
@@ -56,6 +57,16 @@ public sealed class ProductFormat {
     return new ProductFormat(id, quantity, imageUrl, latestSnapshot);
   }
 
+  public ProductFormatPrimitives ToPrimitives() {
+    return new ProductFormatPrimitives(
+      Id.Value,
+      Quantity.Amount,
+      Quantity.UnitOfMeasure.Value,
+      ImageUrl?.Value.ToString(),
+      LatestSnapshot.ToPrimitives(),
+      [.. PendingSnapshots.Select(s => s.ToPrimitives())]);
+  }
+
   internal bool RecordSnapshot(Money price, ObservationDate observedOn) {
     EnsureIsLaterObservation(observedOn);
     EnsureDoesNotConflictCurrentObservation(price, observedOn);
@@ -87,3 +98,16 @@ public sealed class ProductFormat {
 
 internal sealed record PreparedFormatObservation(
   Quantity Quantity, Money Price, ImageUrl ImageUrl);
+
+#pragma warning disable CA1054, CA1056 // Persistence snapshots intentionally represent URLs as primitive strings.
+
+public sealed record ProductFormatPrimitives(
+  Guid Id,
+  decimal Quantity,
+  string UnitOfMeasure,
+  string? ImageUrl,
+  PriceSnapshotPrimitives LatestSnapshot,
+  ImmutableArray<PriceSnapshotPrimitives> PendingSnapshots
+);
+
+#pragma warning restore CA1054, CA1056

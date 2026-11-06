@@ -52,4 +52,17 @@ public static class BrandTests {
     // Assert
     Assert.Equal(id, aggregate.Id);
   }
+
+  [Fact]
+  public static void ToPrimitives_PreservesBrandState() {
+    // Arrange
+    var brand = Brand.Create("Brand");
+    var expected = new BrandPrimitives(brand.Id.Value, "Brand");
+
+    // Act
+    BrandPrimitives state = brand.ToPrimitives();
+
+    // Assert
+    Assert.Equal(expected, state);
+  }
 }

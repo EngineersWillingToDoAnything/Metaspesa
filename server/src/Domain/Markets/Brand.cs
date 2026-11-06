@@ -21,4 +21,10 @@ public sealed class Brand : AggregateRoot {
   public static Brand Rehydrate(BrandId id, BrandName name) {
     return new Brand(id, name);
   }
+
+  public BrandPrimitives ToPrimitives() {
+    return new BrandPrimitives(Id.Value, Name.Value);
+  }
 }
+
+public sealed record BrandPrimitives(Guid Id, string Name);

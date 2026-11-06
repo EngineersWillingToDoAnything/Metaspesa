@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Markets;
 using Metaspesa.Domain.SharedKernel;
@@ -71,6 +72,16 @@ public sealed class ShoppingList : AggregateRoot {
     DateTime? deletedAt,
     IEnumerable<ShoppingItem> items
   ) => new(id, ownerIds, name, items, deletedAt);
+
+  public ShoppingListPrimitives ToPrimitives() {
+    ImmutableArray<Guid> ownerIds = [.. _ownerIds.Select(owner => owner.Value)];
+    ImmutableArray<ShoppingItemPrimitives> items = [..
+      _items.Select(item => item.ToPrimitives())
+    ];
+
+    return new ShoppingListPrimitives(
+      Id.Value, Name?.Value, IsTemporary, DeletedAt, ownerIds, items);
+  }
 
   public void Update(string name) {
     Name = new ShoppingListName(name);
@@ -151,3 +162,12 @@ public sealed class ShoppingList : AggregateRoot {
     }
   }
 }
+
+public sealed record ShoppingListPrimitives(
+  Guid Id,
+  string? Name,
+  bool IsTemporary,
+  DateTime? DeletedAt,
+  ImmutableArray<Guid> OwnerIds,
+  ImmutableArray<ShoppingItemPrimitives> Items
+);

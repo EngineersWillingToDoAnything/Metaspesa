@@ -10,7 +10,7 @@ using Metaspesa.Domain.Shopping.Events;
 namespace Metaspesa.Domain.UnitTests.Shopping;
 
 public class ShoppingListTests {
-  private static readonly UserId OwnerId = new(Guid.Parse("11111111-1111-1111-1111-111111111111"));
+  private static readonly UserId OwnerId = new(Guid.CreateVersion7());
 
   [Fact(DisplayName = "Creates list with version 7 id")]
   public void Create_CreatesList_WithV7Id() {
@@ -62,7 +62,7 @@ public class ShoppingListTests {
       [OwnerId],
       new ShoppingListName("Weekly"),
       deletedAt,
-      [ShoppingItem.Create(Guid.Parse("00000000-0000-7000-8000-000000000008"), 2, true)]);
+      [ShoppingItem.Create(Guid.CreateVersion7(), 2, true)]);
 
     Assert.Equal(new ShoppingListId(id), list.Id);
     Assert.Equal(new ShoppingListName("Weekly"), list.Name);
@@ -418,7 +418,7 @@ public class ShoppingListTests {
   [Fact]
   public void Checkout_RecordsShoppingListId() {
     var list = ShoppingList.Create(OwnerId, null);
-    var buyerId = Guid.Parse("11111111-1111-1111-1111-111111111112");
+    var buyerId = Guid.CreateVersion7();
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
     list.AddItems([new AddItemsParams(
       Guid.CreateVersion7(), 2, true)]);
@@ -432,7 +432,7 @@ public class ShoppingListTests {
   [Fact]
   public void Checkout_RecordsBuyerId() {
     var list = ShoppingList.Create(OwnerId, null);
-    var buyerId = Guid.Parse("11111111-1111-1111-1111-111111111112");
+    var buyerId = Guid.CreateVersion7();
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
     list.AddItems([new AddItemsParams(
       Guid.CreateVersion7(), 2, true)]);
@@ -446,7 +446,7 @@ public class ShoppingListTests {
   [Fact]
   public void Checkout_RecordsCheckoutAt() {
     var list = ShoppingList.Create(OwnerId, null);
-    var buyerId = Guid.Parse("11111111-1111-1111-1111-111111111112");
+    var buyerId = Guid.CreateVersion7();
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
     list.AddItems([new AddItemsParams(
       Guid.CreateVersion7(), 2, true)]);
@@ -607,5 +607,89 @@ public class ShoppingListTests {
       [ShoppingItem.Create(Guid.CreateVersion7(), 2, true)]);
 
     Assert.Empty(list.DomainEvents);
+  }
+
+  [Theory]
+  [InlineData("Weekly")]
+  [InlineData(null)]
+  public void ToPrimitives_ExportsCompleteSnapshot(string? name) {
+    // Arrange
+    var ownerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(ownerId, name);
+    var expected = new ShoppingListPrimitives(
+      list.Id.Value, name, false, null, [ownerId], []);
+
+    // Act
+    ShoppingListPrimitives state = list.ToPrimitives();
+
+    // Assert
+    Assert.Equivalent(expected, state, strict: true);
+  }
+
+  [Fact]
+  public void ToPrimitives_PreservesUpdatedAndDeletedItemState() {
+    // Arrange
+    var ownerId = Guid.CreateVersion7();
+    var formatId = Guid.CreateVersion7();
+    var deletedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
+
+    var list = ShoppingList.Create(ownerId, "Weekly");
+    list.AddItems([new AddItemsParams(formatId, 1, false)]);
+    ShoppingItem item = list.Items.Single();
+    list.UpdateItem(item.Id.Value, 3, true);
+    list.RemoveItem(item.Id.Value, deletedAt);
+
+    var expected = new ShoppingListPrimitives(list.Id.Value, "Weekly", false, null, [ownerId],
+      [new ShoppingItemPrimitives(item.Id.Value, formatId, 3, true, deletedAt)]);
+
+    // Act
+    ShoppingListPrimitives state = list.ToPrimitives();
+
+    // Assert
+    Assert.Equivalent(expected, state, strict: true);
+  }
+
+  [Fact]
+  public void Snapshot_RemainsUnchangedAfterAggregateMutation() {
+    // Arrange
+    var ownerId = Guid.CreateVersion7();
+    var formatId = Guid.CreateVersion7();
+    var otherFormatId = Guid.CreateVersion7();
+    var deletedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
+
+    var list = ShoppingList.Create(ownerId, "Original");
+    list.AddItems([new AddItemsParams(formatId, 1, false)]);
+    ShoppingItem item = list.Items.Single();
+    ShoppingListPrimitives state = list.ToPrimitives();
+
+    var expected = new ShoppingListPrimitives(list.Id.Value, "Original", false, null, [ownerId],
+      [new ShoppingItemPrimitives(item.Id.Value, formatId, 1, false, null)]);
+
+    // Act
+    list.Update("Updated");
+    list.UpdateItem(item.Id.Value, 9, true);
+    list.RemoveItem(item.Id.Value, deletedAt);
+    list.AddItems([new AddItemsParams(otherFormatId, 2, true)]);
+
+    // Assert
+    Assert.Equivalent(expected, state, strict: true);
+  }
+
+  [Fact]
+  public void ToPrimitives_DoesNotConsumePendingDomainEvents() {
+    // Arrange
+    var ownerId = Guid.CreateVersion7();
+    var formatId = Guid.CreateVersion7();
+    var checkoutAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
+
+    var list = ShoppingList.Create(ownerId, "Weekly");
+    list.AddItems([new AddItemsParams(formatId, 1, true)]);
+    list.Checkout(ownerId, checkoutAt);
+
+    // Act
+    _ = list.ToPrimitives();
+
+    // Assert
+    Assert.Single(list.DomainEvents);
   }
 }

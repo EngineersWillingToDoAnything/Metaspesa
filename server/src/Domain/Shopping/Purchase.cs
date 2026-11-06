@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping.Errors;
@@ -76,6 +77,12 @@ public sealed class Purchase : AggregateRoot {
       items);
   }
 
+  public PurchasePrimitives ToPrimitives() {
+    ImmutableArray<PurchaseItemPrimitives> items = [.. _items.Select(item => item.ToPrimitives())];
+
+    return new PurchasePrimitives(Id.Value, BuyerId?.Value, ShoppingListId?.Value, PurchasedAt, items);
+  }
+
   private static void EnsureNotEmpty(CreatePurchaseItem[] items) {
     if (items.Length == 0) {
       throw new EmptyCheckoutException();
@@ -99,3 +106,11 @@ public sealed class Purchase : AggregateRoot {
     }
   }
 }
+
+public sealed record PurchasePrimitives(
+  Guid Id,
+  Guid? BuyerId,
+  Guid? ShoppingListId,
+  DateTime PurchasedAt,
+  ImmutableArray<PurchaseItemPrimitives> Items
+);

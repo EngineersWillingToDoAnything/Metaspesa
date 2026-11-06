@@ -8,9 +8,9 @@ public class ProductTests {
   [Fact]
   public void Rehydrate_DoesNotRaiseDomainEvents() {
     // Arrange
-    var id = new ProductId(Guid.Parse("00000000-0000-7000-8000-000000000001"));
-    var brandId = new BrandId(Guid.Parse("00000000-0000-7000-8000-000000000002"));
-    var marketId = new MarketId(Guid.Parse("00000000-0000-7000-8000-000000000003"));
+    var id = new ProductId(Guid.CreateVersion7());
+    var brandId = new BrandId(Guid.CreateVersion7());
+    var marketId = new MarketId(Guid.CreateVersion7());
     var name = new ProductName("Milk");
 
     // Act
@@ -814,5 +814,138 @@ public class ProductTests {
     void action() => ((ICollection<PriceSnapshot>)product.PendingSnapshots).Clear();
 
     Assert.Throws<NotSupportedException>(action);
+  }
+
+  [Fact]
+  public void ToPrimitives_ExportsCompleteSnapshot() {
+    // Arrange
+    var brandId = Guid.CreateVersion7();
+    var marketId = Guid.CreateVersion7();
+    var observedOn = new DateOnly(2026, 8, 19);
+    var observation = new ProductObservationParams(
+      marketId,
+      brandId,
+      "Milk",
+      observedOn,
+      [new ProductFormatObservationParams(1, "kg", 1.99m, new Uri("https://example.test/milk.png"))]);
+    var product = Product.Create(observation);
+
+    ProductFormat originalFormat = product.Formats.Single();
+    var expectedSnapshot = new PriceSnapshotPrimitives(
+      originalFormat.LatestSnapshot.Id.Value, 1.99m, observedOn);
+    var expectedFormat = new ProductFormatPrimitives(originalFormat.Id.Value, 1000m, "g",
+      "https://example.test/milk.png", expectedSnapshot, [expectedSnapshot]);
+
+    var expected = new ProductPrimitives(product.Id.Value, "Milk", brandId, marketId,
+      [expectedFormat], [originalFormat.Id.Value]);
+
+    // Act
+    ProductPrimitives state = product.ToPrimitives();
+
+    // Assert
+    Assert.Equivalent(expected, state, strict: true);
+  }
+
+  [Fact]
+  public void ToPrimitives_PreservesEveryPendingPriceObservation() {
+    // Arrange
+    var brandId = Guid.CreateVersion7();
+    var marketId = Guid.CreateVersion7();
+    var observedOn = new DateOnly(2026, 8, 19);
+    var observation = new ProductObservationParams(marketId, brandId, "Milk", observedOn,
+      [new ProductFormatObservationParams(1, "kg", 1.99m, new Uri("https://example.test/milk.png"))]);
+
+    var product = Product.Create(observation);
+    product.RegisterObservation(observation with {
+      ObservedOn = observedOn.AddDays(1),
+      Formats = [new ProductFormatObservationParams(1, "kg", 2.49m, new Uri("https://example.test/milk.png"))],
+    });
+
+    ProductFormat originalFormat = product.Formats.Single();
+    PriceSnapshot[] originalSnapshots = [.. originalFormat.PendingSnapshots];
+    var firstSnapshot = new PriceSnapshotPrimitives(
+      originalSnapshots[0].Id.Value, 1.99m, observedOn);
+    var latestSnapshot = new PriceSnapshotPrimitives(
+      originalSnapshots[1].Id.Value, 2.49m, observedOn.AddDays(1));
+
+    var expected = new ProductFormatPrimitives(originalFormat.Id.Value, 1000m, "g",
+      "https://example.test/milk.png", latestSnapshot, [firstSnapshot, latestSnapshot]);
+
+    // Act
+    ProductFormatPrimitives format = product.ToPrimitives().Formats.Single();
+
+    // Assert
+    Assert.Equivalent(expected, format, strict: true);
+  }
+
+  [Fact]
+  public void Snapshot_RemainsUnchangedAfterAnotherObservation() {
+    // Arrange
+    var brandId = Guid.CreateVersion7();
+    var marketId = Guid.CreateVersion7();
+    var observedOn = new DateOnly(2026, 8, 19);
+    var observation = new ProductObservationParams(marketId, brandId, "Milk", observedOn,
+      [new ProductFormatObservationParams(1, "kg", 1.99m, new Uri("https://example.test/milk.png"))]);
+
+    var product = Product.Create(observation);
+
+    ProductPrimitives state = product.ToPrimitives();
+    ProductFormat originalFormat = product.Formats.Single();
+    var expectedSnapshot = new PriceSnapshotPrimitives(
+      originalFormat.LatestSnapshot.Id.Value, 1.99m, observedOn);
+    var expectedFormat = new ProductFormatPrimitives(
+      originalFormat.Id.Value, 1000m, "g",
+      "https://example.test/milk.png", expectedSnapshot, [expectedSnapshot]);
+
+    var expected = new ProductPrimitives(product.Id.Value, "Milk", brandId, marketId,
+      [expectedFormat], [originalFormat.Id.Value]);
+
+    // Act
+    product.RegisterObservation(observation with {
+      ObservedOn = observedOn.AddDays(1),
+      Formats = [
+        new ProductFormatObservationParams(1, "kg", 2.49m, new Uri("https://example.test/milk.png")),
+        new ProductFormatObservationParams(2, "kg", 3.99m, new Uri("https://example.test/milk.png")),
+      ],
+    });
+
+    // Assert
+    Assert.Equivalent(expected, state, strict: true);
+  }
+
+  [Fact]
+  public void ToPrimitives_DoesNotConsumePendingFormats() {
+    // Arrange
+    var brandId = Guid.CreateVersion7();
+    var marketId = Guid.CreateVersion7();
+    var observedOn = new DateOnly(2026, 8, 19);
+    var observation = new ProductObservationParams(marketId, brandId, "Milk", observedOn,
+      [new ProductFormatObservationParams(1, "kg", 1.99m, new Uri("https://example.test/milk.png"))]);
+
+    var product = Product.Create(observation);
+
+    // Act
+    _ = product.ToPrimitives();
+
+    // Assert
+    Assert.Single(product.PendingFormats);
+  }
+
+  [Fact]
+  public void ToPrimitives_DoesNotConsumePendingSnapshots() {
+    // Arrange
+    var brandId = Guid.CreateVersion7();
+    var marketId = Guid.CreateVersion7();
+    var observedOn = new DateOnly(2026, 8, 19);
+    var observation = new ProductObservationParams(marketId, brandId, "Milk", observedOn,
+      [new ProductFormatObservationParams(1, "kg", 1.99m, new Uri("https://example.test/milk.png"))]);
+
+    var product = Product.Create(observation);
+
+    // Act
+    _ = product.ToPrimitives();
+
+    // Assert
+    Assert.Single(product.PendingSnapshots);
   }
 }

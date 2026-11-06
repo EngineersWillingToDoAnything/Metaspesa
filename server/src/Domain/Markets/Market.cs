@@ -28,4 +28,12 @@ public sealed class Market : AggregateRoot {
   ) {
     return new(id, name, logoUrl);
   }
+
+  public MarketPrimitives ToPrimitives() {
+    return new MarketPrimitives(Id.Value, Name.Value, LogoUrl?.Value.ToString());
+  }
 }
+
+#pragma warning disable CA1054, CA1056 // Persistence snapshots intentionally represent URLs as primitive strings.
+public sealed record MarketPrimitives(Guid Id, string Name, string? LogoUrl);
+#pragma warning restore CA1054, CA1056

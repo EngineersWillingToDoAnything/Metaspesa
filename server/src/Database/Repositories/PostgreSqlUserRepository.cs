@@ -18,11 +18,12 @@ internal partial class PostgreSqlUserRepository(
   public async Task SaveAsync(
     User user, CancellationToken cancellationToken = default
   ) {
+    UserPrimitives state = user.ToPrimitives();
     context.Users.Add(new UserDbEntity {
-      Uid = user.Id.Value,
-      Username = user.Username.Value,
-      EncryptedPassword = user.PasswordHash.Value,
-      RoleId = UserRoleIds.FromRole(user.Role),
+      Uid = state.Id,
+      Username = state.Username,
+      EncryptedPassword = state.PasswordHash,
+      RoleId = UserRoleIds.FromRole((Role)state.Role),
     });
     await context.SaveChangesAsync(cancellationToken);
   }

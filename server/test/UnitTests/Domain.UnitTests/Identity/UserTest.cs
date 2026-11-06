@@ -76,4 +76,18 @@ public static class UserTest {
     Assert.Throws<InvalidPasswordHashException>(
       () => User.Create("estela", passwordHash!));
   }
+
+  [Fact]
+  public static void ToPrimitives_PreservesUserState() {
+    // Arrange
+    var user = User.Create("shopper", "password_hash");
+    var expected = new UserPrimitives(
+      user.Id.Value, "shopper", "password_hash", (int)Role.Shopper);
+
+    // Act
+    UserPrimitives state = user.ToPrimitives();
+
+    // Assert
+    Assert.Equal(expected, state);
+  }
 }

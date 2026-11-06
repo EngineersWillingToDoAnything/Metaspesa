@@ -132,6 +132,12 @@ public class PurchaseTests {
     Assert.Throws<DuplicatePurchaseItemException>(action);
   }
 
+  private sealed class InvalidPurchaseTimes() : TheoryData<DateTime>(
+    default,
+    new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Local),
+    new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Unspecified)
+  );
+
   [Theory]
   [ClassData<InvalidPurchaseTimes>]
   public void Create_RejectsInvalidTime(DateTime value) {
@@ -150,7 +156,7 @@ public class PurchaseTests {
   [Fact]
   public void Rehydrate_DoesNotRaiseDomainEvents() {
     // Arrange
-    var id = Guid.Parse("00000000-0000-7000-8000-000000000001");
+    var id = Guid.CreateVersion7();
     var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
 
     // Act
@@ -205,9 +211,49 @@ public class PurchaseTests {
       property => Assert.False(property.CanWrite));
   }
 
-  private sealed class InvalidPurchaseTimes() : TheoryData<DateTime>(
-    default,
-    new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Local),
-    new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Unspecified)
-  );
+  [Fact]
+  public void ToPrimitives_ExportsCompleteSnapshot() {
+    // Arrange
+    var id = Guid.CreateVersion7();
+    var buyerId = Guid.CreateVersion7();
+    var listId = Guid.CreateVersion7();
+    var snapshotId = Guid.CreateVersion7();
+    var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
+
+    var purchase = Purchase.Create(new CreatePurchaseParams(
+      id, buyerId, listId, purchasedAt, [new CreatePurchaseItem(snapshotId, 2)]));
+    var expected = new PurchasePrimitives(id, buyerId, listId, purchasedAt,
+      [new PurchaseItemPrimitives(purchase.Items.Single().Id.Value, snapshotId, 2)]);
+
+    // Act
+    PurchasePrimitives state = purchase.ToPrimitives();
+
+    // Assert
+    Assert.Equivalent(expected, state, strict: true);
+  }
+
+  [Fact]
+  public void ToPrimitives_PreservesPurchaseLines() {
+    // Arrange
+    var id = Guid.CreateVersion7();
+    var buyerId = Guid.CreateVersion7();
+    var listId = Guid.CreateVersion7();
+    var firstSnapshotId = Guid.CreateVersion7();
+    var secondSnapshotId = Guid.CreateVersion7();
+    var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
+
+    var purchase = Purchase.Create(new CreatePurchaseParams(id, buyerId, listId, purchasedAt,
+      [new CreatePurchaseItem(firstSnapshotId, 2), new CreatePurchaseItem(secondSnapshotId, 3)]));
+    PurchaseItem[] items = [.. purchase.Items];
+    var expected = new PurchasePrimitives(id, buyerId, listId, purchasedAt, [
+      new PurchaseItemPrimitives(items[0].Id.Value, firstSnapshotId, 2),
+      new PurchaseItemPrimitives(items[1].Id.Value, secondSnapshotId, 3),
+    ]);
+
+    // Act
+    PurchasePrimitives state = purchase.ToPrimitives();
+
+    // Assert
+    Assert.Equivalent(expected, state, strict: true);
+  }
 }

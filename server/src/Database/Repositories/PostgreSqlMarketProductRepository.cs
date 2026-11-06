@@ -171,20 +171,21 @@ internal class PostgreSqlMarketProductRepository(
   ) {
     ArgumentNullException.ThrowIfNull(products);
 
-    if (products.DistinctBy(product => product.Id).Count() != products.Count) {
+    ProductPrimitives[] states = [.. products.Select(product => product.ToPrimitives())];
+    if (states.DistinctBy(product => product.Id).Count() != states.Length) {
       throw new ArgumentException(
         "A batch cannot contain a Product more than once.", nameof(products));
     }
 
-    Product[] changed = [.. products.Where(product =>
-      product.PendingFormats.Count > 0 || product.PendingSnapshots.Count > 0)];
+    ProductPrimitives[] changed = [.. states.Where(product =>
+      !product.PendingFormatIds.IsEmpty || product.Formats.Any(format => !format.PendingSnapshots.IsEmpty))];
     if (changed.Length == 0) {
       return;
     }
 
     await using IDbContextTransaction transaction = await context.Database
       .BeginTransactionAsync(cancellationToken);
-    Guid[] ids = [.. changed.Select(product => product.Id.Value)];
+    Guid[] ids = [.. changed.Select(product => product.Id)];
     Guid[] existingIds = await context.Products.AsNoTracking()
       .Where(product => ids.Contains(product.Id))
       .Select(product => product.Id)
@@ -192,42 +193,47 @@ internal class PostgreSqlMarketProductRepository(
     HashSet<Guid> existing = [.. existingIds];
 
     await InsertProductsAsync(
-      [.. changed.Where(product => !existing.Contains(product.Id.Value))],
+      [.. changed.Where(product => !existing.Contains(product.Id))],
       cancellationToken);
     await InsertFormatsAsync(changed, cancellationToken);
     await InsertSnapshotsAsync(changed, cancellationToken);
     await transaction.CommitAsync(cancellationToken);
   }
 
-  private async Task InsertProductsAsync(Product[] products, CancellationToken cancellationToken) {
+  private async Task InsertProductsAsync(
+    ProductPrimitives[] products, CancellationToken cancellationToken
+  ) {
     if (products.Length == 0) {
       return;
     }
 
-    Guid[] ids = [.. products.Select(product => product.Id.Value)];
-    string[] names = [.. products.Select(product => product.Name.Value)];
-    Guid[] marketIds = [.. products.Select(product => product.MarketId.Value)];
-    Guid[] brandIds = [.. products.Select(product => product.BrandId.Value)];
+    Guid[] ids = [.. products.Select(product => product.Id)];
+    string[] names = [.. products.Select(product => product.Name)];
+    Guid[] marketIds = [.. products.Select(product => product.MarketId)];
+    Guid[] brandIds = [.. products.Select(product => product.BrandId)];
     await context.Database.ExecuteSqlInterpolatedAsync($"""
       INSERT INTO market.products (id, name, super_market_id, brand_id)
       SELECT * FROM unnest({ids}, {names}, {marketIds}, {brandIds});
       """, cancellationToken);
   }
 
-  private async Task InsertFormatsAsync(Product[] products, CancellationToken cancellationToken) {
-    (Product Product, ProductFormat Format)[] formats = [..
-      products.SelectMany(product => product.PendingFormats
+  private async Task InsertFormatsAsync(
+    ProductPrimitives[] products, CancellationToken cancellationToken
+  ) {
+    (ProductPrimitives Product, ProductFormatPrimitives Format)[] formats = [..
+      products.SelectMany(product => product.Formats
+        .Where(format => product.PendingFormatIds.Contains(format.Id))
         .Select(format => (Product: product, Format: format)))
     ];
     if (formats.Length == 0) {
       return;
     }
 
-    Guid[] ids = [.. formats.Select(value => value.Format.Id.Value)];
-    Guid[] productIds = [.. formats.Select(value => value.Product.Id.Value)];
-    decimal[] quantities = [.. formats.Select(value => value.Format.Quantity.Amount)];
-    string[] units = [.. formats.Select(value => value.Format.Quantity.UnitOfMeasure.Value)];
-    string[] images = [.. formats.Select(value => value.Format.ImageUrl?.Value.ToString() ?? string.Empty)];
+    Guid[] ids = [.. formats.Select(value => value.Format.Id)];
+    Guid[] productIds = [.. formats.Select(value => value.Product.Id)];
+    decimal[] quantities = [.. formats.Select(value => value.Format.Quantity)];
+    string[] units = [.. formats.Select(value => value.Format.UnitOfMeasure)];
+    string[] images = [.. formats.Select(value => value.Format.ImageUrl ?? string.Empty)];
 
     await context.Database.ExecuteSqlInterpolatedAsync($"""
       INSERT INTO market.product_formats (id, product_id, quantity, unit_of_measure, image_url)
@@ -235,8 +241,10 @@ internal class PostgreSqlMarketProductRepository(
       """, cancellationToken);
   }
 
-  private async Task InsertSnapshotsAsync(Product[] products, CancellationToken cancellationToken) {
-    (ProductFormatId FormatId, PriceSnapshot Snapshot)[] snapshots = [..
+  private async Task InsertSnapshotsAsync(
+    ProductPrimitives[] products, CancellationToken cancellationToken
+  ) {
+    (Guid FormatId, PriceSnapshotPrimitives Snapshot)[] snapshots = [..
       products.SelectMany(product => product.Formats)
         .SelectMany(format => format.PendingSnapshots.Select(snapshot =>
           (format.Id, snapshot)))
@@ -245,10 +253,10 @@ internal class PostgreSqlMarketProductRepository(
       return;
     }
 
-    Guid[] ids = [.. snapshots.Select(value => value.Snapshot.Id.Value)];
-    Guid[] formatIds = [.. snapshots.Select(value => value.FormatId.Value)];
-    decimal[] prices = [.. snapshots.Select(value => value.Snapshot.Price.Amount)];
-    DateOnly[] dates = [.. snapshots.Select(value => value.Snapshot.ObservedOn.Value)];
+    Guid[] ids = [.. snapshots.Select(value => value.Snapshot.Id)];
+    Guid[] formatIds = [.. snapshots.Select(value => value.FormatId)];
+    decimal[] prices = [.. snapshots.Select(value => value.Snapshot.Price)];
+    DateOnly[] dates = [.. snapshots.Select(value => value.Snapshot.ObservedOn)];
 
     await context.Database.ExecuteSqlInterpolatedAsync($"""
       INSERT INTO market.price_snapshots (id, product_format_id, price_amount, observed_on)

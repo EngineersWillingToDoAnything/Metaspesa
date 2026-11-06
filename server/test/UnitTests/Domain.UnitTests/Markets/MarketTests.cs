@@ -78,4 +78,20 @@ public static class MarketTests {
     // Assert
     Assert.Null(market.LogoUrl);
   }
+
+  [Theory]
+  [InlineData(null)]
+  [InlineData("https://example.test/logo.png")]
+  public static void ToPrimitives_PreservesMarketState(string? logoAddress) {
+    // Arrange
+    Uri? logo = logoAddress is null ? null : new Uri(logoAddress);
+    var market = Market.Create("Market", logo);
+    var expected = new MarketPrimitives(market.Id.Value, "Market", logoAddress);
+
+    // Act
+    MarketPrimitives state = market.ToPrimitives();
+
+    // Assert
+    Assert.Equal(expected, state);
+  }
 }

@@ -34,6 +34,10 @@ public sealed class PriceSnapshot {
     return new(id, price, observedOn);
   }
 
+  public PriceSnapshotPrimitives ToPrimitives() {
+    return new PriceSnapshotPrimitives(Id.Value, Price.Amount, ObservedOn.Value);
+  }
+
   public bool IsConflictingWith(Money price, ObservationDate observedOn) =>
     WasObservedOn(observedOn) && !HasSamePrice(price);
 
@@ -41,3 +45,5 @@ public sealed class PriceSnapshot {
 
   private bool WasObservedOn(ObservationDate observedOn) => ObservedOn == observedOn;
 }
+
+public sealed record PriceSnapshotPrimitives(Guid Id, decimal Price, DateOnly ObservedOn);

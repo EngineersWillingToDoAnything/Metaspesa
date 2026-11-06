@@ -35,8 +35,9 @@ internal sealed class PostgreSqlBrandRepository(
   }
 
   public async Task SaveAsync(Brand brand, CancellationToken cancellationToken) {
-    Guid id = brand.Id.Value;
-    string name = brand.Name.Value;
+    BrandPrimitives state = brand.ToPrimitives();
+    Guid id = state.Id;
+    string name = state.Name;
 
     await context.Database.ExecuteSqlInterpolatedAsync($"""
       INSERT INTO market.product_brands (id, name) VALUES ({id}, {name})
