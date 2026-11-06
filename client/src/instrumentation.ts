@@ -26,12 +26,14 @@ export async function register() {
         exporter: new OTLPLogExporter({ url: otlpEndpoint }),
       }),
     ],
-    metricReader: new PeriodicExportingMetricReader({
-      exportIntervalMillis: Number(
-        process.env.OTEL_METRIC_EXPORT_INTERVAL ?? '60000',
-      ),
-      exporter: new OTLPMetricExporter({ url: otlpEndpoint }),
-    }),
+    metricReaders: [
+      new PeriodicExportingMetricReader({
+        exportIntervalMillis: Number(
+          process.env.OTEL_METRIC_EXPORT_INTERVAL ?? '60000',
+        ),
+        exporter: new OTLPMetricExporter({ url: otlpEndpoint }),
+      }),
+    ],
     resource: resourceFromAttributes({
       [ATTR_SERVICE_NAME]: 'metaspesa_web_client',
     }),
