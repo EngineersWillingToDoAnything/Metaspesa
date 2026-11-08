@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Metaspesa.Database.Configurations;
 
-internal class SuperMarketConfiguration : IEntityTypeConfiguration<SuperMarketDbEntity> {
-  public void Configure(EntityTypeBuilder<SuperMarketDbEntity> builder) {
+internal class MarketConfiguration : IEntityTypeConfiguration<MarketDbEntity> {
+  public void Configure(EntityTypeBuilder<MarketDbEntity> builder) {
     builder.ToTable("super_markets", "market", t =>
       t.HasComment("Supermarkets where products are available"));
 

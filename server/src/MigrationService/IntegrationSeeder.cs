@@ -34,20 +34,20 @@ internal sealed class IntegrationSeeder(MainContext context) {
   }
 
   private async Task SeedFixtureAsync(Fixture fixture, CancellationToken cancellationToken) {
-    SuperMarketDbEntity? market = await context.SuperMarkets.SingleOrDefaultAsync(
+    MarketDbEntity? market = await context.SuperMarkets.SingleOrDefaultAsync(
       value => value.Name == fixture.Market, cancellationToken);
     if (market is null) {
-      market = new SuperMarketDbEntity {
+      market = new MarketDbEntity {
         Id = Uid.Create(),
         Name = fixture.Market,
       };
       context.SuperMarkets.Add(market);
     }
 
-    ProductBrandDbEntity? brand = await context.ProductBrands.SingleOrDefaultAsync(
+    BrandDbEntity? brand = await context.ProductBrands.SingleOrDefaultAsync(
       value => value.Name == "Integration Brand", cancellationToken);
     if (brand is null) {
-      brand = new ProductBrandDbEntity {
+      brand = new BrandDbEntity {
         Id = Uid.Create(),
         Name = "Integration Brand",
       };

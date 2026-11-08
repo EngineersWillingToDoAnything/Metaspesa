@@ -4,8 +4,8 @@ using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace Metaspesa.Database.Configurations;
 
-internal class ProductBrandConfiguration : IEntityTypeConfiguration<ProductBrandDbEntity> {
-  public void Configure(EntityTypeBuilder<ProductBrandDbEntity> builder) {
+internal class BrandConfiguration : IEntityTypeConfiguration<BrandDbEntity> {
+  public void Configure(EntityTypeBuilder<BrandDbEntity> builder) {
     builder.ToTable("product_brands", "market", t =>
       t.HasComment("Brands of products available in the market"));
 

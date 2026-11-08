@@ -9,8 +9,8 @@ internal class ProductDbEntity {
   public Guid SuperMarketId { get; set; }
   public Guid BrandId { get; set; }
 
-  public SuperMarketDbEntity SuperMarket { get; set; } = null!;
-  public ProductBrandDbEntity Brand { get; set; } = null!;
+  public MarketDbEntity SuperMarket { get; set; } = null!;
+  public BrandDbEntity Brand { get; set; } = null!;
   public ICollection<ProductFormatDbEntity> Formats { get; set; } = [];
 
   public Product MapToDomain() => Product.Rehydrate(

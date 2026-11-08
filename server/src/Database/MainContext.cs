@@ -15,8 +15,8 @@ internal class MainContext(
   public DbSet<PurchaseDbEntity> Purchases { get; set; } = null!;
   public DbSet<PurchaseItemDbEntity> PurchaseItems { get; set; } = null!;
 
-  public DbSet<SuperMarketDbEntity> SuperMarkets { get; set; } = null!;
-  public DbSet<ProductBrandDbEntity> ProductBrands { get; set; } = null!;
+  public DbSet<MarketDbEntity> SuperMarkets { get; set; } = null!;
+  public DbSet<BrandDbEntity> ProductBrands { get; set; } = null!;
   public DbSet<ProductDbEntity> Products { get; set; } = null!;
   public DbSet<ProductFormatDbEntity> ProductFormats { get; set; } = null!;
   public DbSet<PriceSnapshotDbEntity> PriceSnapshots { get; set; } = null!;

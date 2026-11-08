@@ -1,6 +1,6 @@
 namespace Metaspesa.Database.Entities;
 
-internal class ProductBrandDbEntity {
+internal class BrandDbEntity {
   public Guid Id { get; set; }
   public string Name { get; set; } = null!;
 

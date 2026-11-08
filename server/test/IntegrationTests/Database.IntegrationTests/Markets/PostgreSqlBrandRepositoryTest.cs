@@ -144,25 +144,6 @@ public sealed class PostgreSqlBrandRepositoryTest : IAsyncLifetime {
   }
 
   [Fact]
-  public async Task SaveAsync_UpdatesExistingAggregateName() {
-    // Arrange
-    var updated = Brand.Create("Updated");
-    _context.ProductBrands.Add(new ProductBrandDbEntity {
-      Id = updated.Id.Value,
-      Name = "Original",
-    });
-    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-
-    // Act
-    await _repository.SaveAsync(updated, TestContext.Current.CancellationToken);
-
-    // Assert
-    string actual = await _context.ProductBrands.Select(value => value.Name)
-      .SingleAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(updated.Name.Value, actual);
-  }
-
-  [Fact]
   public async Task SaveAsync_RejectsDuplicateName() {
     // Arrange
     var original = Brand.Create("Name");

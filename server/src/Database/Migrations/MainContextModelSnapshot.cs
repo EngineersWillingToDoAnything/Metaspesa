@@ -70,7 +70,7 @@ namespace Metaspesa.Database.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Metaspesa.Database.Entities.ProductBrandDbEntity", b =>
+            modelBuilder.Entity("Metaspesa.Database.Entities.BrandDbEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
@@ -356,7 +356,7 @@ namespace Metaspesa.Database.Migrations
                         });
                 });
 
-            modelBuilder.Entity("Metaspesa.Database.Entities.SuperMarketDbEntity", b =>
+            modelBuilder.Entity("Metaspesa.Database.Entities.MarketDbEntity", b =>
                 {
                     b.Property<Guid>("Id")
                         .HasColumnType("uuid")
@@ -483,13 +483,13 @@ namespace Metaspesa.Database.Migrations
 
             modelBuilder.Entity("Metaspesa.Database.Entities.ProductDbEntity", b =>
                 {
-                    b.HasOne("Metaspesa.Database.Entities.ProductBrandDbEntity", "Brand")
+                    b.HasOne("Metaspesa.Database.Entities.BrandDbEntity", "Brand")
                         .WithMany("Products")
                         .HasForeignKey("BrandId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
-                    b.HasOne("Metaspesa.Database.Entities.SuperMarketDbEntity", "SuperMarket")
+                    b.HasOne("Metaspesa.Database.Entities.MarketDbEntity", "SuperMarket")
                         .WithMany("Products")
                         .HasForeignKey("SuperMarketId")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -601,7 +601,7 @@ namespace Metaspesa.Database.Migrations
                     b.Navigation("PurchaseItems");
                 });
 
-            modelBuilder.Entity("Metaspesa.Database.Entities.ProductBrandDbEntity", b =>
+            modelBuilder.Entity("Metaspesa.Database.Entities.BrandDbEntity", b =>
                 {
                     b.Navigation("Products");
                 });
@@ -632,7 +632,7 @@ namespace Metaspesa.Database.Migrations
                     b.Navigation("Purchases");
                 });
 
-            modelBuilder.Entity("Metaspesa.Database.Entities.SuperMarketDbEntity", b =>
+            modelBuilder.Entity("Metaspesa.Database.Entities.MarketDbEntity", b =>
                 {
                     b.Navigation("Products");
                 });
