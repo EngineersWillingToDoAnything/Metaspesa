@@ -27,30 +27,15 @@ public class DomainModelBoundaryTests {
     Assert.Empty(violations);
   }
 
-  [Fact(DisplayName = "Product exposes only pending snapshots as a collection")]
-  public void Product_ExposesOnlyPendingSnapshotCollection() {
+  [Fact(DisplayName = "Product format snapshot contains only pending price observations as a collection")]
+  public void ProductFormatSnapshot_ContainsOnlyPendingSnapshotCollection() {
     // Arrange
-    Type productType = typeof(Product);
-    string[] expectedCollections = [nameof(Product.PendingSnapshots)];
-
-    // Act
-    string[] snapshotCollections = [.. productType.GetProperties()
-      .Where(property => typeof(IEnumerable<PriceSnapshot>).IsAssignableFrom(property.PropertyType))
-      .Select(property => property.Name)];
-
-    // Assert
-    Assert.Equal(expectedCollections, snapshotCollections);
-  }
-
-  [Fact(DisplayName = "Product format exposes only pending snapshots as a collection")]
-  public void ProductFormat_ExposesOnlyPendingSnapshotCollection() {
-    // Arrange
-    Type productFormatType = typeof(ProductFormat);
-    string[] expectedCollections = [nameof(ProductFormat.PendingSnapshots)];
+    Type productFormatType = typeof(ProductFormatPrimitives);
+    string[] expectedCollections = [nameof(ProductFormatPrimitives.PendingSnapshots)];
 
     // Act
     string[] snapshotCollections = [.. productFormatType.GetProperties()
-      .Where(property => typeof(IEnumerable<PriceSnapshot>).IsAssignableFrom(property.PropertyType))
+      .Where(property => typeof(IEnumerable<PriceSnapshotPrimitives>).IsAssignableFrom(property.PropertyType))
       .Select(property => property.Name)];
 
     // Assert
@@ -69,16 +54,16 @@ public class DomainModelBoundaryTests {
     Assert.DoesNotContain(typeof(ProductFormatId), referencedTypes);
   }
 
-  [Fact(DisplayName = "Product format exposes its latest snapshot")]
-  public void ProductFormat_ExposesLatestSnapshot() {
+  [Fact(DisplayName = "Product format snapshot contains its latest price observation")]
+  public void ProductFormatSnapshot_ContainsLatestSnapshot() {
     // Arrange
-    Type productFormatType = typeof(ProductFormat);
+    Type productFormatType = typeof(ProductFormatPrimitives);
 
     // Act
-    Type? snapshotType = productFormatType.GetProperty(nameof(ProductFormat.LatestSnapshot))?.PropertyType;
+    Type? snapshotType = productFormatType.GetProperty(nameof(ProductFormatPrimitives.LatestSnapshot))?.PropertyType;
 
     // Assert
-    Assert.Equal(typeof(PriceSnapshot), snapshotType);
+    Assert.Equal(typeof(PriceSnapshotPrimitives), snapshotType);
   }
 
   private static IEnumerable<Type> ReferencedTypes(Type type) {

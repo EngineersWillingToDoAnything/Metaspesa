@@ -21,17 +21,17 @@ public class PersistenceSnapshotTests {
     typeof(PurchaseItem)
   );
 
-  private sealed class SnapshotOwners() : TheoryData<Type, Type, string>(
-    (typeof(UserPrimitives), typeof(User), "Metaspesa.Database.Repositories.PostgreSqlUserRepository"),
-    (typeof(MarketPrimitives), typeof(Market), "Metaspesa.Database.Repositories.PostgreSqlMarketRepository"),
-    (typeof(BrandPrimitives), typeof(Brand), "Metaspesa.Database.Repositories.PostgreSqlBrandRepository"),
-    (typeof(ProductPrimitives), typeof(Product), "Metaspesa.Database.Repositories.PostgreSqlMarketProductRepository"),
-    (typeof(ProductFormatPrimitives), typeof(ProductFormat), "Metaspesa.Database.Repositories.PostgreSqlMarketProductRepository"),
-    (typeof(PriceSnapshotPrimitives), typeof(PriceSnapshot), "Metaspesa.Database.Repositories.PostgreSqlMarketProductRepository"),
-    (typeof(ShoppingListPrimitives), typeof(ShoppingList), "Metaspesa.Database.Repositories.PostgreSqlShoppingListRepository"),
-    (typeof(ShoppingItemPrimitives), typeof(ShoppingItem), "Metaspesa.Database.Repositories.PostgreSqlShoppingListRepository"),
-    (typeof(PurchasePrimitives), typeof(Purchase), "Metaspesa.Database.Repositories.PostgreSqlPurchaseRepository"),
-    (typeof(PurchaseItemPrimitives), typeof(PurchaseItem), "Metaspesa.Database.Repositories.PostgreSqlPurchaseRepository")
+  private sealed class EntityOwnership() : TheoryData<Type, Type>(
+    (typeof(User), typeof(User)),
+    (typeof(Market), typeof(Market)),
+    (typeof(Brand), typeof(Brand)),
+    (typeof(Product), typeof(Product)),
+    (typeof(ProductFormat), typeof(Product)),
+    (typeof(PriceSnapshot), typeof(Product)),
+    (typeof(ShoppingList), typeof(ShoppingList)),
+    (typeof(ShoppingItem), typeof(ShoppingList)),
+    (typeof(Purchase), typeof(Purchase)),
+    (typeof(PurchaseItem), typeof(Purchase))
   );
 
   [Trait("ArchitectureRule", "ARCH-DOM-005")]
@@ -46,7 +46,7 @@ public class PersistenceSnapshotTests {
     // Act
     MethodInfo? export = entityType.GetMethod("ToPrimitives", flags, Type.EmptyTypes);
     bool hasValidSnapshot = export is not null &&
-      export.ReturnType.Name.EndsWith("Primitives", StringComparison.Ordinal) &&
+      export.ReturnType.FullName == entityType.FullName + "Primitives" &&
       IsImmutablePrimitiveSnapshot(export.ReturnType, []);
 
     // Assert
@@ -55,17 +55,18 @@ public class PersistenceSnapshotTests {
 
   [Trait("ArchitectureRule", "ARCH-DOM-005")]
   [Theory]
-  [InlineData(typeof(User), "Metaspesa.Database.Repositories.PostgreSqlUserRepository", "SaveAsync")]
-  [InlineData(typeof(Market), "Metaspesa.Database.Repositories.PostgreSqlMarketRepository", "SaveAsync")]
-  [InlineData(typeof(Brand), "Metaspesa.Database.Repositories.PostgreSqlBrandRepository", "SaveAsync")]
-  [InlineData(typeof(Product), "Metaspesa.Database.Repositories.PostgreSqlMarketProductRepository", "SaveBatchAsync")]
-  [InlineData(typeof(ShoppingList), "Metaspesa.Database.Repositories.PostgreSqlShoppingListRepository", "SaveAsync")]
-  [InlineData(typeof(Purchase), "Metaspesa.Database.Repositories.PostgreSqlPurchaseRepository", "SaveAsync")]
+  [InlineData(typeof(User), "SaveAsync")]
+  [InlineData(typeof(Market), "SaveAsync")]
+  [InlineData(typeof(Brand), "SaveAsync")]
+  [InlineData(typeof(Product), "SaveBatchAsync")]
+  [InlineData(typeof(ShoppingList), "SaveAsync")]
+  [InlineData(typeof(Purchase), "SaveAsync")]
   public void AggregateSnapshotExport_IsOnlyCalledByTheOwningRepositorySave(
-    Type aggregateType, string repositoryType, string saveMethod
+    Type aggregateType, string saveMethod
   ) {
     // Arrange
     string aggregateName = DependencyAnalysis.TypeName(aggregateType);
+    string repositoryName = $"Metaspesa.Database.Repositories.PostgreSql{aggregateType.Name}Repository";
     DependencyAnalysis.MethodUse[] calls = [.. DependencyAnalysis.ProductionAssemblies
       .SelectMany(DependencyAnalysis.MethodUses)
       .Where(call => call.Target == aggregateName && call.Method == "ToPrimitives")
@@ -75,7 +76,7 @@ public class PersistenceSnapshotTests {
     DependencyAnalysis.MethodUse[] violations = [.. calls
       .Where(call =>
         call.Assembly != "Database" ||
-        call.OwnerType != repositoryType ||
+        call.OwnerType != repositoryName ||
         !IsWithinMethod(call, saveMethod))
       ];
 
@@ -85,50 +86,53 @@ public class PersistenceSnapshotTests {
 
   [Trait("ArchitectureRule", "ARCH-DOM-005")]
   [Theory]
-  [InlineData(typeof(User), "Metaspesa.Database.Repositories.PostgreSqlUserRepository")]
-  [InlineData(typeof(Market), "Metaspesa.Database.Repositories.PostgreSqlMarketRepository")]
-  [InlineData(typeof(Brand), "Metaspesa.Database.Repositories.PostgreSqlBrandRepository")]
-  [InlineData(typeof(Product), "Metaspesa.Database.Repositories.PostgreSqlMarketProductRepository")]
-  [InlineData(typeof(ShoppingList), "Metaspesa.Database.Repositories.PostgreSqlShoppingListRepository")]
-  [InlineData(typeof(Purchase), "Metaspesa.Database.Repositories.PostgreSqlPurchaseRepository")]
+  [InlineData(typeof(User))]
+  [InlineData(typeof(Market))]
+  [InlineData(typeof(Brand))]
+  [InlineData(typeof(Product))]
+  [InlineData(typeof(ShoppingList))]
+  [InlineData(typeof(Purchase))]
   public void OwningRepository_UsesTheAggregatePersistenceSnapshot(
-    Type aggregateType, string repositoryType
+    Type aggregateType
   ) {
     // Arrange
     var database = Assembly.Load("Database");
     string aggregateName = DependencyAnalysis.TypeName(aggregateType);
+    string repositoryName = $"Metaspesa.Database.Repositories.PostgreSql{aggregateType.Name}Repository";
 
     // Act
     DependencyAnalysis.MethodUse[] calls = DependencyAnalysis.MethodUses(database);
 
     // Assert
-    Assert.Contains(calls, call => call.OwnerType == repositoryType &&
+    Assert.Contains(calls, call => call.OwnerType == repositoryName &&
       call.Target == aggregateName &&
       call.Method == "ToPrimitives");
   }
 
   [Trait("ArchitectureRule", "ARCH-DOM-005")]
   [Theory]
-  [ClassData<SnapshotOwners>]
-  public void SnapshotMembers_AreOnlyUsedByTheirOwningEntityAndRepository(
-    Type snapshotType, Type entityType, string repositoryType
+  [ClassData<EntityOwnership>]
+  public void SnapshotMembers_StayInsideTheirEntityAndPersistenceMapping(
+    Type entityType, Type aggregateType
   ) {
     // Arrange
-    string snapshotName = DependencyAnalysis.TypeName(snapshotType);
     string entityName = DependencyAnalysis.TypeName(entityType);
+    string snapshotName = entityName + "Primitives";
+    string mapperName = $"Metaspesa.Database.Entities.{entityType.Name}DbEntity";
+    string repositoryName = $"Metaspesa.Database.Repositories.PostgreSql{aggregateType.Name}Repository";
+    TypeIdentity[] allowedOwners = [
+      new("Domain", entityName),
+      new("Domain", snapshotName),
+      new("Database", mapperName),
+      new("Database", repositoryName),
+    ];
     Assembly[] assemblies = DependencyAnalysis.ProductionAssemblies;
 
     // Act
     DependencyAnalysis.MethodUse[] violations = [.. assemblies
       .SelectMany(DependencyAnalysis.MethodUses)
       .Where(call => call.Target == snapshotName)
-      .Where(call => (
-          call.Assembly != "Domain" ||
-          call.OwnerType != entityName && call.OwnerType != snapshotName
-        ) && (
-          call.Assembly != "Database" ||
-          call.OwnerType != repositoryType
-        ))
+      .Where(call => !allowedOwners.Contains(TypeIdentity.FromCall(call)))
     ];
 
     // Assert
@@ -137,17 +141,18 @@ public class PersistenceSnapshotTests {
 
   [Trait("ArchitectureRule", "ARCH-DOM-005")]
   [Theory]
-  [InlineData("Metaspesa.Database.Repositories.PostgreSqlUserRepository")]
-  [InlineData("Metaspesa.Database.Repositories.PostgreSqlMarketRepository")]
-  [InlineData("Metaspesa.Database.Repositories.PostgreSqlBrandRepository")]
-  [InlineData("Metaspesa.Database.Repositories.PostgreSqlMarketProductRepository")]
-  [InlineData("Metaspesa.Database.Repositories.PostgreSqlShoppingListRepository")]
-  [InlineData("Metaspesa.Database.Repositories.PostgreSqlPurchaseRepository")]
+  [InlineData(typeof(User))]
+  [InlineData(typeof(Market))]
+  [InlineData(typeof(Brand))]
+  [InlineData(typeof(Product))]
+  [InlineData(typeof(ShoppingList))]
+  [InlineData(typeof(Purchase))]
   public void RepositoryWrites_ReadSnapshotsInsteadOfTraversingDomainObjects(
-    string repositoryType
+    Type aggregateType
   ) {
     // Arrange
     var database = Assembly.Load("Database");
+    string repositoryName = $"Metaspesa.Database.Repositories.PostgreSql{aggregateType.Name}Repository";
     string[] writeMethods = ["SaveAsync", "SaveBatchAsync", "InsertProductsAsync", "InsertFormatsAsync", "InsertSnapshotsAsync"];
     string[] snapshotNames = [.. typeof(User).Assembly.GetTypes()
       .Where(type => type.Name.EndsWith("Primitives", StringComparison.Ordinal))
@@ -156,7 +161,7 @@ public class PersistenceSnapshotTests {
     // Act
     DependencyAnalysis.MethodUse[] violations = [.. DependencyAnalysis
       .MethodUses(database)
-      .Where(call => call.OwnerType == repositoryType &&
+      .Where(call => call.OwnerType == repositoryName &&
         writeMethods.Any(method => IsWithinMethod(call, method)))
       .Where(call =>
         call.Target.StartsWith("Metaspesa.Domain.", StringComparison.Ordinal) &&

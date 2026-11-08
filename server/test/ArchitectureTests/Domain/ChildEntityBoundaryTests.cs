@@ -126,16 +126,17 @@ public class ChildEntityBoundaryTests {
   }
 
   [Trait("ArchitectureRule", "ARCH-DOM-003")]
-  [Fact]
-  public void ChildEntityRehydration_IsOnlyCalledByDatabaseProductionCode() {
+  [Theory]
+  [InlineData(typeof(ShoppingItem), typeof(ShoppingList))]
+  [InlineData(typeof(PurchaseItem), typeof(Purchase))]
+  [InlineData(typeof(ProductFormat), typeof(Product))]
+  [InlineData(typeof(PriceSnapshot), typeof(ProductFormat))]
+  public void ChildEntityRehydration_StaysInsideDatabaseOrItsOwner(
+    Type entityType, Type ownerType
+  ) {
     // Arrange
-    Type[] entities = [
-      typeof(ShoppingItem),
-      typeof(PurchaseItem),
-      typeof(ProductFormat),
-      typeof(PriceSnapshot),
-    ];
-    string[] entityNames = [.. entities.Select(DependencyAnalysis.TypeName)];
+    string entityName = DependencyAnalysis.TypeName(entityType);
+    string ownerName = DependencyAnalysis.TypeName(ownerType);
     Assembly[] assemblies = DependencyAnalysis.ProductionAssemblies;
 
     // Act
@@ -143,7 +144,8 @@ public class ChildEntityBoundaryTests {
       .Where(assembly => assembly.GetName().Name != "Database")
       .SelectMany(DependencyAnalysis.MethodUses)
       .Where(call => call.Method == "Rehydrate" &&
-        entityNames.Contains(call.Target, StringComparer.Ordinal))
+        call.Target == entityName)
+      .Where(call => call.Assembly != "Domain" || call.OwnerType != ownerName)
     ];
 
     // Assert
