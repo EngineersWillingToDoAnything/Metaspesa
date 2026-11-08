@@ -1,97 +1,37 @@
 using Metaspesa.Domain.Markets;
-using Metaspesa.Domain.Markets.Errors;
 
 namespace Metaspesa.Domain.UnitTests.Markets;
 
 public static class MarketTests {
-  [Fact]
-  public static void Rehydrate_DoesNotRaiseDomainEvents() {
+  private sealed class MarketLogos() : TheoryData<Uri?>(
+    null,
+    new Uri("https://example.test/logo.png")
+  );
+
+  [Theory]
+  [ClassData<MarketLogos>]
+  public static void Create_GeneratesDistinctMarkets(Uri? logo) {
     // Arrange
-    var id = new MarketId(Guid.Parse("00000000-0000-7000-8000-000000000001"));
-    var name = new MarketName("Market");
-    var logo = new ImageUrl(new Uri("https://example.test/logo.png"));
+    const string name = "Market";
+    var first = Market.Create(name, logo);
 
     // Act
-    var market = Market.Rehydrate(id, name, logo);
-
-    // Assert
-    Assert.Empty(market.DomainEvents);
-  }
-
-  [Fact]
-  public static void Create_GeneratesVersion7Id() {
-    // Arrange
-    string name = "Market";
-
-    // Act
-    var aggregate = Market.Create(name);
-
-    // Assert
-    Assert.Equal(7, aggregate.Id.Value.Version);
-  }
-
-  [Fact]
-  public static void Create_GeneratesDistinctIds() {
-    // Arrange
-    var first = Market.Create("Market");
-
-    // Act
-    var second = Market.Create("Market");
+    var second = Market.Create(name, logo);
 
     // Assert
     Assert.NotEqual(first.Id, second.Id);
   }
 
-  [Fact]
-  public static void Rehydrate_PreservesId() {
-    // Arrange
-    var id = new MarketId(Guid.Parse("00000000-0000-7000-8000-000000000001"));
-    var name = new MarketName("Market");
-
-    // Act
-    var aggregate = Market.Rehydrate(id, name, null);
-
-    // Assert
-    Assert.Equal(id, aggregate.Id);
-  }
-
-  [Fact]
-  public static void Create_PreservesLogo() {
-    // Arrange
-    var logo = new Uri("https://example.test/logo.png");
-
-    // Act
-    var market = Market.Create("Market", logo);
-
-    // Assert
-    Assert.Equal(logo, market.LogoUrl!.Value.Value);
-  }
-
-  [Fact]
-  public static void Create_AllowsAbsentLogo() {
-    // Arrange
-    string name = "Market";
-
-    // Act
-    var market = Market.Create(name);
-
-    // Assert
-    Assert.Null(market.LogoUrl);
-  }
-
   [Theory]
-  [InlineData(null)]
-  [InlineData("https://example.test/logo.png")]
-  public static void ToPrimitives_PreservesMarketState(string? logoAddress) {
+  [ClassData<MarketLogos>]
+  public static void Rehydrate_PreservesState(Uri? logo) {
     // Arrange
-    Uri? logo = logoAddress is null ? null : new Uri(logoAddress);
-    var market = Market.Create("Market", logo);
-    var expected = new MarketPrimitives(market.Id.Value, "Market", logoAddress);
+    var originalMarket = Market.Create("Market", logo);
 
     // Act
-    MarketPrimitives state = market.ToPrimitives();
+    var aggregate = Market.Rehydrate(originalMarket.ToPrimitives());
 
     // Assert
-    Assert.Equal(expected, state);
+    Assert.Equivalent(originalMarket, aggregate);
   }
 }

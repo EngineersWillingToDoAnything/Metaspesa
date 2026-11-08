@@ -104,7 +104,8 @@ public sealed class AddProductsHandlerTest {
 
     await _productsRepo.Received(1).SaveBatchAsync(
       Arg.Is<IReadOnlyCollection<Product>>(products =>
-        products.Single().Name == identity.Name),
+        products.Single().IsIdentifiedBy(
+          identity.MarketId.Value, identity.BrandId.Value, identity.Name.Value)),
       TestContext.Current.CancellationToken);
   }
 
@@ -152,6 +153,9 @@ public sealed class AddProductsHandlerTest {
     var item = new CommandProduct(
       "Meat", 1.99m, 1, "GRAMOS", "Market", "Brand", new Uri("https://example.com/meat.png"));
     var command = new Command([item], new DateOnly(2026, 7, 28));
+    var formatObservation = new ProductFormatObservationParams(
+      item.Quantity, "g", item.Price, item.ImageUrl!
+    );
 
     var identity = new ProductIdentity(
       new MarketId(Guid.CreateVersion7()),
@@ -174,7 +178,7 @@ public sealed class AddProductsHandlerTest {
     await _handler.Handle(command, TestContext.Current.CancellationToken);
 
     await _productsRepo.Received(1).SaveBatchAsync(
-      Arg.Is<IReadOnlyCollection<Product>>(p => p.Single().Formats.Single().Quantity.UnitOfMeasure.Value == "g"),
+      Arg.Is<IReadOnlyCollection<Product>>(p => p.Single().OffersFormat(formatObservation)),
       Arg.Any<CancellationToken>());
   }
 
@@ -208,7 +212,7 @@ public sealed class AddProductsHandlerTest {
 
     await _productsRepo.Received(1).SaveBatchAsync(
       Arg.Is<IReadOnlyCollection<Product>>(products =>
-        products.Count == 1 && products.Single().Formats.Count == 2),
+        products.Count == 1 && products.Single().CountFormats() == 2),
       TestContext.Current.CancellationToken);
   }
 
@@ -323,8 +327,8 @@ public sealed class AddProductsHandlerTest {
     await _handler.Handle(command, TestContext.Current.CancellationToken);
 
     Product savedProduct = saved!.Single(product =>
-      product.Name == ProductName.Create("Product 999"));
-    Assert.Equal(2, savedProduct.Formats.Count);
+      product.IsNamed("Product 999"));
+    Assert.Equal(2, savedProduct.CountFormats());
   }
 
   [Fact]

@@ -1,78 +1,67 @@
 using Metaspesa.Database.Entities;
 using Metaspesa.Domain.Markets;
-using Metaspesa.Domain.Markets.Errors;
 
 namespace Metaspesa.Database.UnitTests;
 
 public static class ProductDbEntityTest {
-  [Fact(DisplayName = "Maps product and formats with latest price snapshots")]
-  public static void Entity_MapsToProductAggregate_WithLatestPriceSnapshots() {
-    ProductDbEntity entity = CreateEntity();
-    entity.Formats.Single().PriceSnapshots.Add(new PriceSnapshotDbEntity {
-      Id = Guid.Parse("00000000-0000-7000-8000-000000000008"),
-      ProductFormatId = Guid.Parse("00000000-0000-7000-8000-000000000007"),
-      PriceAmount = 1.99m,
-      ObservedOn = new DateOnly(2026, 7, 28),
-    });
+  [Fact]
+  public static void ToAggregate_MapsProductAndFormats() {
+    // Arrange
+    var expected = Product.Create(new ProductObservationParams(
+      Guid.CreateVersion7(),
+      Guid.CreateVersion7(),
+      "Milk",
+      new DateOnly(2026, 7, 28),
+      [
+        new(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
+        new(2, "l", 3.49m, new Uri("https://example.com/large.png"))
+      ]));
+    ProductPrimitives persisted = expected.ToPrimitives();
+    var entity = new ProductDbEntity {
+      Id = persisted.Id,
+      Name = persisted.Name,
+      BrandId = persisted.BrandId,
+      SuperMarketId = persisted.MarketId,
+      Formats = [.. persisted.Formats.Select(format => new ProductFormatDbEntity {
+        Id = format.Id,
+        ProductId = persisted.Id,
+        Quantity = format.Quantity,
+        UnitOfMeasure = format.UnitOfMeasure,
+        ImageUrl = format.ImageUrl!,
+        PriceSnapshots = [new PriceSnapshotDbEntity {
+          Id = format.LatestSnapshot.Id,
+          ProductFormatId = format.Id,
+          PriceAmount = format.LatestSnapshot.Price,
+          ObservedOn = format.LatestSnapshot.ObservedOn,
+        }],
+      })],
+    };
 
-    Product product = entity.MapToDomain();
+    // Act
+    Product actual = entity.ToAggregate();
 
-    Assert.Equal(new ProductId(Guid.Parse("00000000-0000-7000-8000-000000000003")), product.Id);
-    Assert.Equal(new ProductName("Milk"), product.Name);
-    Assert.Equal(new BrandId(entity.BrandId), product.BrandId);
-    Assert.Equal(new MarketId(Guid.Parse("00000000-0000-7000-8000-000000000002")), product.MarketId);
-    ProductFormat format = Assert.Single(product.Formats);
-    Assert.Equal(new ProductFormatId(Guid.Parse("00000000-0000-7000-8000-000000000007")), format.Id);
-    Assert.Equal(1m, format.Quantity.Amount);
-    Assert.Equal(1.99m, format.LatestSnapshot.Price.Amount);
-    Assert.Empty(product.PendingSnapshots);
+    // Assert
+    Assert.Equivalent(expected, actual, strict: true);
   }
 
-  [Fact(DisplayName = "Throws specific exception for invalid persisted product id")]
-  public static void Entity_ThrowsSpecificException_WhenProductIdIsInvalid() {
-    ProductDbEntity entity = CreateEntity();
-    entity.Id = Guid.Empty;
+  [Fact]
+  public static void ToAggregateIdentity_MapsTheStoredProductIdentity() {
+    // Arrange
+    var entity = new ProductDbEntity {
+      Id = Guid.CreateVersion7(),
+      Name = "Milk",
+      BrandId = Guid.CreateVersion7(),
+      SuperMarketId = Guid.CreateVersion7(),
+    };
+    var expected = new ProductIdentity(
+      new MarketId(entity.SuperMarketId),
+      new BrandId(entity.BrandId),
+      new ProductName(entity.Name));
 
-    Assert.Throws<InvalidProductIdException>(entity.MapToDomain);
+    // Act
+    ProductIdentity actual = entity.ToAggregateIdentity();
+
+    // Assert
+    Assert.Equal(expected, actual);
   }
-
-  [Fact(DisplayName = "Maps the latest persisted snapshot without registering changes")]
-  public static void Entity_MapsLatestSnapshot_WhenHistoryIsPresent() {
-    ProductDbEntity entity = CreateEntity();
-    ProductFormatDbEntity format = entity.Formats.Single();
-    format.PriceSnapshots = [
-      new PriceSnapshotDbEntity {
-        Id = Guid.Parse("00000000-0000-7000-8000-000000000008"),
-        ProductFormatId = format.Id,
-        PriceAmount = 2.49m,
-        ObservedOn = new DateOnly(2026, 7, 29),
-      },
-      new PriceSnapshotDbEntity {
-        Id = Guid.Parse("00000000-0000-7000-8000-000000000009"),
-        ProductFormatId = format.Id,
-        PriceAmount = 1.99m,
-        ObservedOn = new DateOnly(2026, 7, 28),
-      },
-    ];
-
-    Product product = entity.MapToDomain();
-
-    Assert.Equal(2.49m, Assert.Single(product.Formats).LatestSnapshot.Price.Amount);
-  }
-
-  private static ProductDbEntity CreateEntity() => new() {
-    Id = Guid.Parse("00000000-0000-7000-8000-000000000003"),
-    Name = "Milk",
-    BrandId = Guid.Parse("00000000-0000-7000-8000-000000000004"),
-    SuperMarketId = Guid.Parse("00000000-0000-7000-8000-000000000002"),
-    Brand = new ProductBrandDbEntity { Name = "Brand" },
-    Formats = [
-      new ProductFormatDbEntity {
-        Id = Guid.Parse("00000000-0000-7000-8000-000000000007"),
-        Quantity = 1m,
-        ImageUrl = "https://example.com/milk.png",
-        UnitOfMeasure = "ml",
-      },
-    ],
-  };
 }

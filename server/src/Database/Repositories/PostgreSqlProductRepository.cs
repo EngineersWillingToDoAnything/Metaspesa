@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage;
 
 namespace Metaspesa.Database.Repositories;
 
-internal class PostgreSqlMarketProductRepository(
+internal class PostgreSqlProductRepository(
   MainContext context
 ) : IProductRepository {
   public async Task<Product?> GetByIdAsync(
@@ -24,7 +24,7 @@ internal class PostgreSqlMarketProductRepository(
         product => product.Id == productId.Value,
         cancellationToken);
 
-    return entity?.MapToDomain();
+    return entity?.ToAggregate();
   }, "Couldn't get product.");
 
   public async Task<PagedResult<CatalogProduct>> GetProductsAsync(
@@ -161,8 +161,9 @@ internal class PostgreSqlMarketProductRepository(
       .AsSplitQuery()
       .ToListAsync(cancellationToken);
 
-    return entities.Select(entity => entity.MapToDomain())
-      .ToDictionary(product => new ProductIdentity(product.MarketId, product.BrandId, product.Name));
+    return entities.ToDictionary(
+      entity => entity.ToAggregateIdentity(),
+      entity => entity.ToAggregate());
   }
 
   public async Task SaveBatchAsync(

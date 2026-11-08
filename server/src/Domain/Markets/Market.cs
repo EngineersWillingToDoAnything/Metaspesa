@@ -3,14 +3,15 @@ using Metaspesa.Domain.SharedKernel;
 namespace Metaspesa.Domain.Markets;
 
 public sealed class Market : AggregateRoot {
+  private readonly MarketName _name;
+  private readonly ImageUrl? _logoUrl;
+
   public MarketId Id { get; }
-  public MarketName Name { get; }
-  public ImageUrl? LogoUrl { get; }
 
   private Market(MarketId id, MarketName name, ImageUrl? logoUrl) {
     Id = id;
-    Name = name;
-    LogoUrl = logoUrl;
+    _name = name;
+    _logoUrl = logoUrl;
   }
 
   public static Market Create(
@@ -23,14 +24,20 @@ public sealed class Market : AggregateRoot {
     return new(id, name, logoUrl);
   }
 
-  public static Market Rehydrate(
-    MarketId id, MarketName name, ImageUrl? logoUrl
-  ) {
+  public static Market Rehydrate(MarketPrimitives primitives) {
+    ArgumentNullException.ThrowIfNull(primitives);
+
+    var id = new MarketId(primitives.Id);
+    var name = new MarketName(primitives.Name);
+    ImageUrl? logoUrl = primitives.LogoUrl is null
+      ? null
+      : new ImageUrl(new Uri(primitives.LogoUrl));
+
     return new(id, name, logoUrl);
   }
 
   public MarketPrimitives ToPrimitives() {
-    return new MarketPrimitives(Id.Value, Name.Value, LogoUrl?.Value.ToString());
+    return new MarketPrimitives(Id.Value, _name.Value, _logoUrl?.Value.ToString());
   }
 }
 

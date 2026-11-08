@@ -5,13 +5,12 @@ using Metaspesa.Domain.SharedKernel;
 namespace Metaspesa.Domain.Markets;
 
 public sealed class ProductFormat {
+  private readonly ImageUrl? _imageUrl;
+  private PriceSnapshot _latestSnapshot;
   private readonly List<PriceSnapshot> _pendingSnapshots = [];
 
   public ProductFormatId Id { get; }
   public Quantity Quantity { get; }
-  public ImageUrl? ImageUrl { get; }
-  public PriceSnapshot LatestSnapshot { get; private set; }
-  public IReadOnlyCollection<PriceSnapshot> PendingSnapshots => _pendingSnapshots.AsReadOnly();
 
   private ProductFormat(
     ProductFormatId id,
@@ -21,14 +20,15 @@ public sealed class ProductFormat {
   ) {
     Id = id;
     Quantity = quantity;
-    ImageUrl = imageUrl;
-    LatestSnapshot = latestSnapshot;
+    _imageUrl = imageUrl;
+    _latestSnapshot = latestSnapshot;
   }
 
   internal static PreparedFormatObservation PrepareObservation(
     ProductFormatObservationParams observation
   ) {
     ArgumentNullException.ThrowIfNull(observation);
+
     return new PreparedFormatObservation(
       Quantity.Create(observation.Quantity, observation.UnitOfMeasure),
       Money.Create(observation.Price),
@@ -44,17 +44,25 @@ public sealed class ProductFormat {
       observation.Quantity,
       observation.ImageUrl,
       PriceSnapshot.Create(observation.Price, observedOn));
-    format._pendingSnapshots.Add(format.LatestSnapshot);
+    format._pendingSnapshots.Add(format._latestSnapshot);
     return format;
   }
 
-  public static ProductFormat Rehydrate(
-    ProductFormatId id,
-    Quantity quantity,
-    ImageUrl? imageUrl,
-    PriceSnapshot latestSnapshot
+  internal static ProductFormat Rehydrate(
+    ProductFormatPrimitives primitives
   ) {
-    return new ProductFormat(id, quantity, imageUrl, latestSnapshot);
+    var quantity = new Quantity(
+      primitives.Quantity,
+      new UnitOfMeasure(primitives.UnitOfMeasure));
+    ImageUrl? imageUrl = primitives.ImageUrl is null
+      ? null
+      : new ImageUrl(new Uri(primitives.ImageUrl, UriKind.Absolute));
+
+    return new ProductFormat(
+      new ProductFormatId(primitives.Id),
+      quantity,
+      imageUrl,
+      PriceSnapshot.Rehydrate(primitives.LatestSnapshot));
   }
 
   public ProductFormatPrimitives ToPrimitives() {
@@ -62,38 +70,47 @@ public sealed class ProductFormat {
       Id.Value,
       Quantity.Amount,
       Quantity.UnitOfMeasure.Value,
-      ImageUrl?.Value.ToString(),
-      LatestSnapshot.ToPrimitives(),
-      [.. PendingSnapshots.Select(s => s.ToPrimitives())]);
+      _imageUrl?.Value.ToString(),
+      _latestSnapshot.ToPrimitives(),
+      [.. _pendingSnapshots.Select(s => s.ToPrimitives())]);
   }
 
   internal bool RecordSnapshot(Money price, ObservationDate observedOn) {
     EnsureIsLaterObservation(observedOn);
     EnsureDoesNotConflictCurrentObservation(price, observedOn);
 
-    if (LatestSnapshot.HasSamePrice(price)) {
+    if (_latestSnapshot.HasSamePrice(price)) {
       return false;
     }
 
-    LatestSnapshot = PriceSnapshot.Create(price, observedOn);
-    _pendingSnapshots.Add(LatestSnapshot);
+    _latestSnapshot = PriceSnapshot.Create(price, observedOn);
+    _pendingSnapshots.Add(_latestSnapshot);
     return true;
   }
-
   private void EnsureDoesNotConflictCurrentObservation(
     Money price, ObservationDate observedOn
   ) {
-    if (LatestSnapshot.IsConflictingWith(price, observedOn)) {
+    if (_latestSnapshot.IsConflictingWith(price, observedOn)) {
       throw new ConflictingPriceObservationException(Id, observedOn);
     }
   }
 
   private void EnsureIsLaterObservation(ObservationDate observedOn) {
-    if (LatestSnapshot.IsLaterThan(observedOn)) {
-      throw new EarlierPriceObservationException(
-        Id, observedOn, LatestSnapshot.ObservedOn);
+    if (_latestSnapshot.IsLaterThan(observedOn)) {
+      throw new EarlierPriceObservationException(Id, observedOn);
     }
   }
+
+  internal bool IsIllustratedBy(Uri? imageUrl) => _imageUrl?.Value == imageUrl;
+
+  internal bool HasPriceObservation(decimal price, DateOnly observedOn) =>
+    _latestSnapshot.MatchesObservation(price, observedOn);
+
+  internal bool HasPendingPriceObservation(decimal price, DateOnly observedOn) =>
+    _pendingSnapshots.Any(snapshot => snapshot.MatchesObservation(price, observedOn));
+
+  internal int CountPendingPriceObservations() => _pendingSnapshots.Count;
+
 }
 
 internal sealed record PreparedFormatObservation(

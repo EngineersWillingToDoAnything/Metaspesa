@@ -1,3 +1,5 @@
+using Metaspesa.Domain.Markets;
+
 namespace Metaspesa.Database.Entities;
 
 internal class ProductFormatDbEntity {
@@ -10,4 +12,18 @@ internal class ProductFormatDbEntity {
   public ProductDbEntity Product { get; set; } = null!;
   public ICollection<PriceSnapshotDbEntity> PriceSnapshots { get; set; } = [];
   public ICollection<ShoppingItemDbEntity> ShoppingItems { get; set; } = [];
+
+  public ProductFormatPrimitives ToPrimitives() {
+    var primitives = new ProductFormatPrimitives(
+      Id,
+      Quantity,
+      UnitOfMeasure,
+      ImageUrl,
+      PriceSnapshots.OrderByDescending(snapshot => snapshot.ObservedOn)
+        .First()
+        .ToPrimitives(),
+      []
+    );
+    return primitives;
+  }
 }

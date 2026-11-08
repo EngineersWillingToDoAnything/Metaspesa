@@ -3,11 +3,10 @@ using Metaspesa.Domain.SharedKernel;
 namespace Metaspesa.Domain.Markets;
 
 public sealed class PriceSnapshot {
-  public PriceSnapshotId Id { get; }
-  public Money Price { get; }
-  public ObservationDate ObservedOn { get; }
+  private readonly Money _price;
+  private readonly ObservationDate _observedOn;
 
-  public bool HasSamePrice(Money price) => Price == price;
+  public PriceSnapshotId Id { get; }
 
   private PriceSnapshot(
     PriceSnapshotId id,
@@ -15,8 +14,8 @@ public sealed class PriceSnapshot {
     ObservationDate observedOn
   ) {
     Id = id;
-    Price = price;
-    ObservedOn = observedOn;
+    _price = price;
+    _observedOn = observedOn;
   }
 
   internal static PriceSnapshot Create(
@@ -26,24 +25,31 @@ public sealed class PriceSnapshot {
     return new(id, price, observedOn);
   }
 
-  public static PriceSnapshot Rehydrate(
-    PriceSnapshotId id,
-    Money price,
-    ObservationDate observedOn
+  internal static PriceSnapshot Rehydrate(
+    PriceSnapshotPrimitives primitives
   ) {
-    return new(id, price, observedOn);
+    return new PriceSnapshot(
+      new PriceSnapshotId(primitives.Id),
+      new Money(primitives.Price),
+      new ObservationDate(primitives.ObservedOn));
   }
 
   public PriceSnapshotPrimitives ToPrimitives() {
-    return new PriceSnapshotPrimitives(Id.Value, Price.Amount, ObservedOn.Value);
+    return new PriceSnapshotPrimitives(
+      Id.Value, _price.Amount, _observedOn.Value);
   }
+
+  public bool HasSamePrice(Money price) => _price == price;
+
+  internal bool MatchesObservation(decimal price, DateOnly observedOn) =>
+    _price.Amount == price && _observedOn.Value == observedOn;
 
   public bool IsConflictingWith(Money price, ObservationDate observedOn) =>
     WasObservedOn(observedOn) && !HasSamePrice(price);
 
-  public bool IsLaterThan(ObservationDate observedOn) => ObservedOn > observedOn;
+  public bool IsLaterThan(ObservationDate observedOn) => _observedOn > observedOn;
 
-  private bool WasObservedOn(ObservationDate observedOn) => ObservedOn == observedOn;
+  private bool WasObservedOn(ObservationDate observedOn) => _observedOn == observedOn;
 }
 
 public sealed record PriceSnapshotPrimitives(Guid Id, decimal Price, DateOnly ObservedOn);
