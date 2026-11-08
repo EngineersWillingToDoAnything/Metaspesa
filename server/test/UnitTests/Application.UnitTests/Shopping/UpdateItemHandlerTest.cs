@@ -34,10 +34,10 @@ public class UpdateItemHandlerTest {
   public async Task Handle_SavesAggregateAfterUpdatingItemById() {
     var ownerId = Guid.CreateVersion7();
     var list = ShoppingList.Create(ownerId, "Weekly");
-    list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 1, false)]);
-    ShoppingItem item = list.Items.Single();
+    var item = new AddItemsParams(Guid.CreateVersion7(), 1, false);
+    list.AddItems([item]);
     var command = new Command(
-      ownerId, list.Id.Value, item.Id.Value, 4, true);
+      ownerId, list.Id.Value, list.ItemIdFor(item), 4, true);
     _shoppingListRepository.GetAsync(
         ownerId, list.Id.Value, TestContext.Current.CancellationToken)
       .Returns(list);

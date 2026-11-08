@@ -1,12 +1,11 @@
 using Metaspesa.Application.Shopping;
-using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Shopping;
 
 namespace Metaspesa.Application.Abstractions.Shopping;
 
 public interface IShoppingListRepository {
-  Task<IReadOnlyCollection<ShoppingList>> GetByOwnerAsync(
-    UserId ownerId, CancellationToken cancellationToken);
+  Task<IReadOnlyCollection<GetShoppingListSummaries.Response>> GetByOwnerAsync(
+    Guid ownerId, CancellationToken cancellationToken);
   Task<ShoppingList?> GetAsync(
     Guid ownerId, Guid listId, CancellationToken cancellationToken);
   Task<bool> ExistsAsync(

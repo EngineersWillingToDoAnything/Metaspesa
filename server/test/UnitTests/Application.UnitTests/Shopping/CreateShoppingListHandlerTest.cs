@@ -40,8 +40,8 @@ public class CreateShoppingListHandlerTest {
 
     await _repository.Received(1).SaveAsync(
       Arg.Is<ShoppingList>(list =>
-        list.OwnerIds.Single().Value == command.UserUid &&
-        list.Name == new ShoppingListName(command.ShoppingListName!)),
+        list.IsOwnedBy(command.UserUid) &&
+        list.IsNamed(command.ShoppingListName)),
       TestContext.Current.CancellationToken);
   }
 

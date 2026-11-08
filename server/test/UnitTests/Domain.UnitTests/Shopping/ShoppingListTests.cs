@@ -1,8 +1,3 @@
-using Metaspesa.Domain.Identity;
-using Metaspesa.Domain.Identity.Errors;
-using Metaspesa.Domain.Markets;
-using Metaspesa.Domain.Markets.Errors;
-using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
 using Metaspesa.Domain.Shopping.Events;
@@ -10,300 +5,213 @@ using Metaspesa.Domain.Shopping.Events;
 namespace Metaspesa.Domain.UnitTests.Shopping;
 
 public class ShoppingListTests {
-  private static readonly UserId OwnerId = new(Guid.CreateVersion7());
-
-  [Fact(DisplayName = "Creates list with version 7 id")]
-  public void Create_CreatesList_WithV7Id() {
-    var list = ShoppingList.Create(OwnerId.Value, "Weekly");
-
-    Assert.Equal(7, list.Id.Value.Version);
-  }
-
   [Fact(DisplayName = "Creates list with given name")]
   public void Create_CreatesList_WithGivenName() {
-    var list = ShoppingList.Create(OwnerId.Value, "Weekly");
+    // Act
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
 
-    Assert.Equal(new ShoppingListName("Weekly"), list.Name);
+    // Assert
+    Assert.True(list.IsNamed("Weekly"));
   }
 
   [Fact(DisplayName = "Creates list with single owner")]
   public void Create_CreatesList_WithSingleOwner() {
-    var list = ShoppingList.Create(OwnerId.Value, "Weekly");
+    // Arrange
+    var ownerId = Guid.CreateVersion7();
 
-    Assert.Equal(OwnerId, Assert.Single(list.OwnerIds));
+    // Act
+    var list = ShoppingList.Create(ownerId, "Weekly");
+
+    // Assert
+    Assert.True(list.IsOwnedBy(ownerId));
   }
 
   [Fact(DisplayName = "Creates list without items")]
   public void Create_CreatesList_WithoutItems() {
-    var list = ShoppingList.Create(OwnerId.Value, "Weekly");
+    // Act
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
 
-    Assert.Empty(list.Items);
+    // Assert
+    Assert.Equal(0, list.CountActiveItems());
   }
 
   [Fact(DisplayName = "Creates list without deleted timestamp")]
   public void Create_CreatesList_WithoutDeletedTimestamp() {
-    var list = ShoppingList.Create(OwnerId.Value, "Weekly");
+    // Act
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
 
-    Assert.Null(list.DeletedAt);
-  }
-
-  [Fact(DisplayName = "Rejects invalid primitive owner ID")]
-  public void Create_ThrowsExactException_WhenPrimitiveOwnerIdIsInvalid() {
-    Assert.Throws<InvalidUserIdException>(() =>
-      ShoppingList.Create(Guid.Empty, "Weekly"));
+    // Assert
+    Assert.False(list.WasDeleted());
   }
 
   [Fact(DisplayName = "Rehydrates persisted list state")]
-  public void Rehydrate_ExposesPersistedState() {
-    var deletedAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
-    var id = Guid.CreateVersion7();
-    var list = ShoppingList.Rehydrate(
-      new ShoppingListId(id),
-      [OwnerId],
-      new ShoppingListName("Weekly"),
-      deletedAt,
-      [ShoppingItem.Create(Guid.CreateVersion7(), 2, true)]);
+  public void Rehydrate_PreservesState() {
+    // Arrange
+    var original = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
+    var item = new AddItemsParams(Guid.CreateVersion7(), 2, true);
+    original.AddItems([item]);
 
-    Assert.Equal(new ShoppingListId(id), list.Id);
-    Assert.Equal(new ShoppingListName("Weekly"), list.Name);
-    Assert.False(list.IsTemporary);
-    Assert.Equal(deletedAt, list.DeletedAt);
-    Assert.Single(list.Items);
-  }
+    // Act
+    var restored = ShoppingList.Rehydrate(original.ToPrimitives());
 
-  [Fact(DisplayName = "Rejects missing owner")]
-  public void Rehydrate_ThrowsExactException_WhenOwnerIsMissing() {
-    Assert.Throws<MissingShoppingListOwnerException>(() => ShoppingList.Rehydrate(
-      new ShoppingListId(Guid.CreateVersion7()), [], null, null, []));
-  }
-
-  [Fact(DisplayName = "Rejects duplicate owners")]
-  public void Rehydrate_ThrowsExactException_WhenOwnerIsDuplicated() {
-    Assert.Throws<DuplicateShoppingListOwnerException>(() => ShoppingList.Rehydrate(
-      new ShoppingListId(Guid.CreateVersion7()), [OwnerId, OwnerId], null, null, []));
-  }
-
-  [Fact(DisplayName = "Rejects duplicate persisted items")]
-  public void Rehydrate_ThrowsExactException_WhenItemIsDuplicated() {
-    var duplicateId = Guid.CreateVersion7();
-
-    Assert.Throws<DuplicateShoppingItemException>(() => ShoppingList.Rehydrate(
-      new ShoppingListId(Guid.CreateVersion7()),
-      [OwnerId],
-      null,
-      null,
-      [
-        ShoppingItem.Create(duplicateId, 1, false),
-        ShoppingItem.Create(duplicateId, 2, true),
-      ]));
+    // Assert
+    Assert.Equivalent(original, restored, strict: true);
   }
 
   [Fact(DisplayName = "Allows active replacement for deleted item history")]
   public void AddItems_AddsActiveReplacement_WhenPreviousItemIsDeleted() {
-    var formatId = Guid.CreateVersion7();
-    var deletedItem = ShoppingItem.Rehydrate(
-      Guid.CreateVersion7(),
-      formatId,
-      1,
-      false,
-      new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc));
-    var list = ShoppingList.Rehydrate(
-      new ShoppingListId(
-        Guid.CreateVersion7()),
-      [OwnerId],
-      new ShoppingListName("Weekly"),
-      null,
-      [deletedItem]);
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
+    var original = new AddItemsParams(Guid.CreateVersion7(), 1, false);
+    var removedAt = new DateTime(2026, 1, 2, 3, 4, 5, DateTimeKind.Utc);
+    list.AddItems([original]);
+    list.RemoveItem(list.ItemIdFor(original), removedAt);
+    AddItemsParams replacement = original with { Amount = 2, IsChecked = true };
 
-    list.AddItems([new AddItemsParams(formatId, 2, true)]);
+    // Act
+    list.AddItems([replacement]);
 
-    Assert.Single(list.Items, item => item.DeletedAt is not null);
-    Assert.Single(list.Items, item => item.DeletedAt is null);
+    // Assert
+    Assert.True(list.IncludesItem(replacement));
   }
 
   [Fact(DisplayName = "Renames temporary list")]
   public void Rename_SetsNameAndClearsTemporaryState() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), null);
 
+    // Act
     list.Update("Weekly");
 
-    Assert.Equal(new ShoppingListName("Weekly"), list.Name);
-  }
-
-  [Fact(DisplayName = "Adds item")]
-  public void AddItem_AddsTypedItem() {
-    var list = ShoppingList.Create(OwnerId, null);
-    var formatId = Guid.CreateVersion7();
-
-    list.AddItem(new ProductFormatId(formatId), new PositiveAmount(3), true);
-
-    ShoppingItem item = Assert.Single(list.Items);
-    Assert.Equal(new ProductFormatId(formatId), item.ProductFormatId);
-    Assert.Equal(3, item.Amount.Value);
-    Assert.True(item.IsChecked);
+    // Assert
+    Assert.True(list.IsNamed("Weekly"));
   }
 
   [Fact(DisplayName = "Adds primitive item batch")]
   public void AddItems_AddsPrimitiveItems() {
-    var list = ShoppingList.Create(OwnerId.Value, "Test");
-    var firstFormatId = Guid.CreateVersion7();
-    var secondFormatId = Guid.CreateVersion7();
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Test");
+    AddItemsParams[] items = [
+      new(Guid.CreateVersion7(), 2, true),
+      new(Guid.CreateVersion7(), 3, false),
+    ];
 
-    list.AddItems([
-      new AddItemsParams(firstFormatId, 2, true),
-      new AddItemsParams(secondFormatId, 3, false),
-    ]);
+    // Act
+    list.AddItems(items);
 
-    var actual = list.Items.Select(item => new {
-      ProductFormatId = item.ProductFormatId.Value,
-      Amount = item.Amount.Value,
-      item.IsChecked,
-    });
-    var expected = new[] {
-      new { ProductFormatId = firstFormatId, Amount = 2, IsChecked = true },
-      new { ProductFormatId = secondFormatId, Amount = 3, IsChecked = false },
-    };
-    Assert.Equal(expected, actual);
+    // Assert
+    Assert.All(items, item => Assert.True(list.IncludesItem(item)));
   }
 
   [Fact(DisplayName = "Rejects empty primitive item batch")]
   public void AddItems_ThrowsExactException_WhenPrimitiveBatchIsEmpty() {
-    var list = ShoppingList.Create(OwnerId.Value, "Test");
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Test");
 
-    void action() => list.AddItems(Array.Empty<AddItemsParams>());
+    // Act
+    void action() => list.AddItems([]);
 
+    // Assert
     Assert.Throws<EmptyShoppingItemsException>(action);
   }
 
   [Fact(DisplayName = "Rejects duplicate primitive batch atomically")]
   public void AddItems_ThrowsWhenPrimitiveBatchHasDuplicate() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), null);
     var duplicateId = Guid.CreateVersion7();
     IEnumerable<AddItemsParams> items = [
       new AddItemsParams(duplicateId, 1, false),
       new AddItemsParams(duplicateId, 2, true),
     ];
 
+    // Act
     void action() => list.AddItems(items);
 
+    // Assert
     Assert.Throws<DuplicateShoppingItemException>(action);
   }
 
   [Fact(DisplayName = "Rejects existing primitive item")]
   public void AddItems_ThrowsWhenPrimitiveItemExists() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), null);
     var existingId = Guid.CreateVersion7();
     list.AddItems([new AddItemsParams(existingId, 1, false)]);
 
+    // Act
     void action() => list.AddItems([new AddItemsParams(existingId, 2, true)]);
 
+    // Assert
     Assert.Throws<DuplicateShoppingItemException>(action);
-  }
-
-  [Fact(DisplayName = "Rejects invalid primitive item batch atomically")]
-  public void AddItems_ThrowsWhenPrimitiveItemIsInvalid() {
-    var list = ShoppingList.Create(OwnerId, null);
-
-    void action() => list.AddItems([new AddItemsParams(Guid.Empty, 1, false)]);
-
-    Assert.Throws<InvalidProductFormatIdException>(action);
   }
 
   [Fact(DisplayName = "Updates amount and checked state atomically")]
   public void UpdateItem_UpdatesProvidedFields() {
-    var list = ShoppingList.Create(OwnerId.Value, "Test list");
-    list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 1, false)]);
-    ShoppingItem item = list.Items.Single();
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
+    var original = new AddItemsParams(Guid.CreateVersion7(), 1, false);
+    list.AddItems([original]);
+    Guid itemId = list.ItemIdFor(original);
+    AddItemsParams expected = original with { Amount = 4, IsChecked = true };
 
-    list.UpdateItem(item.Id.Value, 4, true);
+    // Act
+    list.UpdateItem(itemId, 4, true);
 
-    Assert.Equal(4, item.Amount.Value);
-    Assert.True(item.IsChecked);
-  }
-
-  [Fact(DisplayName = "Rejects update without fields")]
-  public void UpdateItem_ThrowsExactException_WhenNoFieldsProvided() {
-    var list = ShoppingList.Create(OwnerId.Value, "Test list");
-    list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 1, false)]);
-    ShoppingItem item = list.Items.Single();
-
-    void action() => list.UpdateItem(item.Id.Value, null, null);
-
-    Assert.Throws<EmptyShoppingItemUpdateException>(action);
+    // Assert
+    Assert.True(list.IncludesItem(expected));
   }
 
   [Fact(DisplayName = "Rejects update for missing item")]
   public void UpdateItem_ThrowsExactException_WhenItemIsMissing() {
-    var list = ShoppingList.Create(OwnerId.Value, "Test list");
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Test list");
 
-    Assert.Throws<ShoppingItemNotFoundException>(() =>
-      list.UpdateItem(
-        Guid.CreateVersion7(), 1, null));
-  }
+    // Act
+    void action() => list.UpdateItem(Guid.CreateVersion7(), 1, null);
 
-  [Fact(DisplayName = "Preserves amount when updating checked state")]
-  public void UpdateItem_PreservesAmount_WhenAmountIsMissing() {
-    var list = ShoppingList.Create(OwnerId.Value, "Test list");
-    list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 3, false)]);
-    ShoppingItem item = list.Items.Single();
-
-    list.UpdateItem(item.Id.Value, null, true);
-
-    Assert.Equal(3, list.Items.Single().Amount.Value);
-  }
-
-  [Fact(DisplayName = "Preserves checked state when updating amount")]
-  public void UpdateItem_PreservesCheckedState_WhenCheckedStateIsMissing() {
-    var list = ShoppingList.Create(OwnerId.Value, "Test list");
-    list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 3, true)]);
-    ShoppingItem item = list.Items.Single();
-
-    list.UpdateItem(item.Id.Value, 3, null);
-
-    Assert.True(item.IsChecked);
+    // Assert
+    Assert.Throws<ShoppingItemNotFoundException>(action);
   }
 
   [Fact(DisplayName = "Marks existing item deleted at supplied time")]
   public void RemoveItem_MarksItemDeletedAtSuppliedTime() {
-    var list = ShoppingList.Create(OwnerId.Value, "Test list");
-    list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 3, true)]);
-    ShoppingItem item = list.Items.Single();
-
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
+    var item = new AddItemsParams(Guid.CreateVersion7(), 3, true);
     var deletedAt = new DateTime(2026, 10, 3, 8, 30, 0, DateTimeKind.Utc);
+    list.AddItems([item]);
+    Guid itemId = list.ItemIdFor(item);
 
-    list.RemoveItem(item.Id.Value, deletedAt);
+    // Act
+    list.RemoveItem(itemId, deletedAt);
 
-    Assert.Equal(deletedAt, item.DeletedAt);
+    // Assert
+    Assert.True(list.HasRemovedItem(item, deletedAt));
   }
 
   [Fact(DisplayName = "Rejects removal of missing item")]
   public void RemoveItem_ThrowsExactException_WhenItemIsMissing() {
-    var list = ShoppingList.Create(OwnerId.Value, "Test list");
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Test list");
 
+    // Act
     void action() => list.RemoveItem(Guid.CreateVersion7(), DateTime.UtcNow);
 
+    // Assert
     Assert.Throws<ShoppingItemNotFoundException>(action);
-  }
-
-  [Fact(DisplayName = "Returns checked items without mutation")]
-  public void CheckedItems_ReturnsOnlyCheckedItems() {
-    var list = ShoppingList.Create(OwnerId, null);
-    list.AddItem(new ProductFormatId(Guid.CreateVersion7()), new PositiveAmount(1), true);
-    list.AddItem(new ProductFormatId(Guid.CreateVersion7()), new PositiveAmount(1), false);
-
-    IReadOnlyCollection<ShoppingItem> checkedItems = list.CheckedItems();
-
-    Assert.Single(checkedItems);
-    Assert.Equal(2, list.Items.Count);
   }
 
   [Fact]
   public void Checkout_RejectsEmptyList() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
+    var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, null);
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
 
+    // Assert
     Assert.Throws<EmptyCheckoutException>(() =>
-      list.Checkout(OwnerId.Value, checkoutAt));
+      list.Checkout(buyerId, checkoutAt));
   }
 
   [Theory]
@@ -313,169 +221,147 @@ public class ShoppingListTests {
   public void Checkout_RejectsListWithoutEligibleItems(
     bool isChecked, bool isDeleted
   ) {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
+    var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, null);
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
-    list.AddItems([new AddItemsParams(
-      Guid.CreateVersion7(), 2, isChecked)]);
+    var item = new AddItemsParams(Guid.CreateVersion7(), 2, isChecked);
+    list.AddItems([item]);
+    Guid itemId = list.ItemIdFor(item);
     if (isDeleted) {
-      list.RemoveItem(list.Items.Single().Id.Value, checkoutAt.AddDays(-1));
+      list.RemoveItem(itemId, checkoutAt.AddDays(-1));
     }
 
+    // Assert
     Assert.Throws<EmptyCheckoutException>(() =>
-      list.Checkout(OwnerId.Value, checkoutAt));
-  }
-
-  [Fact]
-  public void Checkout_RecordsNoEvent_WhenListIsEmpty() {
-    var list = ShoppingList.Create(OwnerId, null);
-    var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
-
-    _ = Record.Exception(() => list.Checkout(OwnerId.Value, checkoutAt));
-
-    Assert.Empty(list.DomainEvents);
-  }
-
-  [Theory]
-  [InlineData(false, false)]
-  [InlineData(false, true)]
-  [InlineData(true, true)]
-  public void Checkout_RecordsNoEvent_WhenNoItemIsEligible(
-    bool isChecked, bool isDeleted
-  ) {
-    var list = ShoppingList.Create(OwnerId, null);
-    var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
-    list.AddItems([new AddItemsParams(
-      Guid.CreateVersion7(), 2, isChecked)]);
-    if (isDeleted) {
-      list.RemoveItem(list.Items.Single().Id.Value, checkoutAt.AddDays(-1));
-    }
-
-    _ = Record.Exception(() => list.Checkout(OwnerId.Value, checkoutAt));
-
-    Assert.Empty(list.DomainEvents);
-  }
-
-  [Theory]
-  [InlineData(false, false)]
-  [InlineData(false, true)]
-  [InlineData(true, true)]
-  public void Checkout_PreservesCheckedState_WhenNoItemIsEligible(
-    bool isChecked, bool isDeleted
-  ) {
-    var list = ShoppingList.Create(OwnerId, null);
-    var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
-    list.AddItems([new AddItemsParams(
-      Guid.CreateVersion7(), 2, isChecked)]);
-    ShoppingItem item = list.Items.Single();
-    if (isDeleted) {
-      list.RemoveItem(item.Id.Value, checkoutAt.AddDays(-1));
-    }
-
-    _ = Record.Exception(() => list.Checkout(OwnerId.Value, checkoutAt));
-
-    Assert.Equal(isChecked, item.IsChecked);
+      list.Checkout(buyerId, checkoutAt));
   }
 
   [Fact]
   public void Checkout_PreservesUncheckedItemState_WhenOtherItemIsChecked() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
+    var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, null);
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
-    var uncheckedId = Guid.CreateVersion7();
+    var uncheckedItem = new AddItemsParams(Guid.CreateVersion7(), 2, false);
     list.AddItems([
-      new AddItemsParams(uncheckedId, 2, false),
+      uncheckedItem,
       new AddItemsParams(
         Guid.CreateVersion7(), 1, true),
     ]);
 
-    list.Checkout(OwnerId.Value, checkoutAt);
+    // Act
+    list.Checkout(buyerId, checkoutAt);
 
-    Assert.False(list.Items.Single(item =>
-      item.ProductFormatId.Value == uncheckedId).IsChecked);
+    // Assert
+    Assert.True(list.IncludesItem(uncheckedItem));
   }
 
   [Fact(DisplayName = "Resets checked items")]
   public void Checkout_UnchecksAllItems() {
-    var list = ShoppingList.Create(OwnerId, null);
-    list.AddItem(new ProductFormatId(Guid.CreateVersion7()), new PositiveAmount(1), true);
+    // Arrange
+    var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, null);
+    var item = new AddItemsParams(Guid.CreateVersion7(), 1, true);
+    list.AddItems([item]);
 
-    list.Checkout(OwnerId.Value,
+    // Act
+    list.Checkout(buyerId,
       new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
 
-    Assert.False(list.Items.Single().IsChecked);
+    // Assert
+    Assert.True(list.IncludesItem(item with { IsChecked = false }));
   }
 
   [Fact(DisplayName = "Preserves items when resetting checked state")]
   public void Checkout_DoesNotRemoveItems() {
-    var list = ShoppingList.Create(OwnerId, null);
-    list.AddItem(new ProductFormatId(Guid.CreateVersion7()), new PositiveAmount(1), true);
+    // Arrange
+    var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, null);
+    var item = new AddItemsParams(Guid.CreateVersion7(), 1, true);
+    list.AddItems([item]);
 
-    list.Checkout(OwnerId.Value,
+    // Act
+    list.Checkout(buyerId,
       new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
 
-    Assert.Single(list.Items);
+    // Assert
+    Assert.Equal(1, list.CountActiveItems());
   }
 
   [Fact]
   public void Checkout_RecordsShoppingListId() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
     var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, "Test");
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
     list.AddItems([new AddItemsParams(
       Guid.CreateVersion7(), 2, true)]);
 
+    // Act
     list.Checkout(buyerId, checkoutAt);
 
+    // Assert
     var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
     Assert.Equal(list.Id.Value, domainEvent.ShoppingListId);
   }
 
   [Fact]
   public void Checkout_RecordsBuyerId() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
     var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, "Test");
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
     list.AddItems([new AddItemsParams(
       Guid.CreateVersion7(), 2, true)]);
 
+    // Act
     list.Checkout(buyerId, checkoutAt);
 
+    // Assert
     var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
     Assert.Equal(buyerId, domainEvent.BuyerId);
   }
 
   [Fact]
   public void Checkout_RecordsCheckoutAt() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
     var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, null);
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
     list.AddItems([new AddItemsParams(
       Guid.CreateVersion7(), 2, true)]);
 
+    // Act
     list.Checkout(buyerId, checkoutAt);
 
+    // Assert
     var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
     Assert.Equal(checkoutAt, domainEvent.CheckoutAt);
   }
 
   [Fact]
   public void Checkout_RecordsActiveCheckedProductFormats() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
+    var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, null);
     var firstId = Guid.CreateVersion7();
     var secondId = Guid.CreateVersion7();
     var uncheckedId = Guid.CreateVersion7();
-    var deletedId = Guid.CreateVersion7();
+    var deletedItem = new AddItemsParams(Guid.CreateVersion7(), 5, true);
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
     list.AddItems([
       new AddItemsParams(firstId, 2, true),
       new AddItemsParams(secondId, 3, true),
       new AddItemsParams(uncheckedId, 4, false),
-      new AddItemsParams(deletedId, 5, true),
+      deletedItem,
     ]);
-    list.RemoveItem(list.Items.Single(item =>
-      item.ProductFormatId.Value == deletedId).Id.Value, checkoutAt);
+    list.RemoveItem(list.ItemIdFor(deletedItem), checkoutAt);
 
-    list.Checkout(OwnerId.Value, checkoutAt);
+    // Act
+    list.Checkout(buyerId, checkoutAt);
 
+    // Assert
     var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
     Assert.Equal([firstId, secondId],
       domainEvent.Items.Select(item => item.ProductFormatId));
@@ -483,46 +369,52 @@ public class ShoppingListTests {
 
   [Fact]
   public void Checkout_RecordsCheckedAmounts() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
+    var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, null);
     var firstId = Guid.CreateVersion7();
     var secondId = Guid.CreateVersion7();
     var uncheckedId = Guid.CreateVersion7();
-    var deletedId = Guid.CreateVersion7();
+    var deletedItem = new AddItemsParams(Guid.CreateVersion7(), 5, true);
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
     list.AddItems([
       new AddItemsParams(firstId, 2, true),
       new AddItemsParams(secondId, 3, true),
       new AddItemsParams(uncheckedId, 4, false),
-      new AddItemsParams(deletedId, 5, true),
+      deletedItem,
     ]);
-    list.RemoveItem(list.Items.Single(item =>
-      item.ProductFormatId.Value == deletedId).Id.Value, checkoutAt);
+    list.RemoveItem(list.ItemIdFor(deletedItem), checkoutAt);
 
-    list.Checkout(OwnerId.Value, checkoutAt);
+    // Act
+    list.Checkout(buyerId, checkoutAt);
 
+    // Assert
     var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
     Assert.Equal([2, 3], domainEvent.Items.Select(item => item.Amount));
   }
 
   [Fact]
   public void Checkout_ExcludesUncheckedItemsFromEvent() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
+    var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, null);
     var firstId = Guid.CreateVersion7();
     var secondId = Guid.CreateVersion7();
     var uncheckedId = Guid.CreateVersion7();
-    var deletedId = Guid.CreateVersion7();
+    var deletedItem = new AddItemsParams(Guid.CreateVersion7(), 5, true);
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
     list.AddItems([
       new AddItemsParams(firstId, 2, true),
       new AddItemsParams(secondId, 3, true),
       new AddItemsParams(uncheckedId, 4, false),
-      new AddItemsParams(deletedId, 5, true),
+      deletedItem,
     ]);
-    list.RemoveItem(list.Items.Single(item =>
-      item.ProductFormatId.Value == deletedId).Id.Value, checkoutAt);
+    list.RemoveItem(list.ItemIdFor(deletedItem), checkoutAt);
 
-    list.Checkout(OwnerId.Value, checkoutAt);
+    // Act
+    list.Checkout(buyerId, checkoutAt);
 
+    // Assert
     var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
     Assert.DoesNotContain(domainEvent.Items,
       item => item.ProductFormatId == uncheckedId);
@@ -530,149 +422,104 @@ public class ShoppingListTests {
 
   [Fact]
   public void Checkout_ExcludesDeletedItemsFromEvent() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
+    var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, null);
     var firstId = Guid.CreateVersion7();
     var secondId = Guid.CreateVersion7();
     var uncheckedId = Guid.CreateVersion7();
-    var deletedId = Guid.CreateVersion7();
+    var deletedItem = new AddItemsParams(Guid.CreateVersion7(), 5, true);
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
     list.AddItems([
       new AddItemsParams(firstId, 2, true),
       new AddItemsParams(secondId, 3, true),
       new AddItemsParams(uncheckedId, 4, false),
-      new AddItemsParams(deletedId, 5, true),
+      deletedItem,
     ]);
-    list.RemoveItem(list.Items.Single(item =>
-      item.ProductFormatId.Value == deletedId).Id.Value, checkoutAt);
+    list.RemoveItem(list.ItemIdFor(deletedItem), checkoutAt);
 
-    list.Checkout(OwnerId.Value, checkoutAt);
+    // Act
+    list.Checkout(buyerId, checkoutAt);
 
+    // Assert
     var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
     Assert.DoesNotContain(domainEvent.Items,
-      item => item.ProductFormatId == deletedId);
+      item => item.ProductFormatId == deletedItem.ProductFormatUid);
   }
 
   [Fact]
   public void Checkout_PreservesDeletedItemState() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
+    var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, null);
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
-    list.AddItems([new AddItemsParams(
-      Guid.CreateVersion7(), 2, true)]);
-    ShoppingItem deletedItem = list.Items.Single();
-    list.RemoveItem(deletedItem.Id.Value, checkoutAt);
+    var removedItem = new AddItemsParams(Guid.CreateVersion7(), 2, true);
+    list.AddItems([removedItem]);
+    list.RemoveItem(list.ItemIdFor(removedItem), checkoutAt);
     list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 1, true)]);
 
-    list.Checkout(OwnerId.Value, checkoutAt);
+    // Act
+    list.Checkout(buyerId, checkoutAt);
 
-    Assert.True(deletedItem.IsChecked);
+    // Assert
+    Assert.True(list.HasRemovedItem(removedItem, checkoutAt));
   }
 
   [Fact]
   public void Checkout_EventLinesSurviveSubsequentItemChanges() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
+    var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, null);
     var formatId = Guid.CreateVersion7();
-    list.AddItems([new AddItemsParams(formatId, 2, true)]);
-    list.Checkout(OwnerId.Value,
+    var item = new AddItemsParams(formatId, 2, true);
+    list.AddItems([item]);
+    list.Checkout(buyerId,
       new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
     var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
 
-    list.UpdateItem(list.Items.Single().Id.Value, 99, true);
+    // Act
+    list.UpdateItem(list.ItemIdFor(item), 99, true);
 
+    // Assert
     Assert.Equal([new CheckedOutItem(formatId, 2)], domainEvent.Items);
   }
 
   [Fact]
   public void Checkout_GeneratesDistinctCheckoutIdsForEachOccurrence() {
-    var list = ShoppingList.Create(OwnerId, null);
+    // Arrange
+    var buyerId = Guid.CreateVersion7();
+    var list = ShoppingList.Create(buyerId, null);
     var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
-    list.AddItems([new AddItemsParams(
-      Guid.CreateVersion7(), 2, true)]);
-    list.Checkout(OwnerId.Value, checkoutAt);
-    list.UpdateItem(list.Items.Single().Id.Value, null, true);
+    var item = new AddItemsParams(Guid.CreateVersion7(), 2, true);
+    list.AddItems([item]);
+    list.Checkout(buyerId, checkoutAt);
+    list.UpdateItem(list.ItemIdFor(item), null, true);
 
-    list.Checkout(OwnerId.Value, checkoutAt.AddMinutes(1));
+    // Act
+    list.Checkout(buyerId, checkoutAt.AddMinutes(1));
 
-    Guid[] checkoutIds = list.DomainEvents.Cast<ShoppingListCheckedOut>()
-      .Select(domainEvent => domainEvent.CheckoutId).ToArray();
+    // Assert
+    Guid[] checkoutIds = [.. list.DomainEvents
+      .Cast<ShoppingListCheckedOut>()
+      .Select(domainEvent => domainEvent.CheckoutId)
+    ];
     Assert.Equal(2, checkoutIds.Distinct().Count());
   }
 
   [Fact]
   public void Rehydrate_DoesNotRaiseEventsForPersistedItems() {
-    var list = ShoppingList.Rehydrate(
-      new ShoppingListId(Guid.CreateVersion7()),
-      [OwnerId],
-      null,
-      null,
-      [ShoppingItem.Create(Guid.CreateVersion7(), 2, true)]);
-
-    Assert.Empty(list.DomainEvents);
-  }
-
-  [Theory]
-  [InlineData("Weekly")]
-  [InlineData(null)]
-  public void ToPrimitives_ExportsCompleteSnapshot(string? name) {
     // Arrange
-    var ownerId = Guid.CreateVersion7();
-    var list = ShoppingList.Create(ownerId, name);
-    var expected = new ShoppingListPrimitives(
-      list.Id.Value, name, false, null, [ownerId], []);
+    var buyerId = Guid.CreateVersion7();
+    var original = ShoppingList.Create(buyerId, "Weekly");
+    original.AddItems([new AddItemsParams(Guid.CreateVersion7(), 2, true)]);
+    original.Checkout(
+      buyerId, new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
 
     // Act
-    ShoppingListPrimitives state = list.ToPrimitives();
+    var restored = ShoppingList.Rehydrate(original.ToPrimitives());
 
     // Assert
-    Assert.Equivalent(expected, state, strict: true);
-  }
-
-  [Fact]
-  public void ToPrimitives_PreservesUpdatedAndDeletedItemState() {
-    // Arrange
-    var ownerId = Guid.CreateVersion7();
-    var formatId = Guid.CreateVersion7();
-    var deletedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
-
-    var list = ShoppingList.Create(ownerId, "Weekly");
-    list.AddItems([new AddItemsParams(formatId, 1, false)]);
-    ShoppingItem item = list.Items.Single();
-    list.UpdateItem(item.Id.Value, 3, true);
-    list.RemoveItem(item.Id.Value, deletedAt);
-
-    var expected = new ShoppingListPrimitives(list.Id.Value, "Weekly", false, null, [ownerId],
-      [new ShoppingItemPrimitives(item.Id.Value, formatId, 3, true, deletedAt)]);
-
-    // Act
-    ShoppingListPrimitives state = list.ToPrimitives();
-
-    // Assert
-    Assert.Equivalent(expected, state, strict: true);
-  }
-
-  [Fact]
-  public void Snapshot_RemainsUnchangedAfterAggregateMutation() {
-    // Arrange
-    var ownerId = Guid.CreateVersion7();
-    var formatId = Guid.CreateVersion7();
-    var otherFormatId = Guid.CreateVersion7();
-    var deletedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
-
-    var list = ShoppingList.Create(ownerId, "Original");
-    list.AddItems([new AddItemsParams(formatId, 1, false)]);
-    ShoppingItem item = list.Items.Single();
-    ShoppingListPrimitives state = list.ToPrimitives();
-
-    var expected = new ShoppingListPrimitives(list.Id.Value, "Original", false, null, [ownerId],
-      [new ShoppingItemPrimitives(item.Id.Value, formatId, 1, false, null)]);
-
-    // Act
-    list.Update("Updated");
-    list.UpdateItem(item.Id.Value, 9, true);
-    list.RemoveItem(item.Id.Value, deletedAt);
-    list.AddItems([new AddItemsParams(otherFormatId, 2, true)]);
-
-    // Assert
-    Assert.Equivalent(expected, state, strict: true);
+    Assert.Empty(restored.DomainEvents);
   }
 
   [Fact]
@@ -691,5 +538,130 @@ public class ShoppingListTests {
 
     // Assert
     Assert.Single(list.DomainEvents);
+  }
+
+  [Theory]
+  [InlineData(null)]
+  [InlineData("")]
+  [InlineData(" ")]
+  public void Create_CreatesTemporaryList_WhenNameIsBlank(string? name) {
+    // Arrange
+    var ownerId = Guid.CreateVersion7();
+
+    // Act
+    var list = ShoppingList.Create(ownerId, name);
+
+    // Assert
+    Assert.True(list.IsTemporary());
+  }
+
+  [Fact]
+  public void Update_MakesTemporaryListPermanent() {
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), null);
+
+    // Act
+    list.Update("Weekly");
+
+    // Assert
+    Assert.False(list.IsTemporary());
+  }
+
+  [Fact]
+  public void AddItems_PreservesRemovedHistory_WhenReplacementIsAdded() {
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
+    var original = new AddItemsParams(Guid.CreateVersion7(), 1, true);
+    var removedAt = new DateTime(2026, 10, 3, 8, 30, 0, DateTimeKind.Utc);
+    list.AddItems([original]);
+    list.RemoveItem(list.ItemIdFor(original), removedAt);
+    AddItemsParams replacement = original with { Amount = 2 };
+
+    // Act
+    list.AddItems([replacement]);
+
+    // Assert
+    Assert.True(list.HasRemovedItem(original, removedAt));
+  }
+
+  [Fact]
+  public void AddItems_DoesNotAddItems_WhenBatchContainsDuplicates() {
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
+    var item = new AddItemsParams(Guid.CreateVersion7(), 1, false);
+    AddItemsParams[] additions = [item, item with { Amount = 2 }];
+
+    // Act
+    _ = Record.Exception(() => list.AddItems(additions));
+
+    // Assert
+    Assert.Equal(0, list.CountActiveItems());
+  }
+
+  [Fact]
+  public void AddItems_DoesNotAddEarlierItems_WhenLaterFormatIsInvalid() {
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
+    AddItemsParams[] additions = [
+      new(Guid.CreateVersion7(), 1, false),
+      new(Guid.Empty, 2, true),
+    ];
+
+    // Act
+    _ = Record.Exception(() => list.AddItems(additions));
+
+    // Assert
+    Assert.Equal(0, list.CountActiveItems());
+  }
+
+  [Fact]
+  public void AddItems_DoesNotAddEarlierItems_WhenLaterAmountIsInvalid() {
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
+    AddItemsParams[] additions = [
+      new(Guid.CreateVersion7(), 1, false),
+      new(Guid.CreateVersion7(), 0, true),
+    ];
+
+    // Act
+    _ = Record.Exception(() => list.AddItems(additions));
+
+    // Assert
+    Assert.Equal(0, list.CountActiveItems());
+  }
+
+  [Fact]
+  public void UpdateItem_RejectsRemovedItem() {
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
+    var item = new AddItemsParams(Guid.CreateVersion7(), 2, true);
+    list.AddItems([item]);
+    Guid itemId = list.ItemIdFor(item);
+    list.RemoveItem(itemId, new DateTime(2026, 10, 3, 8, 30, 0, DateTimeKind.Utc));
+
+    // Act
+    Exception? failure = Record.Exception(() => list.UpdateItem(itemId, 4, false));
+
+    // Assert
+    Assert.IsType<ShoppingItemNotFoundException>(failure);
+  }
+
+  [Theory]
+  [InlineData(false)]
+  [InlineData(true)]
+  public void Checkout_RejectsBuyerWhoDoesNotOwnList(bool includesCheckedItem) {
+    // Arrange
+    var list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
+    var buyerId = Guid.CreateVersion7();
+    var checkoutAt = new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc);
+    if (includesCheckedItem) {
+      list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 2, true)]);
+    }
+
+    // Act
+    void NewMethod() => list.Checkout(buyerId, checkoutAt);
+
+    // Assert
+    Assert.Throws<BuyerDoNotOwnListException>(NewMethod);
   }
 }

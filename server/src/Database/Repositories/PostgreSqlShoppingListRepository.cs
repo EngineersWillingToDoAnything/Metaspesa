@@ -1,9 +1,7 @@
-using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Markets;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Application.Shopping;
 using Metaspesa.Database.Entities;
-using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
 using Microsoft.EntityFrameworkCore;
@@ -14,24 +12,27 @@ namespace Metaspesa.Database.Repositories;
 internal class PostgreSqlShoppingListRepository(
   MainContext context
 ) : IShoppingListRepository {
-  public async Task<IReadOnlyCollection<ShoppingList>> GetByOwnerAsync(
-    UserId ownerId, CancellationToken cancellationToken
-  ) => await PostgreSqlExceptionMapper.MapAsync<IReadOnlyCollection<ShoppingList>>(
-    async () => {
-      List<ShoppingListDbEntity> entities = await context.ShoppingLists
-        .AsNoTracking()
-        .Include(list => list.Ownerships)
-        .Include(list => list.Items)
-        .Where(list => list.Ownerships.Any(
-          ownership => ownership.UserUid == ownerId.Value) &&
-          list.DeletedAt == null)
-        .OrderBy(list => list.Name == null)
-        .ThenBy(list => list.Name)
-        .ToListAsync(cancellationToken);
+  public async Task<IReadOnlyCollection<GetShoppingListSummaries.Response>> GetByOwnerAsync(
+    Guid ownerId, CancellationToken cancellationToken
+  ) {
+    List<GetShoppingListSummaries.Response> entities = await context.ShoppingLists
+      .AsNoTracking()
+      .Include(list => list.Ownerships)
+      .Include(list => list.Items)
+      .Where(list => list.Ownerships.Any(
+        ownership => ownership.UserUid == ownerId) &&
+        list.DeletedAt == null)
+      .OrderBy(list => list.Name == null)
+      .ThenBy(list => list.Name)
+      .Select(list => new GetShoppingListSummaries.Response(
+        list.Name,
+        list.Id,
+        list.IsTemporary
+      ))
+      .ToListAsync(cancellationToken);
 
-      return [.. entities.Select(ToDomain)];
-    },
-    "Couldn't get shopping lists.");
+    return entities;
+  }
 
   public async Task<ShoppingList?> GetAsync(
     Guid ownerId, Guid listId, CancellationToken cancellationToken
@@ -44,7 +45,7 @@ internal class PostgreSqlShoppingListRepository(
         list.Ownerships.Any(ownership => ownership.UserUid == ownerId))
       .FirstOrDefaultAsync(cancellationToken);
 
-    return entity is null ? null : ToDomain(entity);
+    return entity?.ToAggregate();
   }
 
   public async Task<bool> ExistsAsync(
@@ -123,19 +124,6 @@ internal class PostgreSqlShoppingListRepository(
 
     await transaction.CommitAsync(cancellationToken);
   }
-
-  private static ShoppingList ToDomain(ShoppingListDbEntity entity) =>
-    ShoppingList.Rehydrate(
-      new ShoppingListId(entity.Id),
-      entity.Ownerships.Select(ownership => new UserId(ownership.UserUid)),
-      entity.Name is null ? null : new ShoppingListName(entity.Name),
-      entity.DeletedAt,
-      entity.Items.Select(item => ShoppingItem.Rehydrate(
-        item.Id,
-        item.ProductFormatId,
-        item.Amount,
-        item.IsChecked,
-        item.DeletedAt)));
 
   private static string EscapeLike(string value) => value
     .Replace("\\", "\\\\", StringComparison.Ordinal)

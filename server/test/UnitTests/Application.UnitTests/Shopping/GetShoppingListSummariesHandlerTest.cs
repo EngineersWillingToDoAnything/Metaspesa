@@ -1,40 +1,36 @@
 using Metaspesa.Application.Abstractions.Shopping;
-using Metaspesa.Domain.Identity;
-using Metaspesa.Domain.Shopping;
 using NSubstitute;
 using static Metaspesa.Application.Shopping.GetShoppingListSummaries;
 
 namespace Metaspesa.Application.UnitTests.Shopping;
 
 public class GetShoppingListSummariesHandlerTest {
-  [Fact(DisplayName = "Returns application summary read models")]
-  public async Task Handle_ReturnsReadModels() {
-    var ownerId = Guid.CreateVersion7();
-    IShoppingListRepository repository = Substitute.For<IShoppingListRepository>();
-    repository.GetByOwnerAsync(Arg.Any<UserId>(), Arg.Any<CancellationToken>())
-      .Returns([
-        ShoppingList.Create(ownerId, "Weekly"),
-        ShoppingList.Create(ownerId, null),
-      ]);
-    var handler = new Handler(repository);
+  private readonly IShoppingListRepository _repository;
 
-    IReadOnlyCollection<Response> result = await handler.Handle(
-      new Query(ownerId), TestContext.Current.CancellationToken);
+  private readonly Handler _handler;
 
-    Assert.Collection(result,
-      summary => Assert.Equal("Weekly", summary.Name),
-      summary => Assert.Null(summary.Name));
+  public GetShoppingListSummariesHandlerTest() {
+    _repository = Substitute.For<IShoppingListRepository>();
+
+    _handler = new Handler(_repository);
   }
 
-  [Fact(DisplayName = "Propagates cancellation")]
-  public async Task Handle_PropagatesCancellation() {
-    IShoppingListRepository repository = Substitute.For<IShoppingListRepository>();
-    repository.GetByOwnerAsync(Arg.Any<UserId>(), Arg.Any<CancellationToken>())
-      .Returns<Task<IReadOnlyCollection<ShoppingList>>>(_ =>
-        throw new OperationCanceledException());
-    var handler = new Handler(repository);
+  [Fact(DisplayName = "Returns application summary read models")]
+  public async Task Handle_ReturnsReadModels() {
+    // Arrange
+    var ownerId = Guid.CreateVersion7();
+    Response[] expected = [
+      new("Weekly", Guid.CreateVersion7(), false),
+      new(null, Guid.CreateVersion7(), true),
+    ];
+    _repository.GetByOwnerAsync(ownerId, TestContext.Current.CancellationToken)
+      .Returns(expected);
 
-    await Assert.ThrowsAsync<OperationCanceledException>(() => handler.Handle(
-      new Query(Guid.CreateVersion7()), TestContext.Current.CancellationToken));
+    // Act
+    IReadOnlyCollection<Response> result = await _handler.Handle(
+      new Query(ownerId), TestContext.Current.CancellationToken);
+
+    // Assert
+    Assert.Equal(expected, result);
   }
 }

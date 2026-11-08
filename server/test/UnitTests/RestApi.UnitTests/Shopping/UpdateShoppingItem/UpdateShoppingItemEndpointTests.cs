@@ -21,8 +21,9 @@ public class UpdateShoppingItemEndpointTests {
   public async Task Update_ReturnsNoContent_WhenRequestIsAccepted() {
     // Arrange
     var list = ShoppingList.Create(OwnerUid, "Weekly");
-    list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 1, false)]);
-    ShoppingItem item = list.Items.Single();
+    var item = new AddItemsParams(Guid.CreateVersion7(), 1, false);
+    list.AddItems([item]);
+    Guid itemId = list.ItemIdFor(item);
     _shoppingListRepository.GetAsync(
         OwnerUid, list.Id.Value, TestContext.Current.CancellationToken)
       .Returns(list);
@@ -30,7 +31,7 @@ public class UpdateShoppingItemEndpointTests {
 
     // Act
     IResult result = await UpdateShoppingItemEndpoint.UpdateItemAsync(
-      list.Id.Value, item.Id.Value, request, ShopperContext(), _handler,
+      list.Id.Value, itemId, request, ShopperContext(), _handler,
       TestContext.Current.CancellationToken);
 
     // Assert

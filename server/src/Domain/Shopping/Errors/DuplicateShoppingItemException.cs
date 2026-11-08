@@ -4,7 +4,7 @@ namespace Metaspesa.Domain.Shopping.Errors;
 
 public class DuplicateShoppingItemException : ShoppingDomainException {
   public DuplicateShoppingItemException() { }
-  public DuplicateShoppingItemException(ProductFormatId productFormatId)
+  public DuplicateShoppingItemException(Guid productFormatId)
     : base(
       "ShoppingList.Item.DuplicateReferenceUid",
       $"Product format '{productFormatId}' already belongs to this shopping list.") { }
