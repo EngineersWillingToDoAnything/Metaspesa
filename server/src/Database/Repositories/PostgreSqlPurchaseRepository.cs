@@ -18,7 +18,7 @@ internal class PostgreSqlPurchaseRepository(
       .Where(purchase => purchase.Id == purchaseId)
       .FirstOrDefaultAsync(cancellationToken);
 
-    return entity is null ? null : ToDomain(entity);
+    return entity?.ToAggregate();
   }
 
   public async Task SaveAsync(
@@ -58,16 +58,5 @@ internal class PostgreSqlPurchaseRepository(
       """, cancellationToken);
 
     await transaction.CommitAsync(cancellationToken);
-  }
-
-  private static Purchase ToDomain(PurchaseDbEntity entity) {
-    return Purchase.Rehydrate(
-      entity.Id,
-      entity.UserUid,
-      entity.ShoppingListId,
-      entity.PurchasedAt,
-      [.. entity.Items.Select(item =>
-        PurchaseItem.Rehydrate(item.Id, item.PriceSnapshotId, item.Amount))
-      ]);
   }
 }

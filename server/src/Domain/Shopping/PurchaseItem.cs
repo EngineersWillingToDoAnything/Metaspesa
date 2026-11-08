@@ -4,9 +4,10 @@ using Metaspesa.Domain.SharedKernel;
 namespace Metaspesa.Domain.Shopping;
 
 public sealed class PurchaseItem {
+  private readonly PriceSnapshotId _priceSnapshotId;
+  private readonly PositiveAmount _amount;
+
   public PurchaseItemId Id { get; }
-  public PriceSnapshotId PriceSnapshotId { get; }
-  public PositiveAmount Amount { get; }
 
   private PurchaseItem(
     PurchaseItemId id,
@@ -14,8 +15,8 @@ public sealed class PurchaseItem {
     PositiveAmount amount
   ) {
     Id = id;
-    Amount = amount;
-    PriceSnapshotId = priceSnapshotId;
+    _amount = amount;
+    _priceSnapshotId = priceSnapshotId;
   }
 
   internal static PurchaseItem Create(
@@ -29,20 +30,24 @@ public sealed class PurchaseItem {
     );
   }
 
-  public static PurchaseItem Rehydrate(
-    Guid id,
-    Guid priceSnapshotId,
-    int amount
+  internal static PurchaseItem Rehydrate(
+    PurchaseItemPrimitives primitives
   ) {
     return new PurchaseItem(
-      new PurchaseItemId(id),
-      new PriceSnapshotId(priceSnapshotId),
-      new PositiveAmount(amount)
+      new PurchaseItemId(primitives.Id),
+      new PriceSnapshotId(primitives.PriceSnapshotId),
+      new PositiveAmount(primitives.Amount)
     );
   }
 
   public PurchaseItemPrimitives ToPrimitives() {
-    return new PurchaseItemPrimitives(Id.Value, PriceSnapshotId.Value, Amount.Value);
+    return new PurchaseItemPrimitives(
+      Id.Value, _priceSnapshotId.Value, _amount.Value);
+  }
+
+  internal bool MatchesPurchase(Guid priceSnapshotId, int amount) {
+    return _priceSnapshotId.Value == priceSnapshotId &&
+      _amount.Value == amount;
   }
 }
 
