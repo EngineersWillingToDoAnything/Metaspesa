@@ -1,3 +1,5 @@
+using Metaspesa.Domain.Shopping;
+
 namespace Metaspesa.Database.Entities;
 
 internal class ShoppingItemDbEntity {
@@ -10,4 +12,13 @@ internal class ShoppingItemDbEntity {
 
   public ShoppingListDbEntity ShoppingList { get; set; } = null!;
   public ProductFormatDbEntity ProductFormat { get; set; } = null!;
+
+  internal ShoppingItemPrimitives ToPrimitives() {
+    return new ShoppingItemPrimitives(
+      Id,
+      ProductFormatId,
+      Amount,
+      IsChecked,
+      DeletedAt);
+  }
 }

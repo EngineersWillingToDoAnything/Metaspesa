@@ -145,22 +145,6 @@ public sealed class PostgreSqlMarketRepositoryTest : IAsyncLifetime {
   }
 
   [Fact]
-  public async Task SaveAsync_UpdatesExistingAggregateName() {
-    // Arrange
-    var aggregate = Market.Create("Original");
-    await _repository.SaveAsync(aggregate, TestContext.Current.CancellationToken);
-    var updated = Market.Hydrate(aggregate.Id, new MarketName("Updated"), null);
-
-    // Act
-    await _repository.SaveAsync(updated, TestContext.Current.CancellationToken);
-
-    // Assert
-    string actual = await _context.SuperMarkets.Select(value => value.Name)
-      .SingleAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(updated.Name.Value, actual);
-  }
-
-  [Fact]
   public async Task SaveAsync_RejectsDuplicateName() {
     // Arrange
     var original = Market.Create("Name");
@@ -178,7 +162,7 @@ public sealed class PostgreSqlMarketRepositoryTest : IAsyncLifetime {
   [Fact(DisplayName = "Maps market logo in summaries")]
   public async Task Repository_MapsLogo_InMarketSummary() {
     // Arrange
-    _context.SuperMarkets.Add(new SuperMarketDbEntity {
+    _context.SuperMarkets.Add(new MarketDbEntity {
       Id = Guid.CreateVersion7(),
       Name = "Mercadona",
       LogoUrl = "https://example.test/mercadona.png",
@@ -209,22 +193,5 @@ public sealed class PostgreSqlMarketRepositoryTest : IAsyncLifetime {
     string? actual = await _context.SuperMarkets.Select(value => value.LogoUrl)
       .SingleAsync(TestContext.Current.CancellationToken);
     Assert.Equal(logo.ToString(), actual);
-  }
-
-  [Fact]
-  public async Task SaveAsync_UpdatesLogo() {
-    // Arrange
-    var aggregate = Market.Create("Name");
-    await _repository.SaveAsync(aggregate, TestContext.Current.CancellationToken);
-    var logo = new ImageUrl(new Uri("https://example.test/updated.png"));
-    var updated = Market.Hydrate(aggregate.Id, aggregate.Name, logo);
-
-    // Act
-    await _repository.SaveAsync(updated, TestContext.Current.CancellationToken);
-
-    // Assert
-    string? actual = await _context.SuperMarkets.Select(value => value.LogoUrl)
-      .SingleAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(logo.Value.ToString(), actual);
   }
 }

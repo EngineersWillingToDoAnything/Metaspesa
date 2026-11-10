@@ -18,35 +18,33 @@ internal class PostgreSqlPurchaseRepository(
       .Where(purchase => purchase.Id == purchaseId)
       .FirstOrDefaultAsync(cancellationToken);
 
-    return entity is null ? null : ToDomain(entity);
+    return entity?.ToAggregate();
   }
 
   public async Task SaveAsync(
     Purchase purchase, CancellationToken cancellationToken
   ) {
     ArgumentNullException.ThrowIfNull(purchase);
-    Guid purchaseId = purchase.Id.Value;
-    Guid? buyerId = purchase.BuyerId?.Value;
-    Guid? shoppingListId = purchase.ShoppingListId?.Value;
-    PurchaseItem[] items = [.. purchase.Items];
+    PurchasePrimitives state = purchase.ToPrimitives();
+    PurchaseItemPrimitives[] items = [.. state.Items];
 
     var itemIds = new Guid[items.Length];
     var snapshotIds = new Guid[items.Length];
     int[] amounts = new int[items.Length];
     for (int i = 0; i < items.Length; i++) {
-      PurchaseItem item = items[i];
-      itemIds[i] = item.Id.Value;
-      snapshotIds[i] = item.PriceSnapshotId.Value;
-      amounts[i] = item.Amount.Value;
+      PurchaseItemPrimitives item = items[i];
+      itemIds[i] = item.Id;
+      snapshotIds[i] = item.PriceSnapshotId;
+      amounts[i] = item.Amount;
     }
 
     await using IDbContextTransaction transaction = await context.Database
       .BeginTransactionAsync(cancellationToken);
 
-    await context.Database.ExecuteSqlInterpolatedAsync($"""
+    await context.Database.ExecuteSqlAsync($"""
       WITH inserted_purchase AS (
         INSERT INTO shopping.purchases (id, user_uid, shopping_list_id, purchased_at)
-        VALUES ({purchaseId}, {buyerId}, {shoppingListId}, {purchase.PurchasedAt})
+        VALUES ({state.Id}, {state.BuyerId}, {state.ShoppingListId}, {state.PurchasedAt})
         ON CONFLICT (id) DO NOTHING
         RETURNING id
       )
@@ -60,16 +58,5 @@ internal class PostgreSqlPurchaseRepository(
       """, cancellationToken);
 
     await transaction.CommitAsync(cancellationToken);
-  }
-
-  private static Purchase ToDomain(PurchaseDbEntity entity) {
-    return Purchase.Rehydrate(
-      entity.Id,
-      entity.UserUid,
-      entity.ShoppingListId,
-      entity.PurchasedAt,
-      [.. entity.Items.Select(item =>
-        PurchaseItem.Rehydrate(item.Id, item.PriceSnapshotId, item.Amount))
-      ]);
   }
 }

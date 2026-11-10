@@ -23,15 +23,16 @@ public class RemoveShoppingItemEndpointTests {
   [Fact(DisplayName = "Returns no content for accepted request")]
   public async Task Remove_ReturnsNoContent_WhenRequestIsAccepted() {
     var list = ShoppingList.Create(OwnerUid, "Weekly");
-    list.AddItems([new(Guid.CreateVersion7(), 1, false)]);
-    ShoppingItem item = list.Items.Single();
+    var item = new AddItemsParams(Guid.CreateVersion7(), 1, false);
+    list.AddItems([item]);
+    Guid itemId = list.ItemIdFor(item);
 
     _repository.GetAsync(
         OwnerUid, list.Id.Value, TestContext.Current.CancellationToken)
       .Returns(list);
 
     IResult result = await RemoveShoppingItemEndpoint.RemoveItemAsync(
-      list.Id.Value, item.Id.Value, ShopperContext(), _handler,
+      list.Id.Value, itemId, ShopperContext(), _handler,
       TestContext.Current.CancellationToken);
 
     IStatusCodeHttpResult statusCodeHttpResult = Assert.IsType<IStatusCodeHttpResult>(

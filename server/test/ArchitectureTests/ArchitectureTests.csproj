@@ -23,4 +23,14 @@
     <ProjectReference Include="..\..\src\RestApi\RestApi.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <_DependencyProject Include="Domain;Application;Database;Infrastructure;RestApi;MigrationService;ServiceDefaults" />
+  </ItemGroup>
+
+  <!-- Restored assets contain evaluated references, including Directory.Build.props imports. -->
+  <Target Name="CopyDependencyMetadata" BeforeTargets="CopyFilesToOutputDirectory">
+    <Copy SourceFiles="@(_DependencyProject->'../../src/%(Identity)/obj/project.assets.json')"
+          DestinationFiles="@(_DependencyProject->'$(OutDir)DependencyMetadata/%(Identity).assets.json')" />
+  </Target>
+
 </Project>

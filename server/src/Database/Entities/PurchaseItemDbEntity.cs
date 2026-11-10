@@ -1,3 +1,5 @@
+using Metaspesa.Domain.Shopping;
+
 namespace Metaspesa.Database.Entities;
 
 internal class PurchaseItemDbEntity {
@@ -8,4 +10,8 @@ internal class PurchaseItemDbEntity {
 
   public PurchaseDbEntity Purchase { get; set; } = null!;
   public PriceSnapshotDbEntity PriceSnapshot { get; set; } = null!;
+
+  public PurchaseItemPrimitives ToPrimitives() {
+    return new PurchaseItemPrimitives(Id, PriceSnapshotId, Amount);
+  }
 }

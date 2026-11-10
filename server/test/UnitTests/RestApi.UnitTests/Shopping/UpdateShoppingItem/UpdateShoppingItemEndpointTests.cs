@@ -19,16 +19,22 @@ public class UpdateShoppingItemEndpointTests {
 
   [Fact(DisplayName = "Returns no content for accepted request")]
   public async Task Update_ReturnsNoContent_WhenRequestIsAccepted() {
-    var item = ShoppingItem.Create(Guid.CreateVersion7(), 1, false);
+    // Arrange
+    var list = ShoppingList.Create(OwnerUid, "Weekly");
+    var item = new AddItemsParams(Guid.CreateVersion7(), 1, false);
+    list.AddItems([item]);
+    Guid itemId = list.ItemIdFor(item);
     _shoppingListRepository.GetAsync(
-        OwnerUid, ListId, TestContext.Current.CancellationToken)
-      .Returns(PersistedList("Weekly", item));
+        OwnerUid, list.Id.Value, TestContext.Current.CancellationToken)
+      .Returns(list);
     var request = new UpdateShoppingItemRequest(3, true);
 
+    // Act
     IResult result = await UpdateShoppingItemEndpoint.UpdateItemAsync(
-      ListId, item.Id.Value, request, ShopperContext(), _handler,
+      list.Id.Value, itemId, request, ShopperContext(), _handler,
       TestContext.Current.CancellationToken);
 
+    // Assert
     IStatusCodeHttpResult statusCodeHttpResult = Assert.IsType<IStatusCodeHttpResult>(
       result, exactMatch: false);
     Assert.Equal(StatusCodes.Status204NoContent, statusCodeHttpResult.StatusCode);

@@ -157,11 +157,11 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
   }
 
   private async Task<ProductFormatId> SeedFormatAsync(string name) {
-    var market = new SuperMarketDbEntity {
+    var market = new MarketDbEntity {
       Id = Guid.CreateVersion7(),
       Name = $"Market {Guid.CreateVersion7()}",
     };
-    var brand = new ProductBrandDbEntity {
+    var brand = new BrandDbEntity {
       Id = Guid.CreateVersion7(),
       Name = $"Brand {Guid.CreateVersion7()}",
     };

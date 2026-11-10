@@ -1,3 +1,4 @@
+using System.Collections.Immutable;
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping.Errors;
@@ -18,33 +19,31 @@ public record CreatePurchaseItem(
 );
 
 public sealed class Purchase : AggregateRoot {
+  private readonly UserId? _buyerId;
+  private readonly ShoppingListId? _shoppingListId;
+  private readonly PurchaseTime _purchasedAt;
   private readonly List<PurchaseItem> _items;
 
   public PurchaseId Id { get; }
-  public UserId? BuyerId { get; }
-  public ShoppingListId? ShoppingListId { get; }
-  public DateTime PurchasedAt { get; }
-  public IReadOnlyCollection<PurchaseItem> Items => _items.AsReadOnly();
 
   private Purchase(
     PurchaseId id,
     UserId? buyerId,
     ShoppingListId? shoppingListId,
-    DateTime purchasedAt,
+    PurchaseTime purchasedAt,
     IReadOnlyCollection<PurchaseItem> items
   ) : base() {
     Id = id;
-    BuyerId = buyerId;
-    ShoppingListId = shoppingListId;
-    PurchasedAt = purchasedAt;
+    _buyerId = buyerId;
+    _shoppingListId = shoppingListId;
+    _purchasedAt = purchasedAt;
     _items = [.. items];
   }
 
-  public static Purchase Create(CreatePurchaseParams @params) {
-    ArgumentNullException.ThrowIfNull(@params);
-    CreatePurchaseItem[] items = [.. @params.Items];
+  public static Purchase Create(CreatePurchaseParams parameters) {
+    ArgumentNullException.ThrowIfNull(parameters);
+    CreatePurchaseItem[] items = [.. parameters.Items];
 
-    EnsureValidDate(@params.PurchasedAt);
     EnsureNotEmpty(items);
     EnsureNoDuplicates(items);
 
@@ -53,27 +52,32 @@ public sealed class Purchase : AggregateRoot {
     ];
 
     return new Purchase(
-      new PurchaseId(@params.PurchaseId),
-      new UserId(@params.BuyerId),
-      new ShoppingListId(@params.ShoppingListId),
-      @params.PurchasedAt,
+      new PurchaseId(parameters.PurchaseId),
+      new UserId(parameters.BuyerId),
+      new ShoppingListId(parameters.ShoppingListId),
+      PurchaseTime.Create(parameters.PurchasedAt),
       purchaseItems
     );
   }
 
-  public static Purchase Rehydrate(
-    Guid id,
-    Guid? buyerId,
-    Guid? shoppingListId,
-    DateTime purchasedAt,
-    IReadOnlyCollection<PurchaseItem> items
-  ) {
+  public static Purchase Rehydrate(PurchasePrimitives primitives) {
+    ArgumentNullException.ThrowIfNull(primitives);
+
     return new Purchase(
-      new PurchaseId(id),
-      buyerId is null ? null : new UserId(buyerId.Value),
-      shoppingListId is null ? null : new ShoppingListId(shoppingListId.Value),
-      purchasedAt,
-      items);
+      new PurchaseId(primitives.Id),
+      primitives.BuyerId is null ? null : new UserId(primitives.BuyerId.Value),
+      primitives.ShoppingListId is null ? null : new ShoppingListId(primitives.ShoppingListId.Value),
+      new PurchaseTime(primitives.PurchasedAt),
+      [.. primitives.Items.Select(PurchaseItem.Rehydrate)]);
+  }
+
+  public PurchasePrimitives ToPrimitives() {
+    ImmutableArray<PurchaseItemPrimitives> items = [..
+      _items.Select(item => item.ToPrimitives())
+    ];
+
+    return new PurchasePrimitives(
+      Id.Value, _buyerId?.Value, _shoppingListId?.Value, _purchasedAt.Value, items);
   }
 
   private static void EnsureNotEmpty(CreatePurchaseItem[] items) {
@@ -93,9 +97,19 @@ public sealed class Purchase : AggregateRoot {
     }
   }
 
-  private static void EnsureValidDate(DateTime purchasedAt) {
-    if (purchasedAt == default || purchasedAt.Kind != DateTimeKind.Utc) {
-      throw new InvalidPurchasedAtException(purchasedAt);
-    }
+  public bool WasMadeBy(Guid buyerId) => _buyerId?.Value == buyerId;
+  public bool WasMadeAt(DateTime purchaseAt) => _purchasedAt.Value == purchaseAt;
+  public bool WasForShoppingList(Guid shoppingListId) =>
+    _shoppingListId?.Value == shoppingListId;
+  public bool IncludesItem(Guid priceSnapshotId, int amount) {
+    return _items.Any(item => item.MatchesPurchase(priceSnapshotId, amount));
   }
 }
+
+public sealed record PurchasePrimitives(
+  Guid Id,
+  Guid? BuyerId,
+  Guid? ShoppingListId,
+  DateTime PurchasedAt,
+  ImmutableArray<PurchaseItemPrimitives> Items
+);

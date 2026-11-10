@@ -1,4 +1,4 @@
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS builder
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS builder
 
 WORKDIR /server
 
@@ -6,7 +6,7 @@ COPY . .
 
 RUN dotnet restore src/RestApi && dotnet publish src/RestApi -o /app/publish -c Release
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:11.0
 
 WORKDIR /app
 

@@ -40,10 +40,11 @@ public class RemoveItemHandlerTest {
     var ownerId = Guid.CreateVersion7();
 
     var list = ShoppingList.Create(ownerId, "Weekly");
-    list.AddItems([new(Guid.CreateVersion7(), 1, false)]);
-    ShoppingItem item = list.Items.Single();
+    var item = new AddItemsParams(Guid.CreateVersion7(), 1, false);
+    list.AddItems([item]);
+    _clock.GetCurrentTime().Returns(DateTime.UtcNow);
 
-    var command = new Command(ownerId, list.Id.Value, item.Id.Value);
+    var command = new Command(ownerId, list.Id.Value, list.ItemIdFor(item));
     _shoppingListRepository.GetAsync(
         ownerId, list.Id.Value, TestContext.Current.CancellationToken)
       .Returns(list);
@@ -58,7 +59,7 @@ public class RemoveItemHandlerTest {
   [Fact(DisplayName = "Does not save when shopping item does not exist")]
   public async Task Handle_DoesNotSave_WhenShoppingItemDoesNotExist() {
     var ownerId = Guid.CreateVersion7();
-    ShoppingList list = ShoppingTestData.List(ownerId);
+    var list = ShoppingList.Create(ownerId, "Weekly");
     _shoppingListRepository.GetAsync(
         ownerId, list.Id.Value, TestContext.Current.CancellationToken)
       .Returns(list);

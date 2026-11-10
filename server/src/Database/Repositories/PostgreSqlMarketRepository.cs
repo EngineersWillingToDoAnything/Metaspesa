@@ -34,11 +34,12 @@ internal class PostgreSqlMarketRepository(
   }
 
   public async Task SaveAsync(Market market, CancellationToken cancellationToken) {
-    Guid id = market.Id.Value;
-    string name = market.Name.Value;
-    string? logo = market.LogoUrl?.Value.ToString();
+    MarketPrimitives state = market.ToPrimitives();
+    Guid id = state.Id;
+    string name = state.Name;
+    string? logo = state.LogoUrl;
 
-    await context.Database.ExecuteSqlInterpolatedAsync($"""
+    await context.Database.ExecuteSqlAsync($"""
       INSERT INTO market.super_markets (id, name, logo_url)
       VALUES ({id}, {name}, {logo})
       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, logo_url = EXCLUDED.logo_url

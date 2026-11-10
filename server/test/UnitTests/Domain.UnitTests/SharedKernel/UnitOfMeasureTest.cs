@@ -88,7 +88,7 @@ public static class UnitOfMeasureTest {
   public class ConvertToCanonValue {
     [Theory]
     [InlineData("kg", 1000)]
-    [InlineData("mg", 0.001)]
+    [InlineData("mg", "0.001")]
     [InlineData("g", 1)]
     [InlineData("l", 1000)]
     [InlineData("cl", 10)]

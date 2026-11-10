@@ -1,4 +1,4 @@
-openapi: '3.1.1'
+openapi: '3.1.2'
 info:
   title: Metaspesa REST API
   description: Errors use ProblemDetails with a stable code and traceId for support.
@@ -29,14 +29,14 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
-        '409':
-          description: The username is already registered.
+        '403':
+          description: The browser Origin header is missing or not allowed.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
-        '403':
-          description: The browser Origin header is missing or not allowed.
+        '409':
+          description: The username is already registered.
           content:
             application/problem+json:
               schema:
@@ -189,6 +189,40 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+  /api/v1/products:
+    x-oai-additionalOperations:
+      QUERY:
+        tags:
+          - GetProductsEndpoint
+        summary: Search catalog products.
+        description: 'Search market-owned products with filters supplied as JSON query content. Each result includes formats with their latest observed prices. Pagination counts products, not formats.'
+        operationId: GetProducts
+        requestBody:
+          description: Product catalog query filters.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GetProductsRequest'
+          required: true
+        responses:
+          '200':
+            description: Matching products and pagination counts. An empty page has no items.
+            content:
+              application/json:
+                schema:
+                  $ref: '#/components/schemas/ProductPageResponse'
+          '400':
+            description: 'A filter, market ID, page value, or sort value is invalid.'
+            content:
+              application/problem+json:
+                schema:
+                  $ref: '#/components/schemas/ProblemDetails'
+          '500':
+            description: An unexpected server or database failure occurred.
+            content:
+              application/problem+json:
+                schema:
+                  $ref: '#/components/schemas/ProblemDetails'
   '/api/v1/markets/{marketName}/snapshots/{date}':
     post:
       tags:
@@ -340,16 +374,16 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: No valid authentication token was provided.
+        '403':
+          description: The authenticated user lacks the Shopper role.
         '409':
           description: A list with this name or a temporary list already exists.
           content:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
-        '401':
-          description: No valid authentication token was provided.
-        '403':
-          description: The authenticated user lacks the Shopper role.
         '500':
           description: An unexpected server or database failure occurred.
           content:
@@ -430,6 +464,10 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: No valid authentication token was provided.
+        '403':
+          description: The authenticated user lacks the Shopper role.
         '404':
           description: The list was not found.
           content:
@@ -442,10 +480,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
-        '401':
-          description: No valid authentication token was provided.
-        '403':
-          description: The authenticated user lacks the Shopper role.
         '500':
           description: An unexpected server or database failure occurred.
           content:
@@ -483,6 +517,10 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
+        '401':
+          description: No valid authentication token was provided.
+        '403':
+          description: The authenticated user lacks the Shopper role.
         '404':
           description: The list or a product format was not found.
           content:
@@ -495,10 +533,6 @@ paths:
             application/problem+json:
               schema:
                 $ref: '#/components/schemas/ProblemDetails'
-        '401':
-          description: No valid authentication token was provided.
-        '403':
-          description: The authenticated user lacks the Shopper role.
         '500':
           description: An unexpected server or database failure occurred.
           content:
@@ -1239,19 +1273,19 @@ components:
           description: 'New checked state, or null to keep the current state.'
       description: Changes to a shopping item; at least one field is required.
 tags:
-  - name: RegisterEndpoint
+  - name: AddShoppingItemsEndpoint
+  - name: CheckoutShoppingListEndpoint
+  - name: CreateBrandEndpoint
+  - name: CreateMarketEndpoint
   - name: CreateSessionEndpoint
+  - name: CreateShoppingListEndpoint
   - name: CreateTokenEndpoint
   - name: GetMarketsEndpoint
-  - name: CreateMarketEndpoint
   - name: GetProductsEndpoint
-  - name: SnapshotEndpoint
-  - name: CreateBrandEndpoint
-  - name: GetShoppingListsEndpoint
-  - name: CreateShoppingListEndpoint
   - name: GetShoppingListEndpoint
-  - name: RenameShoppingListEndpoint
-  - name: AddShoppingItemsEndpoint
-  - name: UpdateShoppingItemEndpoint
+  - name: GetShoppingListsEndpoint
+  - name: RegisterEndpoint
   - name: RemoveShoppingItemEndpoint
-  - name: CheckoutShoppingListEndpoint
+  - name: RenameShoppingListEndpoint
+  - name: SnapshotEndpoint
+  - name: UpdateShoppingItemEndpoint

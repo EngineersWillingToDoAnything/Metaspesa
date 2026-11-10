@@ -4,19 +4,7 @@ namespace Metaspesa.Domain.UnitTests.Markets;
 
 public static class BrandTests {
   [Fact]
-  public static void Create_GeneratesVersion7Id() {
-    // Arrange
-    string name = "Brand";
-
-    // Act
-    var aggregate = Brand.Create(name);
-
-    // Assert
-    Assert.Equal(7, aggregate.Id.Value.Version);
-  }
-
-  [Fact]
-  public static void Create_GeneratesDistinctIds() {
+  public static void Create_GeneratesDistinctBrands() {
     // Arrange
     var first = Brand.Create("Brand");
 
@@ -28,15 +16,14 @@ public static class BrandTests {
   }
 
   [Fact]
-  public static void Rehydrate_PreservesId() {
+  public static void Rehydrate_PreservesState() {
     // Arrange
-    var id = new BrandId(Guid.Parse("00000000-0000-7000-8000-000000000001"));
-    var name = new BrandName("Brand");
+    var originalBrand = Brand.Create("Brand");
 
     // Act
-    var aggregate = Brand.Rehydrate(id, name);
+    var aggregate = Brand.Rehydrate(originalBrand.ToPrimitives());
 
     // Assert
-    Assert.Equal(id, aggregate.Id);
+    Assert.Equivalent(originalBrand, aggregate);
   }
 }

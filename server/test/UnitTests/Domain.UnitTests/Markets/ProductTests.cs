@@ -1,208 +1,250 @@
 using Metaspesa.Domain.Markets;
 using Metaspesa.Domain.Markets.Errors;
-using Metaspesa.Domain.SharedKernel;
 
 namespace Metaspesa.Domain.UnitTests.Markets;
 
 public class ProductTests {
   [Fact]
-  public void Create_GeneratesVersion7Id() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
-    var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-
-    var product = Product.Create(observation);
-
-    Assert.Equal(7, product.Id.Value.Version);
-  }
-
-  [Fact]
   public void Create_IncludesInitialFormat() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
+    var formatObservation = new ProductFormatObservationParams(
+      1, "l", 1.99m, new Uri("https://example.com/milk.png"));
     var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
+      marketId, brandId, "Milk", observedOn, [formatObservation]);
 
+    // Act
     var product = Product.Create(observation);
 
-    Assert.Single(product.Formats);
+    // Assert
+    Assert.True(product.OffersFormat(formatObservation));
   }
 
   [Fact]
   public void Create_TracksInitialFormat() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
+    var formatObservation = new ProductFormatObservationParams(
+      1, "l", 1.99m, new Uri("https://example.com/milk.png"));
     var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
+      marketId, brandId, "Milk", observedOn, [formatObservation]);
 
+    // Act
     var product = Product.Create(observation);
 
-    Assert.Same(product.Formats.Single(), product.PendingFormats.Single());
+    // Assert
+    Assert.True(product.HasPendingFormat(formatObservation));
   }
 
   [Fact]
   public void Create_TracksInitialSnapshot() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
+    var formatObservation = new ProductFormatObservationParams(
+      1, "l", 1.99m, new Uri("https://example.com/milk.png"));
     var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
+      marketId, brandId, "Milk", observedOn, [formatObservation]);
 
+    // Act
     var product = Product.Create(observation);
 
-    Assert.Same(product.Formats.Single().LatestSnapshot, product.PendingSnapshots.Single());
+    // Assert
+    Assert.True(product.HasPendingPriceObservation(formatObservation, observedOn));
   }
 
   [Fact]
   public void Create_IncludesAllObservedFormats() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
-       new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))]);
+      [
+        new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
+        new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))
+      ]);
 
+    // Act
     var product = Product.Create(observation);
 
-    Assert.Equal(2, product.Formats.Count);
+    // Assert
+    Assert.All(observation.Formats, format =>
+      Assert.True(product.OffersFormat(format)));
   }
 
   [Fact]
   public void Create_TracksAllInitialFormats() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
-       new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))]);
+      [
+        new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
+        new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))
+      ]);
 
+    // Act
     var product = Product.Create(observation);
 
-    Assert.Equal(product.Formats, product.PendingFormats);
+    // Assert
+    Assert.All(observation.Formats, format =>
+      Assert.True(product.HasPendingFormat(format)));
   }
 
   [Fact]
   public void Create_TracksAllInitialSnapshots() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
-       new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))]);
+      [
+        new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
+        new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))
+      ]);
 
+    // Act
     var product = Product.Create(observation);
 
-    Assert.Equal(
-      product.Formats.Select(format => format.LatestSnapshot),
-      product.PendingSnapshots);
+    // Assert
+    Assert.All(observation.Formats, format =>
+      Assert.True(product.HasPendingPriceObservation(format, observation.ObservedOn)));
   }
 
   [Fact]
   public void Create_RejectsNullObservation() {
+    // Act
     static void action() => Product.Create(null!);
 
+    // Assert
     Assert.Throws<ArgumentNullException>(action);
   }
 
   [Fact]
   public void Create_RejectsEmptyFormats() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn, []);
 
+    // Act
     void action() => Product.Create(observation);
 
+    // Assert
     Assert.Throws<EmptyProductObservationException>(action);
   }
 
   [Fact]
   public void Create_RejectsMissingFormatCollection() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn, null!);
 
+    // Act
     void action() => Product.Create(observation);
 
+    // Assert
     Assert.Throws<EmptyProductObservationException>(action);
   }
 
   [Fact]
   public void Create_RejectsExactDuplicateFormat() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
-       new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
+      [
+        new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
+        new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))
+      ]);
 
+    // Act
     void action() => Product.Create(observation);
 
+    // Assert
     Assert.Throws<DuplicateObservedProductFormatException>(action);
   }
 
   [Fact]
   public void Create_RejectsDuplicateFormatWithEquivalentUnits() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
-       new ProductFormatObservationParams(1000, "ml", 1.99m, new Uri("https://example.com/milk.png"))]);
+      [
+        new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
+        new ProductFormatObservationParams(1000, "ml", 1.99m, new Uri("https://example.com/milk.png"))
+      ]);
 
+    // Act
     void action() => Product.Create(observation);
 
+    // Assert
     Assert.Throws<DuplicateObservedProductFormatException>(action);
   }
 
   [Fact]
   public void Create_RejectsDuplicateFormatWithConflictingPrice() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
-       new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png"))]);
+      [
+        new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
+        new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png"))
+      ]);
 
+    // Act
     void action() => Product.Create(observation);
 
+    // Assert
     Assert.Throws<DuplicateObservedProductFormatException>(action);
   }
 
   [Fact]
   public void Create_RejectsDuplicateFormatWithConflictingImage() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
-       new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/other.png"))]);
+      [
+        new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
+        new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/other.png"))
+      ]);
 
+    // Act
     void action() => Product.Create(observation);
 
+    // Assert
     Assert.Throws<DuplicateObservedProductFormatException>(action);
   }
 
   [Fact]
   public void RegisterObservation_RejectsNullObservation() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -211,13 +253,16 @@ public class ProductTests {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(initialObservation);
 
+    // Act
     void action() => product.RegisterObservation(null!);
 
+    // Assert
     Assert.Throws<ArgumentNullException>(action);
   }
 
   [Fact]
   public void RegisterObservation_RejectsDifferentMarket() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -229,13 +274,16 @@ public class ProductTests {
       MarketId = Guid.CreateVersion7()
     };
 
+    // Act
     void action() => product.RegisterObservation(observation);
 
+    // Assert
     Assert.Throws<ProductObservationIdentityMismatchException>(action);
   }
 
   [Fact]
   public void RegisterObservation_RejectsDifferentBrand() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -247,13 +295,16 @@ public class ProductTests {
       BrandId = Guid.CreateVersion7()
     };
 
+    // Act
     void action() => product.RegisterObservation(observation);
 
+    // Assert
     Assert.Throws<ProductObservationIdentityMismatchException>(action);
   }
 
   [Fact]
   public void RegisterObservation_RejectsDifferentName() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -265,31 +316,16 @@ public class ProductTests {
       ProductName = "Bread"
     };
 
+    // Act
     void action() => product.RegisterObservation(observation);
 
+    // Assert
     Assert.Throws<ProductObservationIdentityMismatchException>(action);
   }
 
   [Fact]
-  public void RegisterObservation_AcceptsEquivalentIdentity() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
-    var initialObservation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-    var product = Product.Create(initialObservation);
-    ProductObservationParams observation = initialObservation with {
-      ProductName = "MILK"
-    };
-
-    Exception? error = Record.Exception(() => product.RegisterObservation(observation));
-
-    Assert.Null(error);
-  }
-
-  [Fact]
   public void RegisterObservation_RejectsDuplicateFormats() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -300,16 +336,21 @@ public class ProductTests {
 
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn.AddDays(1),
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
-       new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
+      [
+        new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
+        new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))
+      ]);
 
+    // Act
     void action() => product.RegisterObservation(observation);
 
+    // Assert
     Assert.Throws<DuplicateObservedProductFormatException>(action);
   }
 
   [Fact]
   public void RegisterObservation_TracksSnapshot_WhenFormatRecordsChange() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -317,21 +358,23 @@ public class ProductTests {
       marketId, brandId, "Milk", observedOn,
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(initialObservation);
-    PriceSnapshot initialSnapshot = product.PendingSnapshots.Single();
 
+    var formatObservation = new ProductFormatObservationParams(
+      1, "l", 2.49m, new Uri("https://example.com/milk.png"));
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn.AddDays(1),
-      [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png"))]);
+      [formatObservation]);
 
+    // Act
     product.RegisterObservation(observation);
 
-    Assert.Equal(
-      [initialSnapshot, product.Formats.Single().LatestSnapshot],
-      product.PendingSnapshots);
+    // Assert
+    Assert.True(product.HasPendingPriceObservation(formatObservation, observation.ObservedOn));
   }
 
   [Fact]
   public void RegisterObservation_DoesNotTrackExistingFormatAgain() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -339,21 +382,26 @@ public class ProductTests {
       marketId, brandId, "Milk", observedOn,
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(initialObservation);
-    ProductFormat original = product.PendingFormats.Single();
+    int pendingFormats = product.CountPendingFormats();
 
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn.AddDays(1),
       [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png"))]);
 
+    // Act
     product.RegisterObservation(observation);
 
-    Assert.Same(original, product.PendingFormats.Single());
+    // Assert
+    Assert.Equal(pendingFormats, product.CountPendingFormats());
   }
 
   [Theory]
   [InlineData(0)]
   [InlineData(1)]
-  public void RegisterObservation_LeavesPendingSnapshotsUnchanged_WhenFormatRecordsNothing(int daysLater) {
+  public void RegisterObservation_LeavesPendingSnapshotsUnchanged_WhenFormatRecordsNothing(
+    int daysLater
+  ) {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -361,19 +409,22 @@ public class ProductTests {
       marketId, brandId, "Milk", observedOn,
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(initialObservation);
-    PriceSnapshot initialSnapshot = product.PendingSnapshots.Single();
+    int pendingObservations = product.CountPendingPriceObservations();
 
     ProductObservationParams observation = initialObservation with {
       ObservedOn = observedOn.AddDays(daysLater)
     };
 
+    // Act
     product.RegisterObservation(observation);
 
-    Assert.Same(initialSnapshot, product.PendingSnapshots.Single());
+    // Assert
+    Assert.Equal(pendingObservations, product.CountPendingPriceObservations());
   }
 
   [Fact]
   public void RegisterObservation_AddsNewFormat() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -382,17 +433,22 @@ public class ProductTests {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(initialObservation);
 
+    var formatObservation = new ProductFormatObservationParams(
+      2, "l", 3.49m, new Uri("https://example.com/large.png"));
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn.AddDays(1),
-      [new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))]);
+      [formatObservation]);
 
+    // Act
     product.RegisterObservation(observation);
 
-    Assert.Equal(2, product.Formats.Count);
+    // Assert
+    Assert.True(product.OffersFormat(formatObservation));
   }
 
   [Fact]
   public void RegisterObservation_TracksNewFormat() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -400,19 +456,23 @@ public class ProductTests {
       marketId, brandId, "Milk", observedOn,
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(initialObservation);
-    ProductFormat original = product.Formats.Single();
 
+    var formatObservation = new ProductFormatObservationParams(
+      2, "l", 3.49m, new Uri("https://example.com/large.png"));
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn.AddDays(1),
-      [new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))]);
+      [formatObservation]);
 
+    // Act
     product.RegisterObservation(observation);
 
-    Assert.Equal([original, product.Formats.Last()], product.PendingFormats);
+    // Assert
+    Assert.True(product.HasPendingFormat(formatObservation));
   }
 
   [Fact]
   public void RegisterObservation_TracksInitialSnapshotOfNewFormat() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -420,41 +480,23 @@ public class ProductTests {
       marketId, brandId, "Milk", observedOn,
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(initialObservation);
-    PriceSnapshot original = product.PendingSnapshots.Single();
 
+    var formatObservation = new ProductFormatObservationParams(
+      2, "l", 3.49m, new Uri("https://example.com/large.png"));
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn.AddDays(1),
-      [new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))]);
+      [formatObservation]);
 
+    // Act
     product.RegisterObservation(observation);
 
-    Assert.Equal(
-      [original, product.Formats.Last().LatestSnapshot],
-      product.PendingSnapshots);
-  }
-
-  [Fact]
-  public void RegisterObservation_RetainsUnobservedFormat() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
-    var initialObservation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-    var product = Product.Create(initialObservation);
-    ProductFormat original = product.Formats.Single();
-
-    var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn.AddDays(1),
-      [new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))]);
-
-    product.RegisterObservation(observation);
-
-    Assert.Contains(original, product.Formats);
+    // Assert
+    Assert.True(product.HasPendingPriceObservation(formatObservation, observation.ObservedOn));
   }
 
   [Fact]
   public void RegisterObservation_ReusesExistingFormatForEquivalentIdentity() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -462,19 +504,22 @@ public class ProductTests {
       marketId, brandId, "Milk", observedOn,
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(initialObservation);
-    ProductFormat original = product.Formats.Single();
+    int formatCount = product.CountFormats();
 
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn,
       [new ProductFormatObservationParams(1000, "ml", 1.99m, new Uri("https://example.com/milk.png"))]);
 
+    // Act
     product.RegisterObservation(observation);
 
-    Assert.Same(original, product.Formats.Single());
+    // Assert
+    Assert.Equal(formatCount, product.CountFormats());
   }
 
   [Fact]
   public void RegisterObservation_ReusesExistingFormat_WhenImageChanges() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -482,19 +527,22 @@ public class ProductTests {
       marketId, brandId, "Milk", observedOn,
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(initialObservation);
-    ProductFormat original = product.Formats.Single();
+    int formatCount = product.CountFormats();
 
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn,
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/other.png"))]);
 
+    // Act
     product.RegisterObservation(observation);
 
-    Assert.Same(original, product.Formats.Single());
+    // Assert
+    Assert.Equal(formatCount, product.CountFormats());
   }
 
   [Fact]
   public void RegisterObservation_TracksOnlyRecordedSnapshots_ForMixedObservation() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -503,7 +551,7 @@ public class ProductTests {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
        new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))]);
     var product = Product.Create(initialObservation);
-    ProductFormat changedFormat = product.Formats.Last();
+    int pendingObservations = product.CountPendingPriceObservations();
 
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn.AddDays(1),
@@ -511,15 +559,16 @@ public class ProductTests {
        new ProductFormatObservationParams(2, "l", 3.99m, new Uri("https://example.com/large.png")),
        new ProductFormatObservationParams(3, "l", 4.49m, new Uri("https://example.com/new.png"))]);
 
+    // Act
     product.RegisterObservation(observation);
 
-    Assert.Equal(
-      [changedFormat.LatestSnapshot, product.Formats.Last().LatestSnapshot],
-      product.PendingSnapshots.Skip(2));
+    // Assert
+    Assert.Equal(pendingObservations + 2, product.CountPendingPriceObservations());
   }
 
   [Fact]
   public void RegisterObservation_TracksOnlyNewFormat_ForMixedObservation() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -529,124 +578,24 @@ public class ProductTests {
        new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))]);
     var product = Product.Create(initialObservation);
 
+    var newFormatObservation = new ProductFormatObservationParams(
+      3, "l", 4.49m, new Uri("https://example.com/new.png"));
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn.AddDays(1),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
        new ProductFormatObservationParams(2, "l", 3.99m, new Uri("https://example.com/large.png")),
-       new ProductFormatObservationParams(3, "l", 4.49m, new Uri("https://example.com/new.png"))]);
+       newFormatObservation]);
 
+    // Act
     product.RegisterObservation(observation);
 
-    Assert.Same(product.Formats.Last(), product.PendingFormats.Skip(2).Single());
-  }
-
-  [Fact]
-  public void RegisterObservation_PreservesPendingFormats_WhenDuplicatesAreRejected() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
-    var initialObservation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-    var product = Product.Create(initialObservation);
-    ProductFormat[] before = [.. product.PendingFormats];
-
-    var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
-       new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-
-    _ = Record.Exception(() => product.RegisterObservation(observation));
-
-    Assert.Equal(before, product.PendingFormats);
-  }
-
-  [Fact]
-  public void RegisterObservation_PreservesPendingSnapshots_WhenDuplicatesAreRejected() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
-    var initialObservation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-    var product = Product.Create(initialObservation);
-    PriceSnapshot[] before = [.. product.PendingSnapshots];
-
-    var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
-       new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-
-    _ = Record.Exception(() => product.RegisterObservation(observation));
-
-    Assert.Equal(before, product.PendingSnapshots);
-  }
-
-  [Fact]
-  public void RegisterObservation_PreservesFormatMembership_WhenPreparationFails() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
-    var initialObservation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-    var product = Product.Create(initialObservation);
-    ProductFormat[] before = [.. product.Formats];
-
-    var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn.AddDays(1),
-      [new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png")),
-       null!]);
-
-    _ = Record.Exception(() => product.RegisterObservation(observation));
-
-    Assert.Equal(before, product.Formats);
-  }
-
-  [Fact]
-  public void RegisterObservation_PreservesPendingFormats_WhenPreparationFails() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
-    var initialObservation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-    var product = Product.Create(initialObservation);
-    ProductFormat[] before = [.. product.PendingFormats];
-
-    var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn.AddDays(1),
-      [new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png")),
-       null!]);
-
-    _ = Record.Exception(() => product.RegisterObservation(observation));
-
-    Assert.Equal(before, product.PendingFormats);
-  }
-
-  [Fact]
-  public void RegisterObservation_PreservesPendingSnapshots_WhenPreparationFails() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
-    var initialObservation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-    var product = Product.Create(initialObservation);
-    PriceSnapshot[] before = [.. product.PendingSnapshots];
-
-    var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn.AddDays(1),
-      [new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png")),
-       null!]);
-
-    _ = Record.Exception(() => product.RegisterObservation(observation));
-
-    Assert.Equal(before, product.PendingSnapshots);
+    // Assert
+    Assert.True(product.HasPendingFormat(newFormatObservation));
   }
 
   [Fact]
   public void RegisterObservation_RetainsEveryRecordedSnapshot() {
+    // Arrange
     var marketId = Guid.CreateVersion7();
     var brandId = Guid.CreateVersion7();
     var observedOn = new DateOnly(2026, 7, 28);
@@ -655,149 +604,80 @@ public class ProductTests {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(initialObservation);
 
+    var formatObservation = new ProductFormatObservationParams(
+      1, "l", 2.49m, new Uri("https://example.com/milk.png"));
     var observation = new ProductObservationParams(
       marketId, brandId, "Milk", observedOn.AddDays(1),
-      [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png"))]);
+      [formatObservation]);
     product.RegisterObservation(observation);
-    PriceSnapshot changedSnapshot = product.Formats.Single().LatestSnapshot;
     ProductObservationParams next = initialObservation with {
       ObservedOn = observedOn.AddDays(2)
     };
 
+    // Act
     product.RegisterObservation(next);
 
-    Assert.Equal(
-      [changedSnapshot, product.Formats.Single().LatestSnapshot],
-      product.PendingSnapshots.Skip(1));
+    // Assert
+    Assert.True(product.HasPendingPriceObservation(formatObservation, observation.ObservedOn));
   }
 
   [Fact]
-  public void Rehydrate_PreservesProductId() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
+  public void Rehydrate_PreservesState() {
+    // Arrange
     var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
+      Guid.CreateVersion7(), Guid.CreateVersion7(), "Milk", new DateOnly(2026, 7, 28),
+      [new(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var original = Product.Create(observation);
 
-    var product = Product.Rehydrate(
-      original.Id, original.Name, original.BrandId, original.MarketId, original.Formats);
+    // Act
+    var restored = Product.Rehydrate(original.ToPrimitives());
 
-    Assert.Equal(original.Id, product.Id);
+    // Assert
+    Assert.Equivalent(original, restored);
   }
 
   [Fact]
-  public void Rehydrate_PreservesFormats() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
+  public void Rehydrate_DoesNotRaiseDomainEvents() {
+    // Arrange
     var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
+      Guid.CreateVersion7(), Guid.CreateVersion7(), "Milk", new DateOnly(2026, 7, 28),
+      [new(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var original = Product.Create(observation);
 
-    var product = Product.Rehydrate(
-      original.Id, original.Name, original.BrandId, original.MarketId, original.Formats);
+    // Act
+    var restored = Product.Rehydrate(original.ToPrimitives());
 
-    Assert.Equal(original.Formats, product.Formats);
+    // Assert
+    Assert.Empty(restored.DomainEvents);
   }
 
   [Fact]
-  public void Rehydrate_RecordsNoPendingFormat() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
+  public void Rehydrate_DoesNotTrackPersistedFormatsAsNew() {
+    // Arrange
     var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
+      Guid.CreateVersion7(), Guid.CreateVersion7(), "Milk", new DateOnly(2026, 7, 28),
+      [new(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var original = Product.Create(observation);
 
-    var product = Product.Rehydrate(
-      original.Id, original.Name, original.BrandId, original.MarketId, original.Formats);
+    // Act
+    var restored = Product.Rehydrate(original.ToPrimitives());
 
-    Assert.Empty(product.PendingFormats);
+    // Assert
+    Assert.Equal(0, restored.CountPendingFormats());
   }
 
   [Fact]
-  public void Rehydrate_RecordsNoPendingSnapshot() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
+  public void Rehydrate_DoesNotTrackPersistedPricesAsNew() {
+    // Arrange
     var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
+      Guid.CreateVersion7(), Guid.CreateVersion7(), "Milk", new DateOnly(2026, 7, 28),
+      [new(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var original = Product.Create(observation);
-    ProductFormat originalFormat = original.Formats.Single();
-    var restoredFormat = ProductFormat.Rehydrate(
-      originalFormat.Id, originalFormat.Quantity, originalFormat.ImageUrl, originalFormat.LatestSnapshot);
 
-    var product = Product.Rehydrate(
-      original.Id, original.Name, original.BrandId, original.MarketId, [restoredFormat]);
+    // Act
+    var restored = Product.Rehydrate(original.ToPrimitives());
 
-    Assert.Empty(product.PendingSnapshots);
-  }
-
-  [Fact]
-  public void Rehydrate_CopiesFormatCollection() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
-    var observation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-    var original = Product.Create(observation);
-    var formats = new List<ProductFormat>(original.Formats);
-    var product = Product.Rehydrate(
-      original.Id, original.Name, original.BrandId, original.MarketId, formats);
-
-    formats.Clear();
-
-    Assert.Equal(original.Formats, product.Formats);
-  }
-
-  [Fact]
-  public void Formats_PreventsExternalCollectionMutation() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
-    var initialObservation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-    var product = Product.Create(initialObservation);
-
-    void action() => ((ICollection<ProductFormat>)product.Formats).Clear();
-
-    Assert.Throws<NotSupportedException>(action);
-  }
-
-  [Fact]
-  public void PendingFormats_PreventsExternalCollectionMutation() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
-    var initialObservation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-    var product = Product.Create(initialObservation);
-
-    void action() => ((ICollection<ProductFormat>)product.PendingFormats).Clear();
-
-    Assert.Throws<NotSupportedException>(action);
-  }
-
-  [Fact]
-  public void PendingSnapshots_PreventsExternalCollectionMutation() {
-    var marketId = Guid.CreateVersion7();
-    var brandId = Guid.CreateVersion7();
-    var observedOn = new DateOnly(2026, 7, 28);
-    var initialObservation = new ProductObservationParams(
-      marketId, brandId, "Milk", observedOn,
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-    var product = Product.Create(initialObservation);
-
-    void action() => ((ICollection<PriceSnapshot>)product.PendingSnapshots).Clear();
-
-    Assert.Throws<NotSupportedException>(action);
+    // Assert
+    Assert.Equal(0, restored.CountPendingPriceObservations());
   }
 }

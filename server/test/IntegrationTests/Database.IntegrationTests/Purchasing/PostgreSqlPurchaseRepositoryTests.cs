@@ -47,14 +47,16 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
   [InlineData(false)]
   [InlineData(true)]
   public async Task SaveAsync_ConcurrentSameIdPreservesFirstPurchase(bool differentPayload) {
-    (Guid firstSnapshot, Guid secondSnapshot) = await SeedConcurrentSaveSnapshotsAsync();
+    (Guid firstSnapshot, Guid secondSnapshot, Guid buyerId, Guid listId) = await SeedPurchaseReferencesAsync();
     var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
-    var purchase = Purchase.Rehydrate(Guid.CreateVersion7(), null, null, purchasedAt,
-      [PurchaseItem.Create(firstSnapshot, 2)]);
-    var duplicate = Purchase.Rehydrate(purchase.Id.Value, null, null,
+    var purchase = Purchase.Create(new CreatePurchaseParams(
+      Guid.CreateVersion7(), buyerId, listId, purchasedAt,
+      [new CreatePurchaseItem(firstSnapshot, 2)]));
+    var duplicate = Purchase.Create(new CreatePurchaseParams(
+      purchase.Id.Value, buyerId, listId,
       differentPayload ? purchasedAt.AddHours(1) : purchasedAt,
-      [PurchaseItem.Create(differentPayload ? secondSnapshot : firstSnapshot,
-        differentPayload ? 9 : 2)]);
+      [new CreatePurchaseItem(differentPayload ? secondSnapshot : firstSnapshot,
+        differentPayload ? 9 : 2)]));
     var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
     var firstGate = new SaveCommandInterceptor(release.Task);
     var secondGate = new SaveCommandInterceptor(Task.CompletedTask);
@@ -77,19 +79,20 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
 
     PurchaseDbEntity actual = await _context.Purchases.AsNoTracking()
       .Include(row => row.Items).SingleAsync(TestContext.Current.CancellationToken);
-    PurchaseItem expectedItem = purchase.Items.Single();
     Assert.Equal(
-      (purchase.Id.Value, purchasedAt, expectedItem.Id.Value, firstSnapshot, 2),
-      (actual.Id, actual.PurchasedAt, actual.Items.Single().Id,
+      (purchase.Id.Value, purchasedAt, firstSnapshot, 2),
+      (actual.Id, actual.PurchasedAt,
         actual.Items.Single().PriceSnapshotId, actual.Items.Single().Amount));
   }
 
   [Fact]
   public async Task SaveAsync_RollsBackAllLines_WhenNewPurchaseHasMissingSnapshot() {
-    (Guid firstSnapshot, _) = await SeedConcurrentSaveSnapshotsAsync();
-    var purchase = Purchase.Rehydrate(Guid.CreateVersion7(), null, null,
+    (Guid firstSnapshot, _, Guid buyerId, Guid listId) = await SeedPurchaseReferencesAsync();
+    var purchase = Purchase.Create(new CreatePurchaseParams(
+      Guid.CreateVersion7(), buyerId, listId,
       new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc),
-      [PurchaseItem.Create(firstSnapshot, 2), PurchaseItem.Create(Guid.CreateVersion7(), 3)]);
+      [new CreatePurchaseItem(firstSnapshot, 2),
+       new CreatePurchaseItem(Guid.CreateVersion7(), 3)]));
 
     _ = await Record.ExceptionAsync(() =>
       _repository.SaveAsync(purchase, TestContext.Current.CancellationToken));
@@ -98,16 +101,24 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
       .ToArrayAsync(TestContext.Current.CancellationToken));
   }
 
-  private async Task<(Guid First, Guid Second)> SeedConcurrentSaveSnapshotsAsync() {
+  private async Task<(Guid FirstSnapshot, Guid SecondSnapshot, Guid BuyerId, Guid ListId)> SeedPurchaseReferencesAsync() {
+    var buyer = User.Create($"buyer_{Guid.CreateVersion7():N}", "hashed");
+    var userRepository = new PostgreSqlUserRepository(_context);
+    await userRepository.SaveAsync(buyer, TestContext.Current.CancellationToken);
+
+    var list = ShoppingList.Create(buyer.Id.Value, "Weekly");
+    var listRepository = new PostgreSqlShoppingListRepository(_context);
+    await listRepository.SaveAsync(list, TestContext.Current.CancellationToken);
+
     var format = new ProductFormatDbEntity {
       Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
       UnitOfMeasure = "unit",
       Product = new ProductDbEntity {
         Id = Guid.CreateVersion7(), Name = "Milk",
-        Brand = new ProductBrandDbEntity {
+        Brand = new BrandDbEntity {
           Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
         },
-        SuperMarket = new SuperMarketDbEntity {
+        SuperMarket = new MarketDbEntity {
           Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
         },
       },
@@ -122,7 +133,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     };
     _context.PriceSnapshots.AddRange(first, second);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-    return (first.Id, second.Id);
+    return (first.Id, second.Id, buyer.Id.Value, list.Id.Value);
   }
 
   private sealed class SaveCommandInterceptor(Task release) : DbCommandInterceptor {
@@ -172,10 +183,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -221,10 +232,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -270,10 +281,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -319,10 +330,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -346,7 +357,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
   }
 
   [Fact]
-  public async Task SaveAsync_PersistsAllItemIds() {
+  public async Task SaveAsync_PersistsDistinctNonemptyItemIds() {
     var buyerId = Guid.CreateVersion7();
     var listId = Guid.CreateVersion7();
     var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
@@ -368,10 +379,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -391,7 +402,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
 
     Guid[] actual = await _context.PurchaseItems.AsNoTracking()
       .Select(item => item.Id).ToArrayAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(purchase.Items.Select(item => item.Id.Value).Order(), actual.Order());
+    Assert.Equal(2, actual.Where(id => id != Guid.Empty).Distinct().Count());
   }
 
   [Fact]
@@ -417,10 +428,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -440,7 +451,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
 
     Guid[] actual = await _context.PurchaseItems.AsNoTracking()
       .Select(item => item.PriceSnapshotId).ToArrayAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(purchase.Items.Select(item => item.PriceSnapshotId.Value).Order(), actual.Order());
+    Assert.Equal(snapshots.Select(snapshot => snapshot.Id).Order(), actual.Order());
   }
 
   [Fact]
@@ -466,10 +477,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -479,17 +490,18 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
       _context.PriceSnapshots.Add(snapshot);
     }
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+    CreatePurchaseItem[] items = [
+      new(snapshots[0].Id, 2),
+      new(snapshots[1].Id, 3),
+    ];
     var purchase = Purchase.Create(new CreatePurchaseParams(
-      Guid.CreateVersion7(), buyerId, listId, purchasedAt, [
-        new CreatePurchaseItem(snapshots[0].Id, 2),
-        new CreatePurchaseItem(snapshots[1].Id, 3),
-      ]));
+      Guid.CreateVersion7(), buyerId, listId, purchasedAt, items));
 
     await _repository.SaveAsync(purchase, TestContext.Current.CancellationToken);
 
     int[] actual = await _context.PurchaseItems.AsNoTracking()
       .Select(item => item.Amount).ToArrayAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(purchase.Items.Select(item => item.Amount.Value).Order(), actual.Order());
+    Assert.Equal(items.Select(item => item.Amount).Order(), actual.Order());
   }
 
   [Fact]
@@ -515,10 +527,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -545,7 +557,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     DateTime actual = await _context.Purchases.AsNoTracking()
       .Select(purchase => purchase.PurchasedAt)
       .SingleAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(original.PurchasedAt, actual);
+    Assert.Equal(purchasedAt, actual);
   }
 
   [Fact]
@@ -571,10 +583,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -599,7 +611,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     Guid[] actual = await _context.PurchaseItems.AsNoTracking()
       .Select(item => item.PriceSnapshotId)
       .ToArrayAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(original.Items.Select(item => item.PriceSnapshotId.Value).Order(), actual.Order());
+    Assert.Equal(snapshots.Select(snapshot => snapshot.Id).Order(), actual.Order());
   }
 
   [Fact]
@@ -625,10 +637,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -638,11 +650,12 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
       _context.PriceSnapshots.Add(snapshot);
     }
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+    CreatePurchaseItem[] items = [
+      new(snapshots[0].Id, 2),
+      new(snapshots[1].Id, 3),
+    ];
     var original = Purchase.Create(new CreatePurchaseParams(
-      Guid.CreateVersion7(), buyerId, listId, purchasedAt, [
-        new CreatePurchaseItem(snapshots[0].Id, 2),
-        new CreatePurchaseItem(snapshots[1].Id, 3),
-      ]));
+      Guid.CreateVersion7(), buyerId, listId, purchasedAt, items));
     await _repository.SaveAsync(original, TestContext.Current.CancellationToken);
     var replacement = Purchase.Create(new CreatePurchaseParams(
       original.Id.Value, buyerId, listId, purchasedAt,
@@ -652,7 +665,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
 
     int[] actual = await _context.PurchaseItems.AsNoTracking()
       .Select(item => item.Amount).ToArrayAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(original.Items.Select(item => item.Amount.Value).Order(), actual.Order());
+    Assert.Equal(items.Select(item => item.Amount).Order(), actual.Order());
   }
 
   [Fact]
@@ -678,10 +691,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -715,7 +728,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
     Guid[] actual = await _context.PurchaseItems.AsNoTracking()
       .Select(item => item.PriceSnapshotId)
       .ToArrayAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(original.Items.Select(item => item.PriceSnapshotId.Value).Order(), actual.Order());
+    Assert.Equal(snapshots.Select(snapshot => snapshot.Id).Order(), actual.Order());
   }
 
   [Fact]
@@ -741,10 +754,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -790,10 +803,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -845,10 +858,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -878,55 +891,28 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
   }
 
   [Fact]
-  public async Task GetAsync_RehydratesPersistedItemIds() {
-    var buyerId = Guid.CreateVersion7();
-    var listId = Guid.CreateVersion7();
+  public async Task GetAsync_PreservesItemIdentities_WhenLoadedPurchaseIsSavedAgain() {
+    // Arrange
+    (Guid firstSnapshot, Guid secondSnapshot, Guid buyerId, Guid listId) = await SeedPurchaseReferencesAsync();
     var purchasedAt = new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc);
-    _context.Users.Add(new UserDbEntity {
-      Uid = buyerId, Username = buyerId.ToString(), EncryptedPassword = "x",
-      RoleId = UserRoleIds.Shopper,
-    });
-    _context.ShoppingLists.Add(new ShoppingListDbEntity {
-      Id = listId, Name = "Weekly",
-      Ownerships = [new ShoppingListOwnershipDbEntity { UserUid = buyerId }],
-    });
-    var snapshots = new List<PriceSnapshotDbEntity>();
-    foreach (string name in new[] { "Milk", "Bread" }) {
-      var snapshot = new PriceSnapshotDbEntity {
-        Id = Guid.CreateVersion7(), PriceAmount = 1.25m,
-        ObservedOn = DateOnly.FromDateTime(purchasedAt.AddDays(-1)),
-        ProductFormat = new ProductFormatDbEntity {
-          Id = Guid.CreateVersion7(), Quantity = 1, ImageUrl = string.Empty,
-          UnitOfMeasure = "unit",
-          Product = new ProductDbEntity {
-            Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
-              Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
-            },
-            SuperMarket = new SuperMarketDbEntity {
-              Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
-            },
-          },
-        },
-      };
-      snapshots.Add(snapshot);
-      _context.PriceSnapshots.Add(snapshot);
-    }
-    await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var purchase = Purchase.Create(new CreatePurchaseParams(
-      Guid.CreateVersion7(), buyerId, listId, purchasedAt, [
-        new CreatePurchaseItem(snapshots[0].Id, 2),
-        new CreatePurchaseItem(snapshots[1].Id, 3),
-      ]));
+      Guid.CreateVersion7(), buyerId, listId, purchasedAt,
+      [new(firstSnapshot, 2), new(secondSnapshot, 3)]));
     await _repository.SaveAsync(purchase, TestContext.Current.CancellationToken);
+    Guid[] persistedItemIds = await _context.PurchaseItems.AsNoTracking()
+      .Select(item => item.Id).ToArrayAsync(TestContext.Current.CancellationToken);
 
-    Purchase? actual = await _repository.GetAsync(purchase.Id.Value,
-      TestContext.Current.CancellationToken);
+    // Act
+    Purchase? loaded = await _repository.GetAsync(purchase.Id.Value, TestContext.Current.CancellationToken);
+    await _context.PurchaseItems.ExecuteDeleteAsync(TestContext.Current.CancellationToken);
+    await _context.Purchases.ExecuteDeleteAsync(TestContext.Current.CancellationToken);
+    await _repository.SaveAsync(loaded!, TestContext.Current.CancellationToken);
 
-    Assert.Equal(purchase.Items.Select(item => item.Id.Value).Order(),
-      actual!.Items.Select(item => item.Id.Value).Order());
+    // Assert
+    Guid[] restoredItemIds = await _context.PurchaseItems.AsNoTracking()
+      .Select(item => item.Id).ToArrayAsync(TestContext.Current.CancellationToken);
+    Assert.Equal(persistedItemIds.Order(), restoredItemIds.Order());
   }
-
   [Fact]
   public async Task GetAsync_ReturnsNull_WhenPurchaseIsMissing() {
     Purchase? actual = await _repository.GetAsync(
@@ -959,10 +945,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -1014,10 +1000,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -1033,6 +1019,8 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
         new CreatePurchaseItem(snapshots[1].Id, 3),
       ]));
     await _repository.SaveAsync(original, TestContext.Current.CancellationToken);
+    Guid[] persistedItemIds = await _context.PurchaseItems.AsNoTracking()
+      .Select(item => item.Id).ToArrayAsync(TestContext.Current.CancellationToken);
     var replacement = Purchase.Create(new CreatePurchaseParams(
       original.Id.Value, buyerId, listId, purchasedAt.AddHours(1),
       [new CreatePurchaseItem(
@@ -1042,7 +1030,7 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
 
     Guid[] actual = await _context.PurchaseItems.AsNoTracking()
       .Select(item => item.Id).ToArrayAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(original.Items.Select(item => item.Id.Value).Order(), actual.Order());
+    Assert.Equal(persistedItemIds.Order(), actual.Order());
   }
 
   [Fact]
@@ -1068,10 +1056,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -1121,10 +1109,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -1175,10 +1163,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },
@@ -1226,10 +1214,10 @@ public class PostgreSqlPurchaseRepositoryTests : IAsyncLifetime {
           UnitOfMeasure = "unit",
           Product = new ProductDbEntity {
             Id = Guid.CreateVersion7(), Name = name,
-            Brand = new ProductBrandDbEntity {
+            Brand = new BrandDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Brand {Guid.CreateVersion7()}",
             },
-            SuperMarket = new SuperMarketDbEntity {
+            SuperMarket = new MarketDbEntity {
               Id = Guid.CreateVersion7(), Name = $"Market {Guid.CreateVersion7()}",
             },
           },

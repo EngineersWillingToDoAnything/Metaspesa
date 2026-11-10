@@ -13,11 +13,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  DOTNET_VERSION: "10.0.100"
-  NODE_VERSION: "26.9.0"
-  PYTHON_VERSION: "3.14"
-
 jobs:
   telemetry-validation:
     name: Metaspesa telemetry
@@ -41,6 +36,9 @@ jobs:
     name: Backend quality
     runs-on: ubuntu-latest
     timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: server
 
     steps:
       - name: Check out repository
@@ -49,7 +47,7 @@ jobs:
       - name: Set up .NET
         uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: ${{ env.DOTNET_VERSION }}
+          global-json-file: server/global.json
 
       - name: Cache NuGet packages
         uses: actions/cache@v6
@@ -59,13 +57,13 @@ jobs:
           restore-keys: ${{ runner.os }}-nuget-
 
       - name: Check formatting
-        run: dotnet format server/Metaspesa.slnx --verify-no-changes --verbosity diagnostic
+        run: dotnet format Metaspesa.slnx --verify-no-changes --verbosity diagnostic
 
       - name: Restore server dependencies
-        run: dotnet restore server/Metaspesa.slnx
+        run: dotnet restore Metaspesa.slnx
 
       - name: Test server
-        run: dotnet test --solution server/Metaspesa.slnx --no-restore
+        run: dotnet test --solution Metaspesa.slnx --no-restore
 
   client-quality:
     name: Client quality and build
@@ -79,12 +77,12 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 12.5.1
+          package_json_file: client/package.json
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: client/package.json
           cache: pnpm
           cache-dependency-path: client/pnpm-lock.yaml
 
@@ -124,7 +122,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v7
         with:
-          python-version: ${{ env.PYTHON_VERSION }}
+          python-version-file: scraper/.python-version
 
       - name: Set up uv
         uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
@@ -213,12 +211,12 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v6
         with:
-          version: 10.34.5
+          package_json_file: client/package.json
 
       - name: Set up Node.js
         uses: actions/setup-node@v7
         with:
-          node-version: ${{ env.NODE_VERSION }}
+          node-version-file: client/package.json
           cache: pnpm
           cache-dependency-path: client/pnpm-lock.yaml
 

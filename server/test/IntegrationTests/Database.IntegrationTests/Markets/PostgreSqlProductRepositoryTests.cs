@@ -5,6 +5,7 @@ using Metaspesa.Application.Markets;
 using Metaspesa.Database.Entities;
 using Metaspesa.Database.Repositories;
 using Metaspesa.Domain.Markets;
+using Metaspesa.Domain.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using Microsoft.EntityFrameworkCore.Infrastructure;
@@ -14,15 +15,15 @@ using Npgsql;
 namespace Metaspesa.Database.IntegrationTests.Markets;
 
 [Collection("Database")]
-public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
+public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
   private readonly DatabaseFixture _fixture;
   private readonly MainContext _context;
-  private readonly PostgreSqlMarketProductRepository _productRepository;
+  private readonly PostgreSqlProductRepository _productRepository;
 
-  public PostgreSqlMarketProductRepositoryTests(DatabaseFixture fixture) {
+  public PostgreSqlProductRepositoryTests(DatabaseFixture fixture) {
     _fixture = fixture;
     _context = fixture.CreateContext();
-    _productRepository = new PostgreSqlMarketProductRepository(_context);
+    _productRepository = new PostgreSqlProductRepository(_context);
   }
 
   public async ValueTask InitializeAsync() {
@@ -42,8 +43,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task Repository_ExcludesProductWithoutSnapshot_FromCatalog() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     _context.Products.Add(new ProductDbEntity { Id = Guid.CreateVersion7(), Name = "Milk", BrandId = brand.Id, SuperMarketId = market.Id });
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -56,8 +57,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task Repository_ProjectsLatestSnapshot_InCatalog() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -81,8 +82,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task Repository_ProjectsProductFormatIdentifier_InCatalog() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -94,13 +95,13 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     PagedResult<CatalogProduct> result = await _productRepository.GetProductsAsync(
       new GetMarketProductsFilter(null, [], null, new Pagination(1, 24)), TestContext.Current.CancellationToken);
 
-    Assert.Equal(product.Formats.Single().Id.Value, result.Values.Single().Formats.Single().Id);
+    Assert.Equal(await ReadStoredFormatIdAsync(product), result.Values.Single().Formats.Single().Id);
   }
 
   [Fact]
   public async Task Repository_ProjectsProductIdentity_InCatalog() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -118,8 +119,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task Repository_FiltersCatalogByName() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -139,8 +140,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task Repository_FiltersCatalogByBrand() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -149,7 +150,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
 
-    var otherBrand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Other" };
+    var otherBrand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Other" };
     _context.Add(otherBrand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var other = Product.Create(observation with { BrandId = otherBrand.Id });
@@ -163,8 +164,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task Repository_FiltersCatalogByMarket() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -173,7 +174,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
 
-    var otherMarket = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Other" };
+    var otherMarket = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Other" };
     _context.Add(otherMarket);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var other = Product.Create(observation with { MarketId = otherMarket.Id });
@@ -187,8 +188,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task Repository_ReturnsEmptyPageForMissingMarket() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -205,8 +206,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task Repository_PaginatesProducts() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -229,8 +230,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task Repository_PreservesTotalCountAcrossPages() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -255,8 +256,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
   [InlineData(CatalogSort.PriceAsc)]
   [InlineData(CatalogSort.PriceDesc)]
   public async Task Repository_SortsByLatestPrice(CatalogSort sort) {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -285,8 +286,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task CheckFormatsExistsAsync_ReturnsTrue_WhenAllFormatsExist() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -296,15 +297,15 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
 
     bool result = await _productRepository.CheckFormatsExistAsync(
-      [product.Formats.Single().Id.Value], TestContext.Current.CancellationToken);
+      [await ReadStoredFormatIdAsync(product)], TestContext.Current.CancellationToken);
 
     Assert.True(result);
   }
 
   [Fact]
   public async Task CheckFormatsExistsAsync_ReturnsFalse_WhenAnyFormatIsMissing() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -314,15 +315,15 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
 
     bool result = await _productRepository.CheckFormatsExistAsync(
-      [product.Formats.Single().Id.Value, Guid.CreateVersion7()], TestContext.Current.CancellationToken);
+      [await ReadStoredFormatIdAsync(product), Guid.CreateVersion7()], TestContext.Current.CancellationToken);
 
     Assert.False(result);
   }
 
   [Fact]
   public async Task CheckFormatsExistsAsync_ReturnsTrue_WhenFormatIdsRepeat() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -332,7 +333,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
 
     bool result = await _productRepository.CheckFormatsExistAsync(
-      [product.Formats.Single().Id.Value, product.Formats.Single().Id.Value], TestContext.Current.CancellationToken);
+      [await ReadStoredFormatIdAsync(product), await ReadStoredFormatIdAsync(product)], TestContext.Current.CancellationToken);
 
     Assert.True(result);
   }
@@ -352,8 +353,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
   [InlineData("box")]
   [InlineData("")]
   public async Task Database_RejectsNonCanonicalUnitCode(string code) {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Mercadona" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(market.Id, brand.Id, "Milk",
@@ -362,7 +363,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
 
-    Task action() => _context.Database.ExecuteSqlInterpolatedAsync(
+    Task action() => _context.Database.ExecuteSqlAsync(
       $"UPDATE market.product_formats SET unit_of_measure = {code}", TestContext.Current.CancellationToken);
 
     PostgresException error = await Assert.ThrowsAsync<PostgresException>(action);
@@ -372,8 +373,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_PreservesProductId() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -388,9 +389,9 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
   }
 
   [Fact]
-  public async Task SaveBatchAsync_PreservesFormatId() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+  public async Task SaveBatchAsync_PersistsVersion7FormatId() {
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -401,13 +402,13 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     Guid actual = await _context.ProductFormats.Select(value => value.Id).SingleAsync(TestContext.Current.CancellationToken);
 
-    Assert.Equal(product.Formats.Single().Id.Value, actual);
+    Assert.Equal(7, actual.Version);
   }
 
   [Fact]
-  public async Task SaveBatchAsync_PreservesSnapshotId() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+  public async Task SaveBatchAsync_PersistsVersion7SnapshotId() {
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -418,13 +419,13 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     Guid actual = await _context.PriceSnapshots.Select(value => value.Id).SingleAsync(TestContext.Current.CancellationToken);
 
-    Assert.Equal(product.PendingSnapshots.Single().Id.Value, actual);
+    Assert.Equal(7, actual.Version);
   }
 
   [Fact]
   public async Task SaveBatchAsync_PersistsSnapshotPrice() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -435,13 +436,13 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     decimal actual = await _context.PriceSnapshots.Select(value => value.PriceAmount).SingleAsync(TestContext.Current.CancellationToken);
 
-    Assert.Equal(product.PendingSnapshots.Single().Price.Amount, actual);
+    Assert.Equal(observation.Formats.Single().Price, actual);
   }
 
   [Fact]
   public async Task SaveBatchAsync_PersistsSnapshotDate() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -457,8 +458,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_DoesNotFlushUnrelatedTrackedChanges() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -475,8 +476,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_AppendsChangedSnapshotWithoutRewritingHistory() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -485,22 +486,25 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     Product aggregate = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
-    Guid initialId = product.PendingSnapshots.Single().Id.Value;
+    Guid initialId = await ReadStoredSnapshotIdAsync(product);
     aggregate.RegisterObservation(observation with {
       ObservedOn = observation.ObservedOn.AddDays(1),
       Formats = [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/new.png"))],
     });
 
     await _productRepository.SaveBatchAsync([aggregate], TestContext.Current.CancellationToken);
-    Guid[] ids = await _context.PriceSnapshots.OrderBy(value => value.ObservedOn).Select(value => value.Id).ToArrayAsync(TestContext.Current.CancellationToken);
+    PriceSnapshotDbEntity[] snapshots = await _context.PriceSnapshots.AsNoTracking()
+      .OrderBy(value => value.ObservedOn).ToArrayAsync(TestContext.Current.CancellationToken);
 
-    Assert.Equal([initialId, aggregate.PendingSnapshots.Single().Id.Value], ids);
+    Assert.Collection(snapshots,
+      first => Assert.Equal(initialId, first.Id),
+      latest => Assert.Equal((2.49m, observation.ObservedOn.AddDays(1)), (latest.PriceAmount, latest.ObservedOn)));
   }
 
   [Fact]
   public async Task SaveBatchAsync_DoesNotRewriteExistingProductName() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -522,8 +526,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_DoesNotRewriteExistingFormatImage() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -545,8 +549,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_InsertsOnlyNewFormat() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -563,13 +567,13 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     await _productRepository.SaveBatchAsync([aggregate], TestContext.Current.CancellationToken);
     Guid[] actual = await _context.ProductFormats.OrderBy(value => value.Id).Select(value => value.Id).ToArrayAsync(TestContext.Current.CancellationToken);
 
-    Assert.Equal(aggregate.Formats.Select(value => value.Id.Value).Order(), actual);
+    Assert.Equal(2, actual.Length);
   }
 
   [Fact]
   public async Task SaveBatchAsync_DoesNotExecuteCommandsForUnchangedObservation() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -581,7 +585,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     aggregate.RegisterObservation(observation with { ObservedOn = observation.ObservedOn.AddDays(1) });
     var commands = new CommandCounter();
     await using MainContext observed = _fixture.CreateContext(commands);
-    var repository = new PostgreSqlMarketProductRepository(observed);
+    var repository = new PostgreSqlProductRepository(observed);
 
     await repository.SaveBatchAsync([aggregate], TestContext.Current.CancellationToken);
 
@@ -590,8 +594,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_DoesNotExecuteCommandsForHydratedAggregate() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -602,7 +606,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     Product aggregate = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
     var commands = new CommandCounter();
     await using MainContext observed = _fixture.CreateContext(commands);
-    var repository = new PostgreSqlMarketProductRepository(observed);
+    var repository = new PostgreSqlProductRepository(observed);
 
     await repository.SaveBatchAsync([aggregate], TestContext.Current.CancellationToken);
 
@@ -611,8 +615,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_RejectsZeroPrice() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -632,8 +636,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_RollsBackProducts_WhenSnapshotInsertFails() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -653,8 +657,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_RollsBackProductFormats_WhenSnapshotInsertFails() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -674,8 +678,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_RollsBackPriceSnapshots_WhenSnapshotInsertFails() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -695,8 +699,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_RejectsDuplicateIdentity() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -714,8 +718,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_RejectsDuplicateAggregateInBatch() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -730,8 +734,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_PreservesPurchaseSnapshotReference() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -740,7 +744,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     Product aggregate = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
-    Guid initialSnapshotId = product.PendingSnapshots.Single().Id.Value;
+    Guid initialSnapshotId = await ReadStoredSnapshotIdAsync(product);
     var purchase = new PurchaseDbEntity {
       Id = Guid.CreateVersion7(), PurchasedAt = observation.ObservedOn.ToDateTime(TimeOnly.MinValue, DateTimeKind.Utc),
       Items = [new PurchaseItemDbEntity { Id = Guid.CreateVersion7(), PriceSnapshotId = initialSnapshotId, Amount = 1 }],
@@ -760,8 +764,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_PreservesShoppingFormatReference() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -770,7 +774,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     Product aggregate = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
-    Guid formatId = product.Formats.Single().Id.Value;
+    Guid formatId = await ReadStoredFormatIdAsync(product);
     _context.ShoppingLists.Add(new ShoppingListDbEntity {
       Id = Guid.CreateVersion7(), Name = "Weekly",
       Items = [new ShoppingItemDbEntity { Id = Guid.CreateVersion7(), ProductFormatId = formatId, Amount = 1 }],
@@ -789,8 +793,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task GetBatchAsync_LoadsMatchingProduct() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -798,7 +802,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(product.MarketId, product.BrandId, product.Name);
+    var identity = new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(observation.ProductName));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity], TestContext.Current.CancellationToken);
 
@@ -807,8 +811,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task GetBatchAsync_ReturnsNoUnrelatedProducts() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -816,7 +820,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(product.MarketId, product.BrandId, product.Name);
+    var identity = new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(observation.ProductName));
     var other = Product.Create(observation with { ProductName = "Bread" });
     await _productRepository.SaveBatchAsync([other], TestContext.Current.CancellationToken);
 
@@ -827,8 +831,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task GetBatchAsync_DoesNotMatchCrossedIdentityComponents() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -836,14 +840,14 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var otherMarket = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Other market" };
-    var otherBrand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Other brand" };
+    var otherMarket = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Other market" };
+    var otherBrand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Other brand" };
     _context.AddRange(otherMarket, otherBrand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var other = Product.Create(observation with { MarketId = otherMarket.Id, BrandId = otherBrand.Id });
     await _productRepository.SaveBatchAsync([other], TestContext.Current.CancellationToken);
-    var firstKey = new ProductIdentity(product.MarketId, other.BrandId, product.Name);
-    var secondKey = new ProductIdentity(other.MarketId, product.BrandId, product.Name);
+    var firstKey = new ProductIdentity(new MarketId(market.Id), new BrandId(otherBrand.Id), new ProductName(observation.ProductName));
+    var secondKey = new ProductIdentity(new MarketId(otherMarket.Id), new BrandId(brand.Id), new ProductName(observation.ProductName));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([firstKey, secondKey], TestContext.Current.CancellationToken);
 
@@ -855,8 +859,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
   [InlineData("Caf\u00e9", "CAF\u00c9")]
   [InlineData("\u00c1gua", "\u00e1gua")]
   public async Task GetBatchAsync_UsesDomainNameIdentity(string storedName, string requestedName) {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -864,7 +868,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation with { ProductName = storedName });
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(product.MarketId, product.BrandId, ProductName.Create(requestedName));
+    var identity = new ProductIdentity(new MarketId(market.Id), new BrandId(brand.Id), ProductName.Create(requestedName));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity], TestContext.Current.CancellationToken);
 
@@ -873,8 +877,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task GetBatchAsync_PreservesDisplayName() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -882,17 +886,17 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(product.MarketId, product.BrandId, ProductName.Create("MILK"));
+    var identity = new ProductIdentity(new MarketId(market.Id), new BrandId(brand.Id), ProductName.Create("MILK"));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity], TestContext.Current.CancellationToken);
 
-    Assert.Equal("Milk", actual[identity].Name.Value);
+    Assert.True(actual[identity].IsNamed(observation.ProductName));
   }
 
   [Fact]
   public async Task GetBatchAsync_IgnoresDuplicateIdentityRequests() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -900,7 +904,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(product.MarketId, product.BrandId, product.Name);
+    var identity = new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(observation.ProductName));
     ProductIdentity equivalent = identity with { Name = ProductName.Create("MILK") };
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity, equivalent], TestContext.Current.CancellationToken);
@@ -910,31 +914,32 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task GetBatchAsync_HydratesAllFormats() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
       market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
-      [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
+      [
+        new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png")),
+        new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))
+      ]);
     var product = Product.Create(observation);
-    product.RegisterObservation(observation with {
-      Formats = [new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png"))],
-    });
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(product.MarketId, product.BrandId, product.Name);
+    var identity = new ProductIdentity(
+      new MarketId(observation.MarketId),
+      new BrandId(observation.BrandId),
+      new ProductName(observation.ProductName));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity], TestContext.Current.CancellationToken);
 
-    Assert.Equal(
-      product.Formats.Select(value => value.Id.Value).Order(),
-      actual[identity].Formats.Select(value => value.Id.Value).Order());
+    Assert.All(observation.Formats, f => actual[identity].OffersFormat(f));
   }
 
   [Fact]
   public async Task GetBatchAsync_HydratesLatestSnapshot() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -944,21 +949,31 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     for (int day = 1; day <= 30; day++) {
       product.RegisterObservation(observation with {
         ObservedOn = observation.ObservedOn.AddDays(day),
-        Formats = [new ProductFormatObservationParams(1, "l", 1.99m + day, new Uri("https://example.com/milk.png"))],
+        Formats = [
+          new ProductFormatObservationParams(1, "l", 1.99m + day, new Uri("https://example.com/milk.png"))
+        ],
       });
     }
-    await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(product.MarketId, product.BrandId, product.Name);
+    await _productRepository.SaveBatchAsync(
+      [product], TestContext.Current.CancellationToken);
+    var identity = new ProductIdentity(
+      new MarketId(observation.MarketId),
+      new BrandId(observation.BrandId),
+      new ProductName(observation.ProductName));
 
-    IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity], TestContext.Current.CancellationToken);
+    IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository
+      .GetBatchAsync([identity], TestContext.Current.CancellationToken);
 
-    Assert.Equal(product.Formats.Single().LatestSnapshot.Id, actual[identity].Formats.Single().LatestSnapshot.Id);
+    ProductFormatObservationParams lastObservation = observation.Formats.Last() with {
+      Price = 31.99m
+    };
+    Assert.True(actual[identity].HasPriceObservation(lastObservation, observation.ObservedOn.AddDays(30)));
   }
 
   [Fact]
   public async Task GetBatchAsync_HydratesWithoutPendingInserts() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -966,45 +981,46 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(product.MarketId, product.BrandId, product.Name);
+    var identity = new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(observation.ProductName));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity], TestContext.Current.CancellationToken);
 
-    Assert.Empty(actual[identity].PendingSnapshots);
+    Assert.Equal(0, actual[identity].CountPendingPriceObservations());
   }
 
   [Fact]
   public async Task GetByIdAsync_HydratesLatestSnapshot() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
       market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
+    var lastFormatObservation = new ProductFormatObservationParams(
+      1, "l", 2.49m, new Uri("https://example.com/milk.png"));
     product.RegisterObservation(observation with {
       ObservedOn = observation.ObservedOn.AddDays(1),
-      Formats = [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png"))],
+      Formats = [lastFormatObservation],
     });
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
 
     Product? actual = await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken);
 
-    Assert.Equal(product.Formats.Single().LatestSnapshot.Id, actual!.Formats.Single().LatestSnapshot.Id);
+    Assert.True(actual!.HasPriceObservation(lastFormatObservation, observation.ObservedOn.AddDays(1)));
   }
 
   [Fact]
   public async Task GetBatchAsync_ReturnsEmptyForMissingIdentity() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
       market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-    var product = Product.Create(observation);
-    var identity = new ProductIdentity(product.MarketId, product.BrandId, product.Name);
+    var identity = new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(observation.ProductName));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity], TestContext.Current.CancellationToken);
 
@@ -1015,7 +1031,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
   public async Task GetBatchAsync_DoesNotQueryForEmptyBatch() {
     var commands = new CommandCounter();
     await using MainContext observed = _fixture.CreateContext(commands);
-    var repository = new PostgreSqlMarketProductRepository(observed);
+    var repository = new PostgreSqlProductRepository(observed);
 
     _ = await repository.GetBatchAsync([], TestContext.Current.CancellationToken);
 
@@ -1026,7 +1042,7 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
   public async Task SaveBatchAsync_DoesNotQueryForEmptyBatch() {
     var commands = new CommandCounter();
     await using MainContext observed = _fixture.CreateContext(commands);
-    var repository = new PostgreSqlMarketProductRepository(observed);
+    var repository = new PostgreSqlProductRepository(observed);
 
     await repository.SaveBatchAsync([], TestContext.Current.CancellationToken);
 
@@ -1036,8 +1052,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
   [Fact]
   public async Task SaveBatchAsync_PersistsAllRequestedProducts() {
     const int productCount = 1_001;
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -1055,8 +1071,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
   [Fact]
   public async Task GetBatchAsync_LoadsAllRequestedProducts() {
     const int productCount = 1_001;
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -1065,10 +1081,11 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     Product[] products = [.. Enumerable.Range(0, productCount)
       .Select(index => Product.Create(observation with { ProductName = $"Product {index}" }))];
     await _productRepository.SaveBatchAsync(products, TestContext.Current.CancellationToken);
-    ProductIdentity[] keys = [.. products.Select(value => new ProductIdentity(value.MarketId, value.BrandId, value.Name))];
+    ProductIdentity[] keys = [.. Enumerable.Range(0, productCount).Select(index =>
+      new ProductIdentity(new MarketId(market.Id), new BrandId(brand.Id), new ProductName($"Product {index}")))];
     var commands = new CommandCounter();
     await using MainContext observed = _fixture.CreateContext(commands);
-    var repository = new PostgreSqlMarketProductRepository(observed);
+    var repository = new PostgreSqlProductRepository(observed);
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await repository.GetBatchAsync(keys, TestContext.Current.CancellationToken);
 
@@ -1077,8 +1094,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task Migration_RejectsCaseInsensitiveProductCollisions() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     IMigrator migrator = _context.GetService<IMigrator>();
@@ -1102,8 +1119,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task Migration_PreservesConflictingProductIdentifiers() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     IMigrator migrator = _context.GetService<IMigrator>();
@@ -1130,8 +1147,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
   [Fact]
   public async Task GetBatchAsync_LoadsManyProductsWithoutPerProductQueries() {
     const int productCount = 1_001;
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -1140,10 +1157,11 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     Product[] products = [.. Enumerable.Range(0, productCount)
       .Select(index => Product.Create(observation with { ProductName = $"Product {index}" }))];
     await _productRepository.SaveBatchAsync(products, TestContext.Current.CancellationToken);
-    ProductIdentity[] keys = [.. products.Select(value => new ProductIdentity(value.MarketId, value.BrandId, value.Name))];
+    ProductIdentity[] keys = [.. Enumerable.Range(0, productCount).Select(index =>
+      new ProductIdentity(new MarketId(market.Id), new BrandId(brand.Id), new ProductName($"Product {index}")))];
     var commands = new CommandCounter();
     await using MainContext observed = _fixture.CreateContext(commands);
-    var repository = new PostgreSqlMarketProductRepository(observed);
+    var repository = new PostgreSqlProductRepository(observed);
 
     _ = await repository.GetBatchAsync(keys, TestContext.Current.CancellationToken);
 
@@ -1152,8 +1170,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_PreservesPreviouslyCommittedProducts_WhenLaterSaveFails() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -1177,8 +1195,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_PreservesPreviouslyCommittedFormats_WhenLaterSaveFails() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -1186,6 +1204,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
+    Guid[] committedIds = await _context.ProductFormats.AsNoTracking()
+      .Select(value => value.Id).ToArrayAsync(TestContext.Current.CancellationToken);
     var valid = Product.Create(observation with { ProductName = "Yogurt" });
     var invalid = Product.Create(observation with {
       ProductName = "Invalid price",
@@ -1197,13 +1217,13 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
     Guid[] actual = await _context.ProductFormats.Select(value => value.Id)
       .ToArrayAsync(TestContext.Current.CancellationToken);
-    Assert.Equal([product.Formats.Single().Id.Value], actual);
+    Assert.Equal(committedIds.Order(), actual.Order());
   }
 
   [Fact]
   public async Task SaveBatchAsync_PreservesPreviouslyCommittedSnapshots_WhenLaterSaveFails() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -1211,6 +1231,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
+    Guid[] committedIds = await _context.PriceSnapshots.AsNoTracking()
+      .Select(value => value.Id).ToArrayAsync(TestContext.Current.CancellationToken);
     var valid = Product.Create(observation with { ProductName = "Yogurt" });
     var invalid = Product.Create(observation with {
       ProductName = "Invalid price",
@@ -1222,13 +1244,13 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
     Guid[] actual = await _context.PriceSnapshots.Select(value => value.Id)
       .ToArrayAsync(TestContext.Current.CancellationToken);
-    Assert.Equal([product.PendingSnapshots.Single().Id.Value], actual);
+    Assert.Equal(committedIds.Order(), actual.Order());
   }
 
   [Fact]
   public async Task SaveBatchAsync_RollsBackAppendedSnapshot_WhenAnotherProductFails() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -1236,6 +1258,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
+    Guid[] committedIds = await _context.PriceSnapshots.AsNoTracking()
+      .Select(value => value.Id).ToArrayAsync(TestContext.Current.CancellationToken);
     Product loaded = (await _productRepository.GetByIdAsync(product.Id, TestContext.Current.CancellationToken))!;
     loaded.RegisterObservation(observation with {
       ObservedOn = observation.ObservedOn.AddDays(1),
@@ -1251,13 +1275,13 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
     Guid[] actual = await _context.PriceSnapshots.Select(value => value.Id)
       .ToArrayAsync(TestContext.Current.CancellationToken);
-    Assert.Equal([product.PendingSnapshots.Single().Id.Value], actual);
+    Assert.Equal(committedIds.Order(), actual.Order());
   }
 
   [Fact]
   public async Task SaveBatchAsync_PreservesSnapshotHistory_WhenReloadedBatchesHaveUnchangedObservations() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -1266,19 +1290,24 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     const int productCount = 1_001;
     Product[] products = [.. Enumerable.Range(0, productCount)
       .Select(index => Product.Create(observation with { ProductName = $"Product {index}" }))];
+    var productNames = new Dictionary<ProductId, string>();
+    for (int index = 0; index < products.Length; index++) {
+      productNames.Add(products[index].Id, $"Product {index}");
+    }
     foreach (Product[] batch in products.Chunk(1000)) {
       await _productRepository.SaveBatchAsync(batch, TestContext.Current.CancellationToken);
     }
-    Guid[] expected = [.. products.Select(product => product.PendingSnapshots.Single().Id.Value).Order()];
+    Guid[] expected = await _context.PriceSnapshots.AsNoTracking().OrderBy(snapshot => snapshot.Id)
+      .Select(snapshot => snapshot.Id).ToArrayAsync(TestContext.Current.CancellationToken);
 
     foreach (DateOnly observedOn in new[] { observation.ObservedOn, observation.ObservedOn.AddDays(1) }) {
       foreach (Product[] batch in products.Chunk(1000)) {
         ProductIdentity[] identities = [.. batch.Select(product =>
-          new ProductIdentity(product.MarketId, product.BrandId, product.Name))];
+          new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(productNames[product.Id])))];
         IReadOnlyDictionary<ProductIdentity, Product> loaded =
           await _productRepository.GetBatchAsync(identities, TestContext.Current.CancellationToken);
         foreach (Product product in loaded.Values) {
-          product.RegisterObservation(observation with { ProductName = product.Name.Value, ObservedOn = observedOn });
+          product.RegisterObservation(observation with { ProductName = productNames[product.Id], ObservedOn = observedOn });
         }
         await _productRepository.SaveBatchAsync([.. loaded.Values], TestContext.Current.CancellationToken);
       }
@@ -1291,8 +1320,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task GetProductsAsync_ProjectsLatestPriceAfterMultipleBatchAppends() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -1300,9 +1329,13 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     Product[] products = [.. Enumerable.Range(0, 1_001)
       .Select(index => Product.Create(observation with { ProductName = $"Product {index}" }))];
+    var productNames = new Dictionary<ProductId, string>();
+    for (int index = 0; index < products.Length; index++) {
+      productNames.Add(products[index].Id, $"Product {index}");
+    }
     foreach (Product product in products) {
       product.RegisterObservation(observation with {
-        ProductName = product.Name.Value,
+        ProductName = productNames[product.Id],
         ObservedOn = observation.ObservedOn.AddDays(1),
         Formats = [new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png"))],
       });
@@ -1312,12 +1345,12 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     }
     foreach (Product[] batch in products.Chunk(1000)) {
       ProductIdentity[] identities = [.. batch.Select(product =>
-        new ProductIdentity(product.MarketId, product.BrandId, product.Name))];
+        new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(productNames[product.Id])))];
       IReadOnlyDictionary<ProductIdentity, Product> loaded =
         await _productRepository.GetBatchAsync(identities, TestContext.Current.CancellationToken);
       foreach (Product product in loaded.Values) {
         product.RegisterObservation(observation with {
-          ProductName = product.Name.Value,
+          ProductName = productNames[product.Id],
           ObservedOn = observation.ObservedOn.AddDays(2),
           Formats = [new ProductFormatObservationParams(1, "l", 2.99m, new Uri("https://example.com/milk.png"))],
         });
@@ -1334,8 +1367,8 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
 
   [Fact]
   public async Task SaveBatchAsync_RetriesWithFreshAggregatesWithoutDuplicatingCommittedSnapshots() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -1352,21 +1385,22 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     Product reloaded = (await _productRepository.GetByIdAsync(committed.Id, TestContext.Current.CancellationToken))!;
     reloaded.RegisterObservation(observation);
     var corrected = Product.Create(observation with { ProductName = "Yogurt" });
-    Guid[] expected = [.. new[] {
-      committed.PendingSnapshots.Single().Id.Value, corrected.PendingSnapshots.Single().Id.Value,
-    }.Order()];
+    Guid committedSnapshotId = await ReadStoredSnapshotIdAsync(committed);
 
     await _productRepository.SaveBatchAsync([reloaded, corrected], TestContext.Current.CancellationToken);
-    Guid[] actual = await _context.PriceSnapshots.OrderBy(snapshot => snapshot.Id)
-      .Select(snapshot => snapshot.Id).ToArrayAsync(TestContext.Current.CancellationToken);
+    var actual = await _context.PriceSnapshots.OrderBy(snapshot => snapshot.ProductFormat.Product.Name)
+      .Select(snapshot => new { snapshot.Id, snapshot.ProductFormat.ProductId })
+      .ToArrayAsync(TestContext.Current.CancellationToken);
 
-    Assert.Equal(expected, actual);
+    Assert.Collection(actual,
+      first => Assert.Equal(committedSnapshotId, first.Id),
+      second => Assert.Equal(corrected.Id.Value, second.ProductId));
   }
 
   [Fact]
   public async Task SaveBatchAsync_PersistsEveryPendingSnapshotWithItsOwningFormat() {
-    var market = new SuperMarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
-    var brand = new ProductBrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
+    var market = new MarketDbEntity { Id = Guid.CreateVersion7(), Name = "Market" };
+    var brand = new BrandDbEntity { Id = Guid.CreateVersion7(), Name = "Brand" };
     _context.AddRange(market, brand);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var observation = new ProductObservationParams(
@@ -1375,27 +1409,39 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
         new ProductFormatObservationParams(2, "l", 3.49m, new Uri("https://example.com/large.png")),
       ]);
     var product = Product.Create(observation);
-    product.RegisterObservation(observation with {
+    ProductObservationParams second = observation with {
       ObservedOn = observation.ObservedOn.AddDays(1),
       Formats = [
         new ProductFormatObservationParams(1, "l", 2.49m, new Uri("https://example.com/milk.png")),
         new ProductFormatObservationParams(2, "l", 3.99m, new Uri("https://example.com/large.png")),
       ],
-    });
-    product.RegisterObservation(observation with {
+    };
+    product.RegisterObservation(second);
+    ProductObservationParams third = observation with {
       ObservedOn = observation.ObservedOn.AddDays(2),
       Formats = [
         new ProductFormatObservationParams(1, "l", 2.99m, new Uri("https://example.com/milk.png")),
         new ProductFormatObservationParams(2, "l", 4.49m, new Uri("https://example.com/large.png")),
       ],
-    });
-    var expected = product.Formats.SelectMany(format => format.PendingSnapshots.Select(snapshot => new {
-      Id = snapshot.Id.Value, ProductFormatId = format.Id.Value,
-    })).OrderBy(value => value.Id).ToArray();
+    };
+    product.RegisterObservation(third);
+    ProductObservationParams[] observations = [observation, second, third];
+    var expected = observations.SelectMany(recorded => recorded.Formats.Select(format => new {
+      Quantity = Quantity.Create(format.Quantity, format.UnitOfMeasure).Amount,
+      UnitOfMeasure = Quantity.Create(format.Quantity, format.UnitOfMeasure).UnitOfMeasure.Value,
+      format.Price,
+      recorded.ObservedOn,
+    })).OrderBy(value => value.Quantity).ThenBy(value => value.ObservedOn).ToArray();
 
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var actual = await _context.PriceSnapshots.OrderBy(snapshot => snapshot.Id)
-      .Select(snapshot => new { snapshot.Id, snapshot.ProductFormatId })
+    var actual = await _context.PriceSnapshots.OrderBy(snapshot => snapshot.ProductFormat.Quantity)
+      .ThenBy(snapshot => snapshot.ObservedOn)
+      .Select(snapshot => new {
+        snapshot.ProductFormat.Quantity,
+        snapshot.ProductFormat.UnitOfMeasure,
+        Price = snapshot.PriceAmount,
+        snapshot.ObservedOn,
+      })
       .ToArrayAsync(TestContext.Current.CancellationToken);
 
     Assert.Equal(expected, actual);
@@ -1421,4 +1467,15 @@ public class PostgreSqlMarketProductRepositoryTests : IAsyncLifetime {
     }
   }
 
+  private async Task<Guid> ReadStoredFormatIdAsync(Product product) {
+    return await _context.ProductFormats.AsNoTracking()
+      .Where(format => format.ProductId == product.Id.Value)
+      .Select(format => format.Id).SingleAsync(TestContext.Current.CancellationToken);
+  }
+
+  private async Task<Guid> ReadStoredSnapshotIdAsync(Product product) {
+    return await _context.PriceSnapshots.AsNoTracking()
+      .Where(snapshot => snapshot.ProductFormat.ProductId == product.Id.Value)
+      .Select(snapshot => snapshot.Id).SingleAsync(TestContext.Current.CancellationToken);
+  }
 }

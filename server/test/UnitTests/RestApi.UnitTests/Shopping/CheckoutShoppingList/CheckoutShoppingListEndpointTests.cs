@@ -21,6 +21,9 @@ public class CheckoutShoppingListEndpointTests {
     private readonly ShoppingList _list;
     private Guid? _publishedCheckoutId;
 
+    internal Guid OwnerId { get; } = Guid.CreateVersion7();
+    internal Guid ListId => _list.Id.Value;
+
     public FakeHandler(
       IShoppingListRepository repository, IClock clock, IDomainEventPublisher publisher
     ) : base(repository, clock, publisher) {
@@ -30,15 +33,15 @@ public class CheckoutShoppingListEndpointTests {
         Arg.Any<IReadOnlyCollection<IDomainEvent>>(), Arg.Any<CancellationToken>()))
         .Do(call => _publishedCheckoutId = call.Arg<IReadOnlyCollection<IDomainEvent>>()
           .OfType<ShoppingListCheckedOut>().Single().CheckoutId);
-      _list = ShoppingList.Create(Guid.CreateVersion7(), "Weekly");
+      _list = ShoppingList.Create(OwnerId, "Weekly");
     }
 
     public void WithHappyPath() {
       _list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 2, true)]);
 
       _repository.GetAsync(
-          Arg.Any<Guid>(),
-          Arg.Any<Guid>(),
+          OwnerId,
+          ListId,
           TestContext.Current.CancellationToken)
         .Returns(_list);
 
@@ -61,12 +64,12 @@ public class CheckoutShoppingListEndpointTests {
 
     var context = new DefaultHttpContext {
       User = new ClaimsPrincipal(new ClaimsIdentity([
-        new Claim(JwtRegisteredClaimNames.Sub, Guid.CreateVersion7().ToString()),
+        new Claim(JwtRegisteredClaimNames.Sub, handler.OwnerId.ToString()),
       ])),
     };
 
     IResult result = await CheckoutShoppingListEndpoint.CheckoutAsync(
-      Guid.CreateVersion7(), context, handler, TestContext.Current.CancellationToken);
+      handler.ListId, context, handler, TestContext.Current.CancellationToken);
 
     int? statusCode = ((IStatusCodeHttpResult)result).StatusCode;
     Assert.Equal(StatusCodes.Status202Accepted, statusCode);
@@ -78,12 +81,12 @@ public class CheckoutShoppingListEndpointTests {
 
     var context = new DefaultHttpContext {
       User = new ClaimsPrincipal(new ClaimsIdentity([
-        new Claim(JwtRegisteredClaimNames.Sub, Guid.CreateVersion7().ToString()),
+        new Claim(JwtRegisteredClaimNames.Sub, handler.OwnerId.ToString()),
       ])),
     };
 
     IResult result = await CheckoutShoppingListEndpoint.CheckoutAsync(
-      Guid.CreateVersion7(), context, handler, TestContext.Current.CancellationToken);
+      handler.ListId, context, handler, TestContext.Current.CancellationToken);
 
     CheckoutResponse? body = ((IValueHttpResult<CheckoutResponse>)result).Value;
 

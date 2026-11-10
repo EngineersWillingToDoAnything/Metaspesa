@@ -9,25 +9,26 @@ internal class ProductDbEntity {
   public Guid SuperMarketId { get; set; }
   public Guid BrandId { get; set; }
 
-  public SuperMarketDbEntity SuperMarket { get; set; } = null!;
-  public ProductBrandDbEntity Brand { get; set; } = null!;
+  public MarketDbEntity SuperMarket { get; set; } = null!;
+  public BrandDbEntity Brand { get; set; } = null!;
   public ICollection<ProductFormatDbEntity> Formats { get; set; } = [];
 
-  public Product MapToDomain() => Product.Rehydrate(
-    new ProductId(Id),
-    new ProductName(Name),
-    new BrandId(BrandId),
-    new MarketId(SuperMarketId),
-    Formats.Select(format => ProductFormat.Rehydrate(
-      new ProductFormatId(format.Id),
-      new Quantity(
-        format.Quantity,
-        new UnitOfMeasure(format.UnitOfMeasure)),
-      string.IsNullOrWhiteSpace(format.ImageUrl)
-        ? null
-        : new ImageUrl(new Uri(format.ImageUrl, UriKind.Absolute)),
-      format.PriceSnapshots
-        .OrderByDescending(snapshot => snapshot.ObservedOn)
-        .ThenByDescending(snapshot => snapshot.Id)
-        .First().MapToDomain())));
+  public Product ToAggregate() {
+    return Product.Rehydrate(new ProductPrimitives(
+      Id,
+      Name,
+      BrandId,
+      SuperMarketId,
+      [.. Formats.Select(format => format.ToPrimitives())],
+      []
+    ));
+  }
+
+  public ProductIdentity ToAggregateIdentity() {
+    return new ProductIdentity(
+      new MarketId(SuperMarketId),
+      new BrandId(BrandId),
+      new ProductName(Name)
+    );
+  }
 }

@@ -1,21 +1,15 @@
+using System.Collections.Immutable;
 using Metaspesa.Domain.Markets.Errors;
 using Metaspesa.Domain.SharedKernel;
 
 namespace Metaspesa.Domain.Markets;
 
-public sealed class Product {
+public sealed class Product : AggregateRoot {
+  private readonly ProductIdentity _identity;
   private readonly List<ProductFormat> _formats;
   private readonly List<ProductFormat> _pendingFormats = [];
-  private readonly ProductIdentity _identity;
 
   public ProductId Id { get; }
-  public ProductName Name => _identity.Name;
-  public BrandId BrandId => _identity.BrandId;
-  public MarketId MarketId => _identity.MarketId;
-  public IReadOnlyCollection<ProductFormat> Formats => _formats.AsReadOnly();
-  public IReadOnlyCollection<ProductFormat> PendingFormats => _pendingFormats.AsReadOnly();
-  public IReadOnlyCollection<PriceSnapshot> PendingSnapshots => _formats
-    .SelectMany(format => format.PendingSnapshots).ToList().AsReadOnly();
 
   private Product(
     ProductId id,
@@ -36,46 +30,60 @@ public sealed class Product {
     return product;
   }
 
-  public static Product Rehydrate(
-    ProductId id,
-    ProductName name,
-    BrandId brandId,
-    MarketId marketId,
-    IEnumerable<ProductFormat> formats
-  ) {
-    return new Product(id, new ProductIdentity(marketId, brandId, name), formats);
+  public static Product Rehydrate(ProductPrimitives primitives) {
+    ArgumentNullException.ThrowIfNull(primitives);
+
+    var id = new ProductId(primitives.Id);
+    var identity = new ProductIdentity(
+      new MarketId(primitives.MarketId),
+      new BrandId(primitives.BrandId),
+      new ProductName(primitives.Name));
+    IEnumerable<ProductFormat> formats = primitives.Formats
+      .Select(ProductFormat.Rehydrate);
+
+    return new Product(id, identity, formats);
+  }
+
+  public ProductPrimitives ToPrimitives() {
+    ImmutableArray<ProductFormatPrimitives> formats = [..
+      _formats.Select(format => format.ToPrimitives())
+    ];
+    ImmutableArray<Guid> pendingFormatIds = [..
+      _pendingFormats.Select(format => format.Id.Value)
+    ];
+
+    return new ProductPrimitives(
+      Id.Value,
+      _identity.Name.Value,
+      _identity.BrandId.Value,
+      _identity.MarketId.Value,
+      formats,
+      pendingFormatIds);
   }
 
   public void RegisterObservation(ProductObservationParams observation) {
     ArgumentNullException.ThrowIfNull(observation);
     EnsureHasSameIdentity(observation);
+    EnsureObservationIsNotEmpty(observation);
 
     var observedOn = ObservationDate.Create(observation.ObservedOn);
     List<PreparedFormatObservation> prepared = PrepareFormats(observation);
     var existing = _formats.ToDictionary(format => format.Quantity);
-    var additions = new List<ProductFormat>();
-    var updates = new List<(ProductFormat Format, Money Price)>();
 
     foreach (PreparedFormatObservation incoming in prepared) {
       if (existing.TryGetValue(incoming.Quantity, out ProductFormat? format)) {
-        updates.Add((format, incoming.Price));
+        format.RecordSnapshot(incoming.Price, observedOn);
       } else {
-        additions.Add(ProductFormat.Create(incoming, observedOn));
+        var newFormat = ProductFormat.Create(incoming, observedOn);
+        _formats.Add(newFormat);
+        _pendingFormats.Add(newFormat);
       }
-    }
-
-    _formats.AddRange(additions);
-    _pendingFormats.AddRange(additions);
-    foreach ((ProductFormat format, Money price) in updates) {
-      format.RecordSnapshot(price, observedOn);
     }
   }
 
   private static List<PreparedFormatObservation> PrepareFormats(
     ProductObservationParams observation
   ) {
-    EnsureObservationIsNotEmpty(observation);
-
     var identities = new HashSet<Quantity>();
     var prepared = new List<PreparedFormatObservation>();
     foreach (ProductFormatObservationParams format in observation.Formats) {
@@ -102,4 +110,53 @@ public sealed class Product {
       throw new EmptyProductObservationException();
     }
   }
+
+  public bool IsIdentifiedBy(Guid marketId, Guid brandId, string name) =>
+    _identity.MarketId.Value == marketId &&
+    _identity.BrandId.Value == brandId &&
+    _identity.Name == new ProductName(name);
+
+  public bool IsNamed(string name) => _identity.Name.Value == name;
+
+  public bool OffersFormat(ProductFormatObservationParams observation) =>
+    _formats.Any(format =>
+      format.Quantity == Quantity.Create(observation.Quantity, observation.UnitOfMeasure));
+
+  public int CountFormats() => _formats.Count;
+
+  public bool HasPriceObservation(
+    ProductFormatObservationParams observation, DateOnly observedOn
+  ) {
+    return _formats.Any(format =>
+      format.Quantity == Quantity.Create(observation.Quantity, observation.UnitOfMeasure) &&
+      format.HasPriceObservation(observation.Price, observedOn));
+  }
+
+  public bool HasPendingFormat(ProductFormatObservationParams observation) {
+    return _pendingFormats.Any(format =>
+      format.Quantity == Quantity.Create(observation.Quantity, observation.UnitOfMeasure));
+  }
+
+  public int CountPendingFormats() => _pendingFormats.Count;
+
+  public bool HasPendingPriceObservation(
+    ProductFormatObservationParams observation, DateOnly observedOn
+  ) {
+    return _formats.Any(format =>
+      format.Quantity == Quantity.Create(observation.Quantity, observation.UnitOfMeasure) &&
+      format.HasPendingPriceObservation(observation.Price, observedOn));
+  }
+
+  public int CountPendingPriceObservations() {
+    return _formats.Sum(format => format.CountPendingPriceObservations());
+  }
 }
+
+public sealed record ProductPrimitives(
+  Guid Id,
+  string Name,
+  Guid BrandId,
+  Guid MarketId,
+  ImmutableArray<ProductFormatPrimitives> Formats,
+  ImmutableArray<Guid> PendingFormatIds
+);

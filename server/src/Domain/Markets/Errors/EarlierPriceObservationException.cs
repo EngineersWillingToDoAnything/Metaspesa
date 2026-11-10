@@ -4,11 +4,9 @@ public class EarlierPriceObservationException : MarketDomainException {
   public EarlierPriceObservationException() { }
 
   public EarlierPriceObservationException(
-    ProductFormatId formatId,
-    ObservationDate observedOn,
-    ObservationDate latestObservedOn
+    ProductFormatId formatId, ObservationDate observedOn
   ) : base("Market.ProductObservation.EarlierPrice",
-    $"Observation '{observedOn.Value:O}' for format '{formatId}' predates its latest snapshot '{latestObservedOn.Value:O}'.") { }
+    $"Observation '{observedOn.Value:O}' for format '{formatId}' predates its latest snapshot.") { }
 
   public EarlierPriceObservationException(string message) : base(message) { }
 

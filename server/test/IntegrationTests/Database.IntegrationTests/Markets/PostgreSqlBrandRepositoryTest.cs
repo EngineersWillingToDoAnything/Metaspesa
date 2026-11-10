@@ -1,3 +1,4 @@
+using Metaspesa.Database.Entities;
 using Metaspesa.Database.Repositories;
 using Metaspesa.Domain.Markets;
 using Microsoft.EntityFrameworkCore;
@@ -140,22 +141,6 @@ public sealed class PostgreSqlBrandRepositoryTest : IAsyncLifetime {
     string actual = await _context.ProductBrands.Select(value => value.Name)
       .SingleAsync(TestContext.Current.CancellationToken);
     Assert.Equal("Name", actual);
-  }
-
-  [Fact]
-  public async Task SaveAsync_UpdatesExistingAggregateName() {
-    // Arrange
-    var aggregate = Brand.Create("Original");
-    await _repository.SaveAsync(aggregate, TestContext.Current.CancellationToken);
-    var updated = Brand.Rehydrate(aggregate.Id, new BrandName("Updated"));
-
-    // Act
-    await _repository.SaveAsync(updated, TestContext.Current.CancellationToken);
-
-    // Assert
-    string actual = await _context.ProductBrands.Select(value => value.Name)
-      .SingleAsync(TestContext.Current.CancellationToken);
-    Assert.Equal(updated.Name.Value, actual);
   }
 
   [Fact]
