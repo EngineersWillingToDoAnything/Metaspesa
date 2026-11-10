@@ -1,13 +1,13 @@
-FROM node:26.13-alpine AS builder
+FROM node:26.13.0-alpine AS builder
 
 ARG NEXT_PUBLIC_REST_API_URL=http://localhost:4001/api/v1
 ENV NEXT_PUBLIC_REST_API_URL=$NEXT_PUBLIC_REST_API_URL
 
 WORKDIR /client
 
-RUN npm install -g pnpm@10.34.5
-
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
+
+RUN npm install -g "$(node -p 'require("./package.json").packageManager')"
 
 RUN pnpm install --frozen-lockfile
 
@@ -15,7 +15,7 @@ COPY . .
 
 RUN pnpm run build
 
-FROM node:26.13-alpine AS runner
+FROM node:26.13.0-alpine AS runner
 
 WORKDIR /client
 

@@ -65,6 +65,17 @@ updates:
           - "minor"
           - "patch"
 
+  - package-ecosystem: "dotnet-sdk"
+    directory: "/server"
+    labels:
+      - "dependencies"
+      - "component/server"
+    schedule:
+      interval: "cron"
+      cronjob: "0 5 * * *"
+      timezone: "Atlantic/Canary"
+    open-pull-requests-limit: 5
+
   - package-ecosystem: "github-actions"
     directory: "/"
     labels:
