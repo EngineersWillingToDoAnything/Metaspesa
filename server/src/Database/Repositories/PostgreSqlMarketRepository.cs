@@ -39,7 +39,7 @@ internal class PostgreSqlMarketRepository(
     string name = state.Name;
     string? logo = state.LogoUrl;
 
-    await context.Database.ExecuteSqlInterpolatedAsync($"""
+    await context.Database.ExecuteSqlAsync($"""
       INSERT INTO market.super_markets (id, name, logo_url)
       VALUES ({id}, {name}, {logo})
       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, logo_url = EXCLUDED.logo_url

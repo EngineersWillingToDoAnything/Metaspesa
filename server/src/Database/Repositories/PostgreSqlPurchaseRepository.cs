@@ -41,7 +41,7 @@ internal class PostgreSqlPurchaseRepository(
     await using IDbContextTransaction transaction = await context.Database
       .BeginTransactionAsync(cancellationToken);
 
-    await context.Database.ExecuteSqlInterpolatedAsync($"""
+    await context.Database.ExecuteSqlAsync($"""
       WITH inserted_purchase AS (
         INSERT INTO shopping.purchases (id, user_uid, shopping_list_id, purchased_at)
         VALUES ({state.Id}, {state.BuyerId}, {state.ShoppingListId}, {state.PurchasedAt})

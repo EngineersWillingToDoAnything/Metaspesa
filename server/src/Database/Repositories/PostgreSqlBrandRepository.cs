@@ -39,7 +39,7 @@ internal sealed class PostgreSqlBrandRepository(
     Guid id = state.Id;
     string name = state.Name;
 
-    await context.Database.ExecuteSqlInterpolatedAsync($"""
+    await context.Database.ExecuteSqlAsync($"""
       INSERT INTO market.product_brands (id, name) VALUES ({id}, {name})
       ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name
       """, cancellationToken);

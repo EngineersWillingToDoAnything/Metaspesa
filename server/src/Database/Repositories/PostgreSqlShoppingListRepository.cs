@@ -88,7 +88,7 @@ internal class PostgreSqlShoppingListRepository(
     await using IDbContextTransaction transaction = await context.Database
       .BeginTransactionAsync(cancellationToken);
 
-    await context.Database.ExecuteSqlInterpolatedAsync($"""
+    await context.Database.ExecuteSqlAsync($"""
       INSERT INTO shopping.shopping_lists (
         id, name, is_temporary, deleted_at
       )

@@ -363,7 +363,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
 
-    Task action() => _context.Database.ExecuteSqlInterpolatedAsync(
+    Task action() => _context.Database.ExecuteSqlAsync(
       $"UPDATE market.product_formats SET unit_of_measure = {code}", TestContext.Current.CancellationToken);
 
     PostgresException error = await Assert.ThrowsAsync<PostgresException>(action);

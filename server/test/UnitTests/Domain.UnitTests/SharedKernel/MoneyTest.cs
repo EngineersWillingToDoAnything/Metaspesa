@@ -6,8 +6,8 @@ namespace Metaspesa.Domain.UnitTests.SharedKernel;
 public class MoneyTest {
   [Theory]
   [InlineData(0)]
-  [InlineData(0.01)]
-  [InlineData(12.34)]
+  [InlineData("0.01")]
+  [InlineData("12.34")]
   public void Create_PreservesNonNegativeAmount(decimal amount) {
     var money = Money.Create(amount);
 
@@ -15,7 +15,7 @@ public class MoneyTest {
   }
 
   [Theory]
-  [InlineData(-0.01)]
+  [InlineData("-0.01")]
   [InlineData(-1)]
   public void Create_RejectsNegativeAmount(decimal amount) {
     void action() => Money.Create(amount);
@@ -31,10 +31,10 @@ public class MoneyTest {
   }
 
   [Theory]
-  [InlineData(12.345, 12.35)]
-  [InlineData(12.344, 12.34)]
-  [InlineData(0.005, 0.01)]
-  [InlineData(0.004, 0)]
+  [InlineData("12.345", "12.35")]
+  [InlineData("12.344", "12.34")]
+  [InlineData("0.005", "0.01")]
+  [InlineData("0.004", 0)]
   public void Create_RoundsToTwoDecimalPlaces(decimal amount, decimal expected) {
     var money = Money.Create(amount);
 
@@ -42,8 +42,8 @@ public class MoneyTest {
   }
 
   [Theory]
-  [InlineData(-0.01)]
-  [InlineData(3.451)]
+  [InlineData("-0.01")]
+  [InlineData("3.451")]
   [InlineData(0)]
   public void Constructor_PreservesRawAmount(decimal amount) {
     var money = new Money(amount);

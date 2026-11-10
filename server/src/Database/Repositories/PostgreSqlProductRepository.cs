@@ -145,7 +145,7 @@ internal class PostgreSqlProductRepository(
     Guid[] brandIds = [.. keys.Select(identity => identity.BrandId.Value)];
     string[] names = [.. keys.Select(identity => identity.Name.Value)];
 
-    List<ProductDbEntity> entities = await context.Products.FromSqlInterpolated($"""
+    List<ProductDbEntity> entities = await context.Products.FromSql($"""
         SELECT product.* FROM market.products AS product
         JOIN unnest({marketIds}, {brandIds}, {names}) AS requested(market_id, brand_id, name)
           ON product.super_market_id = requested.market_id
@@ -212,7 +212,7 @@ internal class PostgreSqlProductRepository(
     string[] names = [.. products.Select(product => product.Name)];
     Guid[] marketIds = [.. products.Select(product => product.MarketId)];
     Guid[] brandIds = [.. products.Select(product => product.BrandId)];
-    await context.Database.ExecuteSqlInterpolatedAsync($"""
+    await context.Database.ExecuteSqlAsync($"""
       INSERT INTO market.products (id, name, super_market_id, brand_id)
       SELECT * FROM unnest({ids}, {names}, {marketIds}, {brandIds});
       """, cancellationToken);
@@ -236,7 +236,7 @@ internal class PostgreSqlProductRepository(
     string[] units = [.. formats.Select(value => value.Format.UnitOfMeasure)];
     string[] images = [.. formats.Select(value => value.Format.ImageUrl ?? string.Empty)];
 
-    await context.Database.ExecuteSqlInterpolatedAsync($"""
+    await context.Database.ExecuteSqlAsync($"""
       INSERT INTO market.product_formats (id, product_id, quantity, unit_of_measure, image_url)
       SELECT * FROM unnest({ids}, {productIds}, {quantities}, {units}, {images});
       """, cancellationToken);
@@ -259,7 +259,7 @@ internal class PostgreSqlProductRepository(
     decimal[] prices = [.. snapshots.Select(value => value.Snapshot.Price)];
     DateOnly[] dates = [.. snapshots.Select(value => value.Snapshot.ObservedOn)];
 
-    await context.Database.ExecuteSqlInterpolatedAsync($"""
+    await context.Database.ExecuteSqlAsync($"""
       INSERT INTO market.price_snapshots (id, product_format_id, price_amount, observed_on)
       SELECT * FROM unnest({ids}, {formatIds}, {prices}, {dates});
       """, cancellationToken);
