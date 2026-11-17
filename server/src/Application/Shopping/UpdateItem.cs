@@ -1,3 +1,4 @@
+using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Domain.SharedKernel;
 using Metaspesa.Domain.Shopping;
@@ -14,7 +15,9 @@ public static class UpdateItem {
     bool? IsChecked
   );
 
-  public class Handler(IShoppingListRepository repository) {
+  public class Handler(
+    IShoppingListRepository repository
+  ) : ICommandHandler<Command> {
     public async Task Handle(
       Command command, CancellationToken cancellationToken = default
     ) {

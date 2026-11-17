@@ -1,4 +1,5 @@
 using System.Reflection;
+using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Identity;
 using Metaspesa.ArchitectureTests.Dependencies;
 using Mono.Cecil;
@@ -16,11 +17,19 @@ public class HandlerBoundaryTests {
       .Where(type => type.Name == "Handler")
       .Select(DependencyAnalysis.TypeName)
     ];
+    Type[] contractDefinitions = [
+      typeof(ICommandHandler<>),
+      typeof(ICommandHandler<,>),
+      typeof(IQueryHandler<>),
+      typeof(IQueryHandler<,>)
+    ];
+    string[] contracts = [.. contractDefinitions.Select(DependencyAnalysis.TypeName)];
 
     // Act
     DependencyAnalysis.MethodUse[] violations = [.. DependencyAnalysis
       .MethodUses(assembly)
-      .Where(call => handlers.Contains(call.Target) && call.Method == "Handle")
+      .Where(call => call.Method == "Handle")
+      .Where(call => handlers.Contains(call.Target) || contracts.Contains(call.Target))
     ];
 
     // Assert
@@ -34,12 +43,19 @@ public class HandlerBoundaryTests {
     Type[] handlers = [.. typeof(LoginUser).Assembly.GetTypes()
       .Where(type => type.Name == "Handler")
     ];
+    Type[] contractDefinitions = [
+      typeof(ICommandHandler<>),
+      typeof(ICommandHandler<,>),
+      typeof(IQueryHandler<>),
+      typeof(IQueryHandler<,>)
+    ];
 
     // Act
     string[] violations = [.. handlers
       .SelectMany(type => type.GetConstructors())
       .SelectMany(constructor => constructor.GetParameters())
-      .Where(parameter => handlers.Contains(parameter.ParameterType))
+      .Where(parameter => handlers.Contains(parameter.ParameterType) ||
+        parameter.ParameterType.IsGenericType && contractDefinitions.Contains(parameter.ParameterType.GetGenericTypeDefinition()))
       .Select(parameter => $"{parameter.Member.DeclaringType}: {parameter.Name}")
     ];
 

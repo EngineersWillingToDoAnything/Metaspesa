@@ -1,3 +1,4 @@
+using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Markets;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Domain.Shopping;
@@ -13,7 +14,7 @@ public static class AddItemsToList {
   public class Handler(
     IShoppingListRepository shoppingListRepository,
     IProductRepository productRepository
-  ) {
+  ) : ICommandHandler<Command> {
     public async Task Handle(
       Command command, CancellationToken cancellationToken = default
     ) {

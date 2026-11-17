@@ -1,3 +1,4 @@
+using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
@@ -10,7 +11,7 @@ public static class RemoveItem {
   public class Handler(
     IShoppingListRepository repository,
     TimeProvider timeProvider
-  ) {
+  ) : ICommandHandler<Command> {
     public async Task Handle(
       Command command, CancellationToken cancellationToken = default
     ) {

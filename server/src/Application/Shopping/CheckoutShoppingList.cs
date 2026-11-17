@@ -12,7 +12,7 @@ public static class CheckoutShoppingList {
     IShoppingListRepository repository,
     TimeProvider timeProvider,
     IDomainEventPublisher eventPublisher
-  ) {
+  ) : ICommandHandler<Command, Guid> {
     public async Task<Guid> Handle(
       Command command, CancellationToken cancellationToken = default
     ) {

@@ -1,3 +1,4 @@
+using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Markets;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Domain.SharedKernel;
@@ -28,7 +29,9 @@ public static class GetShoppingList {
 
   public record Query(Guid UserUid, Guid ShoppingListId);
 
-  public class Handler(IShoppingListRepository repository) {
+  public class Handler(
+    IShoppingListRepository repository
+  ) : IQueryHandler<Query, Response> {
     public async Task<Response> Handle(
       Query query, CancellationToken cancellationToken = default
     ) {

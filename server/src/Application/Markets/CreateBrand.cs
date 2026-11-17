@@ -1,3 +1,4 @@
+using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Markets;
 using Metaspesa.Domain.Markets;
 using Metaspesa.Domain.Markets.Errors;
@@ -7,9 +8,11 @@ namespace Metaspesa.Application.Markets;
 public static class CreateBrand {
   public sealed record Command(string Name);
 
-  public sealed class Handler(IBrandRepository repository) {
+  public sealed class Handler(
+    IBrandRepository repository
+  ) : ICommandHandler<Command, Guid> {
     public async Task<Guid> Handle(
-      Command command, CancellationToken cancellationToken
+      Command command, CancellationToken cancellationToken = default
     ) {
       ArgumentNullException.ThrowIfNull(command);
 

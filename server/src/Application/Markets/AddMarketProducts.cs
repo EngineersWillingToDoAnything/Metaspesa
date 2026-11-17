@@ -1,3 +1,4 @@
+using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Markets;
 using Metaspesa.Domain.Markets;
 using Metaspesa.Domain.Markets.Errors;
@@ -24,7 +25,7 @@ public static class AddMarketProducts {
     IMarketRepository marketRepository,
     IBrandRepository brandRepository,
     IProductRepository productRepository
-  ) {
+  ) : ICommandHandler<Command> {
     private const int BatchSize = 1_000;
 
     private sealed record NamedProduct(
