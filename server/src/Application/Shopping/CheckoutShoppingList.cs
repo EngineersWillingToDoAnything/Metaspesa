@@ -27,8 +27,7 @@ public static class CheckoutShoppingList {
 
       await repository.SaveAsync(shoppingList, cancellationToken);
       await eventPublisher.PublishAsync(
-        shoppingList.DomainEvents, CancellationToken.None);
-      shoppingList.ClearDomainEvents();
+        shoppingList.FlushDomainEvents(), CancellationToken.None);
 
       return checkoutId;
     }

@@ -302,7 +302,7 @@ public class ShoppingListTests {
     list.Checkout(buyerId, checkoutAt);
 
     // Assert
-    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    var domainEvent = (ShoppingListCheckedOut)list.FlushDomainEvents().Single();
     Assert.Equal(list.Id.Value, domainEvent.ShoppingListId);
   }
 
@@ -319,7 +319,7 @@ public class ShoppingListTests {
     list.Checkout(buyerId, checkoutAt);
 
     // Assert
-    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    var domainEvent = (ShoppingListCheckedOut)list.FlushDomainEvents().Single();
     Assert.Equal(buyerId, domainEvent.BuyerId);
   }
 
@@ -336,7 +336,7 @@ public class ShoppingListTests {
     list.Checkout(buyerId, checkoutAt);
 
     // Assert
-    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    var domainEvent = (ShoppingListCheckedOut)list.FlushDomainEvents().Single();
     Assert.Equal(checkoutAt, domainEvent.CheckoutAt);
   }
 
@@ -362,7 +362,7 @@ public class ShoppingListTests {
     list.Checkout(buyerId, checkoutAt);
 
     // Assert
-    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    var domainEvent = (ShoppingListCheckedOut)list.FlushDomainEvents().Single();
     Assert.Equal([firstId, secondId],
       domainEvent.Items.Select(item => item.ProductFormatId));
   }
@@ -389,7 +389,7 @@ public class ShoppingListTests {
     list.Checkout(buyerId, checkoutAt);
 
     // Assert
-    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    var domainEvent = (ShoppingListCheckedOut)list.FlushDomainEvents().Single();
     Assert.Equal([2, 3], domainEvent.Items.Select(item => item.Amount));
   }
 
@@ -415,7 +415,7 @@ public class ShoppingListTests {
     list.Checkout(buyerId, checkoutAt);
 
     // Assert
-    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    var domainEvent = (ShoppingListCheckedOut)list.FlushDomainEvents().Single();
     Assert.DoesNotContain(domainEvent.Items,
       item => item.ProductFormatId == uncheckedId);
   }
@@ -442,7 +442,7 @@ public class ShoppingListTests {
     list.Checkout(buyerId, checkoutAt);
 
     // Assert
-    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    var domainEvent = (ShoppingListCheckedOut)list.FlushDomainEvents().Single();
     Assert.DoesNotContain(domainEvent.Items,
       item => item.ProductFormatId == deletedItem.ProductFormatUid);
   }
@@ -475,7 +475,7 @@ public class ShoppingListTests {
     list.AddItems([item]);
     list.Checkout(buyerId,
       new DateTime(2026, 10, 12, 12, 0, 0, DateTimeKind.Utc));
-    var domainEvent = (ShoppingListCheckedOut)list.DomainEvents.Single();
+    var domainEvent = (ShoppingListCheckedOut)list.FlushDomainEvents().Single();
 
     // Act
     list.UpdateItem(list.ItemIdFor(item), 99, true);
@@ -499,7 +499,7 @@ public class ShoppingListTests {
     list.Checkout(buyerId, checkoutAt.AddMinutes(1));
 
     // Assert
-    Guid[] checkoutIds = [.. list.DomainEvents
+    Guid[] checkoutIds = [.. list.FlushDomainEvents()
       .Cast<ShoppingListCheckedOut>()
       .Select(domainEvent => domainEvent.CheckoutId)
     ];
@@ -519,7 +519,7 @@ public class ShoppingListTests {
     var restored = ShoppingList.Rehydrate(original.ToPrimitives());
 
     // Assert
-    Assert.Empty(restored.DomainEvents);
+    Assert.Empty(restored.FlushDomainEvents());
   }
 
   [Fact]
@@ -537,7 +537,7 @@ public class ShoppingListTests {
     _ = list.ToPrimitives();
 
     // Assert
-    Assert.Single(list.DomainEvents);
+    Assert.Single(list.FlushDomainEvents());
   }
 
   [Theory]

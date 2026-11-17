@@ -15,7 +15,7 @@ public static class UserTest {
     var user = User.Rehydrate(id, username, passwordHash, Role.Shopper);
 
     // Assert
-    Assert.Empty(user.DomainEvents);
+    Assert.Empty(user.FlushDomainEvents());
   }
 
   [Fact(DisplayName = "Creates shopper user")]

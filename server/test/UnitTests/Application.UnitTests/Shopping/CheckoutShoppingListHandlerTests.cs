@@ -135,7 +135,7 @@ public class CheckoutShoppingListHandlerTests {
   }
 
   [Fact]
-  public async Task Handle_ClearsEventsAfterPublication() {
+  public async Task Handle_FlushesEventsAfterSuccessfulSave() {
     var ownerId = Guid.CreateVersion7();
     var list = ShoppingList.Create(ownerId, "Weekly");
     list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 2, true)]);
@@ -148,6 +148,6 @@ public class CheckoutShoppingListHandlerTests {
     await handler.Handle(new Command(ownerId, list.Id.Value),
       TestContext.Current.CancellationToken);
 
-    Assert.Empty(list.DomainEvents);
+    Assert.Empty(list.FlushDomainEvents());
   }
 }

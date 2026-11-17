@@ -648,7 +648,7 @@ public class ProductTests {
     var restored = Product.Rehydrate(original.ToPrimitives());
 
     // Assert
-    Assert.Empty(restored.DomainEvents);
+    Assert.Empty(restored.FlushDomainEvents());
   }
 
   [Fact]

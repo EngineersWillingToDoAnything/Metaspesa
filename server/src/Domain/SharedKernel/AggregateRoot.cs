@@ -1,8 +1,9 @@
+using System.Collections.Immutable;
+
 namespace Metaspesa.Domain.SharedKernel;
 
 public abstract class AggregateRoot {
   private readonly List<IDomainEvent> _domainEvents;
-  public IReadOnlyCollection<IDomainEvent> DomainEvents => _domainEvents.AsReadOnly();
 
   protected AggregateRoot() {
     _domainEvents = [];
@@ -13,5 +14,9 @@ public abstract class AggregateRoot {
     _domainEvents.Add(domainEvent);
   }
 
-  public void ClearDomainEvents() => _domainEvents.Clear();
+  public ImmutableArray<IDomainEvent> FlushDomainEvents() {
+    ImmutableArray<IDomainEvent> events = [.. _domainEvents];
+    _domainEvents.Clear();
+    return events;
+  }
 }
