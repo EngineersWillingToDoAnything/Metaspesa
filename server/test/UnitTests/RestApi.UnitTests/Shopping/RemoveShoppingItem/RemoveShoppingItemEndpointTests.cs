@@ -17,7 +17,7 @@ public class RemoveShoppingItemEndpointTests {
     _repository = Substitute.For<IShoppingListRepository>();
 
     _handler = new RemoveItem.Handler(
-      _repository, Substitute.For<IClock>());
+      _repository, Substitute.For<TimeProvider>());
   }
 
   [Fact(DisplayName = "Returns no content for accepted request")]

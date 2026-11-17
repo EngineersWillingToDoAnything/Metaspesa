@@ -36,8 +36,8 @@ public class DomainEventDispatcherTests {
     list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 2, true)]);
     IShoppingListRepository repository = Substitute.For<IShoppingListRepository>();
     repository.GetAsync(ownerId, list.Id.Value, Arg.Any<CancellationToken>()).Returns(list);
-    IClock clock = Substitute.For<IClock>();
-    clock.GetCurrentTime().Returns(new DateTime(2026, 8, 19, 12, 0, 0, DateTimeKind.Utc));
+    TimeProvider clock = Substitute.For<TimeProvider>();
+    clock.GetUtcNow().Returns(new DateTimeOffset(2026, 8, 19, 12, 0, 0, TimeSpan.Zero));
     var checkout = new CheckoutShoppingList.Handler(repository, clock, publisher);
     await dispatcher.StartAsync(TestContext.Current.CancellationToken);
     try {

@@ -1,4 +1,3 @@
-using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
@@ -10,7 +9,7 @@ public static class RemoveItem {
 
   public class Handler(
     IShoppingListRepository repository,
-    IClock clock
+    TimeProvider timeProvider
   ) {
     public async Task Handle(
       Command command, CancellationToken cancellationToken = default
@@ -21,7 +20,7 @@ public static class RemoveItem {
         command.UserUid, command.ShoppingListId, cancellationToken) ??
         throw new ShoppingListNotFoundException();
 
-      DateTime now = clock.GetCurrentTime();
+      DateTime now = timeProvider.GetUtcNow().UtcDateTime;
 
       shoppingList.RemoveItem(command.ShoppingItemId, now);
 

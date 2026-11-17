@@ -10,7 +10,7 @@ public static class CheckoutShoppingList {
 
   public class Handler(
     IShoppingListRepository repository,
-    IClock clock,
+    TimeProvider timeProvider,
     IDomainEventPublisher eventPublisher
   ) {
     public async Task<Guid> Handle(
@@ -23,7 +23,7 @@ public static class CheckoutShoppingList {
         ?? throw new ShoppingListNotFoundException();
 
       Guid checkoutId = shoppingList.Checkout(
-        command.UserUid, clock.GetCurrentTime());
+        command.UserUid, timeProvider.GetUtcNow().UtcDateTime);
 
       await repository.SaveAsync(shoppingList, cancellationToken);
       await eventPublisher.PublishAsync(

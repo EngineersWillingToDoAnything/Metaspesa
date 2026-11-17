@@ -1,7 +1,6 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Users;
 using Metaspesa.Domain.Identity;
 using Microsoft.Extensions.Options;
@@ -19,7 +18,7 @@ public static class JwtTokenProviderTests {
 
     private static JwtTokenProvider CreateProvider(
       int expirationMinutes = TestExpirationMinutes,
-      IClock? clock = null
+      TimeProvider? clock = null
     ) {
       JwtOptions opts = new() {
         Key = TestKey,
@@ -28,10 +27,7 @@ public static class JwtTokenProviderTests {
         Audience = TestAudience,
         ExpirationMinutes = expirationMinutes,
       };
-      IClock resolvedClock = clock ?? Substitute.For<IClock>();
-      if (clock is null) {
-        resolvedClock.GetCurrentTime().Returns(_ => DateTime.UtcNow);
-      }
+      TimeProvider resolvedClock = clock ?? TimeProvider.System;
       return new JwtTokenProvider(Options.Create(opts), resolvedClock);
     }
 
@@ -115,8 +111,8 @@ public static class JwtTokenProviderTests {
     public void GenerateToken_SetsExpiresAt_InConfiguredMinutes() {
       // Arrange
       DateTime fixedTime = new(2025, 6, 1, 12, 0, 0, DateTimeKind.Utc);
-      IClock clock = Substitute.For<IClock>();
-      clock.GetCurrentTime().Returns(fixedTime);
+      TimeProvider clock = Substitute.For<TimeProvider>();
+      clock.GetUtcNow().Returns(new DateTimeOffset(fixedTime));
       JwtTokenProvider provider = CreateProvider(clock: clock);
 
       // Act
@@ -124,6 +120,40 @@ public static class JwtTokenProviderTests {
 
       // Assert
       Assert.Equal(fixedTime.AddMinutes(TestExpirationMinutes), token.ExpiresAt);
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(2)]
+    [InlineData(-3)]
+    public void GenerateToken_ComputesExpiryFromTheUtcInstant(int offsetHours) {
+      // Arrange
+      var currentTime = new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.FromHours(offsetHours));
+      TimeProvider timeProvider = Substitute.For<TimeProvider>();
+      timeProvider.GetUtcNow().Returns(currentTime);
+      JwtTokenProvider provider = CreateProvider(clock: timeProvider);
+      User user = TestUser();
+
+      // Act
+      Token token = provider.GenerateToken(user);
+
+      // Assert
+      Assert.Equal(currentTime.UtcDateTime.AddMinutes(TestExpirationMinutes), token.ExpiresAt);
+    }
+
+    [Fact]
+    public void GenerateToken_ReturnsExpiryWithUtcKind() {
+      // Arrange
+      TimeProvider timeProvider = Substitute.For<TimeProvider>();
+      timeProvider.GetUtcNow().Returns(new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.Zero));
+      JwtTokenProvider provider = CreateProvider(clock: timeProvider);
+      User user = TestUser();
+
+      // Act
+      Token token = provider.GenerateToken(user);
+
+      // Assert
+      Assert.Equal(DateTimeKind.Utc, token.ExpiresAt.Kind);
     }
 
     [Fact(DisplayName = "Produces token that passes validation with correct key")]

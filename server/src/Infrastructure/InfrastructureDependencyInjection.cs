@@ -17,7 +17,7 @@ public static class InfrastructureDependencyInjection {
     services.AddOpenTelemetry()
       .WithTracing(tracing => tracing.AddSource(SecretsLoaderWorker.ActivitySourceName));
 
-    services.AddSingleton<IClock, SystemClock>();
+    services.AddSingleton(TimeProvider.System);
     services.AddSingleton<ISecretVault, LocalSecretVault>();
     services.AddHostedService<SecretsLoaderWorker>();
 
