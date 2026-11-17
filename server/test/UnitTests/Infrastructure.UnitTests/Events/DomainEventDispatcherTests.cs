@@ -16,8 +16,10 @@ public class DomainEventDispatcherTests {
 
   [Fact]
   public async Task Checkout_ReturnsWhileEventHandlerIsBlocked() {
-    var entered = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
-    var release = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var entered = new TaskCompletionSource(
+      TaskCreationOptions.RunContinuationsAsynchronously);
+    var release = new TaskCompletionSource(
+      TaskCreationOptions.RunContinuationsAsynchronously);
     var consumer = new DelegateHandler(async (_, token) => {
       entered.SetResult();
       await release.Task.WaitAsync(token);
@@ -54,7 +56,8 @@ public class DomainEventDispatcherTests {
   [Fact]
   public async Task Dispatch_LogsHandlerFailure() {
     var exception = new InvalidOperationException("Purchase failed");
-    var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var completed = new TaskCompletionSource(
+      TaskCreationOptions.RunContinuationsAsynchronously);
     ILogger<DomainEventDispatcher> logger = Substitute.For<ILogger<DomainEventDispatcher>>();
     logger.IsEnabled(LogLevel.Error).Returns(true);
     await using ServiceProvider provider = new ServiceCollection()
@@ -84,7 +87,8 @@ public class DomainEventDispatcherTests {
 
   [Fact]
   public async Task Dispatch_ContinuesWithLaterEventsAfterFailure() {
-    var completed = new TaskCompletionSource<int>(TaskCreationOptions.RunContinuationsAsynchronously);
+    var completed = new TaskCompletionSource<int>(
+      TaskCreationOptions.RunContinuationsAsynchronously);
     await using ServiceProvider provider = new ServiceCollection()
       .AddScoped<IDomainEventHandler>(_ => new DelegateHandler((domainEvent, _) => {
         var item = (TestEvent)domainEvent;
@@ -114,7 +118,8 @@ public class DomainEventDispatcherTests {
   [Fact]
   public async Task Dispatch_CreatesAndDisposesSeparateScopePerEvent() {
     var disposed = new ConcurrentQueue<Guid>();
-    var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var completed = new TaskCompletionSource(
+      TaskCreationOptions.RunContinuationsAsynchronously);
     await using ServiceProvider provider = new ServiceCollection()
       .AddScoped<IDomainEventHandler>(_ => new ScopedHandler(disposed, completed))
       .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
@@ -136,7 +141,8 @@ public class DomainEventDispatcherTests {
 
   [Fact]
   public async Task Dispatch_SkipsNonMatchingHandlers() {
-    var completed = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+    var completed = new TaskCompletionSource(
+      TaskCreationOptions.RunContinuationsAsynchronously);
     IDomainEventHandler unmatched = Substitute.For<IDomainEventHandler>();
     await using ServiceProvider provider = new ServiceCollection()
       .AddScoped(_ => unmatched)
@@ -156,6 +162,155 @@ public class DomainEventDispatcherTests {
 
       await unmatched.DidNotReceive().HandleAsync(
         Arg.Any<IDomainEvent>(), Arg.Any<CancellationToken>());
+    } finally {
+      await dispatcher.StopAsync(TestContext.Current.CancellationToken);
+    }
+  }
+
+  [Theory]
+  [InlineData(true)]
+  [InlineData(false)]
+  public async Task Dispatch_IsolatesConsumerFailuresRegardlessOfRegistrationOrder(
+    bool failingConsumerFirst
+  ) {
+    // Arrange
+    var failedConsumerInvoked = new TaskCompletionSource(
+      TaskCreationOptions.RunContinuationsAsynchronously);
+    var healthyConsumerInvoked = new TaskCompletionSource(
+      TaskCreationOptions.RunContinuationsAsynchronously);
+    IDomainEventHandler failing = Substitute.For<IDomainEventHandler>();
+    failing.CanHandle(Arg.Any<IDomainEvent>()).Returns(true);
+    failing.HandleAsync(Arg.Any<IDomainEvent>(), Arg.Any<CancellationToken>()).Returns(_ => {
+      failedConsumerInvoked.TrySetResult();
+      return Task.FromException(new InvalidOperationException("Consumer failed"));
+    });
+    IDomainEventHandler healthy = Substitute.For<IDomainEventHandler>();
+    healthy.CanHandle(Arg.Any<IDomainEvent>()).Returns(true);
+    healthy.HandleAsync(Arg.Any<IDomainEvent>(), Arg.Any<CancellationToken>()).Returns(_ => {
+      healthyConsumerInvoked.TrySetResult();
+      return Task.CompletedTask;
+    });
+    IDomainEventHandler[] consumers = failingConsumerFirst
+      ? [failing, healthy]
+      : [healthy, failing];
+    var services = new ServiceCollection();
+    foreach (IDomainEventHandler consumer in consumers) {
+      services.AddScoped(_ => consumer);
+    }
+    await using ServiceProvider provider = services
+      .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+    var publisher = new InMemoryDomainEventPublisher();
+    using var dispatcher = new DomainEventDispatcher(publisher,
+      provider.GetRequiredService<IServiceScopeFactory>(),
+      Substitute.For<ILogger<DomainEventDispatcher>>());
+    var domainEvent = new TestEvent(1);
+    await dispatcher.StartAsync(TestContext.Current.CancellationToken);
+    try {
+      // Act
+      await publisher.PublishAsync([domainEvent], TestContext.Current.CancellationToken);
+      await Task.WhenAll(failedConsumerInvoked.Task, healthyConsumerInvoked.Task)
+        .WaitAsync(Timeout, TestContext.Current.CancellationToken);
+
+      // Assert
+      await healthy.Received(1).HandleAsync(domainEvent, Arg.Any<CancellationToken>());
+    } finally {
+      await dispatcher.StopAsync(TestContext.Current.CancellationToken);
+    }
+  }
+
+  [Fact]
+  public async Task Dispatch_ContinuesWhenConsumerMatchingThrows() {
+    // Arrange
+    IDomainEventHandler failing = Substitute.For<IDomainEventHandler>();
+    failing.CanHandle(Arg.Any<IDomainEvent>()).Returns(_ => throw new InvalidOperationException("Matching failed"));
+    var completed = new TaskCompletionSource(
+      TaskCreationOptions.RunContinuationsAsynchronously);
+    IDomainEventHandler healthy = Substitute.For<IDomainEventHandler>();
+    healthy.CanHandle(Arg.Any<IDomainEvent>()).Returns(true);
+    healthy.HandleAsync(Arg.Any<IDomainEvent>(), Arg.Any<CancellationToken>()).Returns(_ => {
+      completed.TrySetResult();
+      return Task.CompletedTask;
+    });
+    await using ServiceProvider provider = new ServiceCollection()
+      .AddScoped(_ => failing)
+      .AddScoped(_ => healthy)
+      .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+    var publisher = new InMemoryDomainEventPublisher();
+    using var dispatcher = new DomainEventDispatcher(publisher,
+      provider.GetRequiredService<IServiceScopeFactory>(), Substitute.For<ILogger<DomainEventDispatcher>>());
+    var domainEvent = new TestEvent(1);
+    await dispatcher.StartAsync(TestContext.Current.CancellationToken);
+    try {
+      // Act
+      await publisher.PublishAsync([domainEvent], TestContext.Current.CancellationToken);
+      await completed.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+
+      // Assert
+      await healthy.Received(1).HandleAsync(domainEvent, Arg.Any<CancellationToken>());
+    } finally {
+      await dispatcher.StopAsync(TestContext.Current.CancellationToken);
+    }
+  }
+
+  [Fact]
+  public async Task Dispatch_ContinuesWithTheNextEventWhenConsumerResolutionFails() {
+    // Arrange
+    int resolutions = 0;
+    var completed = new TaskCompletionSource<int>(
+      TaskCreationOptions.RunContinuationsAsynchronously);
+    await using ServiceProvider provider = new ServiceCollection()
+      .AddScoped<IDomainEventHandler>(_ => {
+        if (Interlocked.Increment(ref resolutions) == 1) {
+          throw new InvalidOperationException("Consumer could not be constructed");
+        }
+        return new DelegateHandler((domainEvent, _) => {
+          completed.TrySetResult(((TestEvent)domainEvent).Sequence);
+          return Task.CompletedTask;
+        });
+      })
+      .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+    var publisher = new InMemoryDomainEventPublisher();
+    using var dispatcher = new DomainEventDispatcher(publisher,
+      provider.GetRequiredService<IServiceScopeFactory>(),
+      Substitute.For<ILogger<DomainEventDispatcher>>());
+    var nextEvent = new TestEvent(2);
+    await dispatcher.StartAsync(TestContext.Current.CancellationToken);
+    try {
+      // Act
+      await publisher.PublishAsync([new TestEvent(1), nextEvent], TestContext.Current.CancellationToken);
+      int handledSequence = await completed.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+
+      // Assert
+      Assert.Equal(nextEvent.Sequence, handledSequence);
+    } finally {
+      await dispatcher.StopAsync(TestContext.Current.CancellationToken);
+    }
+  }
+
+  [Fact]
+  public async Task Dispatch_IsolatesConsumerCancellationWhileTheWorkerIsRunning() {
+    // Arrange
+    var completed = new TaskCompletionSource(
+      TaskCreationOptions.RunContinuationsAsynchronously);
+    await using ServiceProvider provider = new ServiceCollection()
+      .AddScoped<IDomainEventHandler>(_ => new DelegateHandler((_, _) =>
+        Task.FromException(new OperationCanceledException("Consumer cancelled its own work"))))
+      .AddScoped<IDomainEventHandler>(_ => new DelegateHandler((_, _) => {
+        completed.TrySetResult();
+        return Task.CompletedTask;
+      }))
+      .BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+    var publisher = new InMemoryDomainEventPublisher();
+    using var dispatcher = new DomainEventDispatcher(publisher,
+      provider.GetRequiredService<IServiceScopeFactory>(), Substitute.For<ILogger<DomainEventDispatcher>>());
+    await dispatcher.StartAsync(TestContext.Current.CancellationToken);
+    try {
+      // Act
+      await publisher.PublishAsync([new TestEvent(1)], TestContext.Current.CancellationToken);
+      await completed.Task.WaitAsync(Timeout, TestContext.Current.CancellationToken);
+
+      // Assert
+      Assert.False(dispatcher.ExecuteTask?.IsCompleted);
     } finally {
       await dispatcher.StopAsync(TestContext.Current.CancellationToken);
     }
