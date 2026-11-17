@@ -48,7 +48,7 @@ internal static class GetProductsEndpoint {
     }
     MarketId[] marketIds = request.MarketId is null
       ? []
-      : [.. request.MarketId.Select(id => new MarketId(id))];
+      : [.. request.MarketId.Select(MarketId.Create)];
     CatalogSort sort = request.Sort switch {
       null or "name" => CatalogSort.Name,
       "priceAsc" => CatalogSort.PriceAsc,

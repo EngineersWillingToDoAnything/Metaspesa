@@ -52,9 +52,9 @@ public sealed class Purchase : AggregateRoot {
     ];
 
     return new Purchase(
-      new PurchaseId(parameters.PurchaseId),
-      new UserId(parameters.BuyerId),
-      new ShoppingListId(parameters.ShoppingListId),
+      PurchaseId.Create(parameters.PurchaseId),
+      UserId.Create(parameters.BuyerId),
+      ShoppingListId.Create(parameters.ShoppingListId),
       PurchaseTime.Create(parameters.PurchasedAt),
       purchaseItems
     );

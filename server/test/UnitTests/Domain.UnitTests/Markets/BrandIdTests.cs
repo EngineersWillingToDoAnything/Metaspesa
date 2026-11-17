@@ -5,24 +5,24 @@ namespace Metaspesa.Domain.UnitTests.Markets;
 
 public static class BrandIdTests {
   [Fact]
-  public static void Constructor_RejectsEmptyGuid() {
+  public static void Create_RejectsEmptyGuid() {
     // Arrange
     Guid value = Guid.Empty;
 
     // Act
-    Exception? exception = Record.Exception(() => new BrandId(value));
+    Exception? exception = Record.Exception(() => BrandId.Create(value));
 
     // Assert
     Assert.IsType<InvalidBrandIdException>(exception);
   }
 
   [Fact]
-  public static void Constructor_PreservesGuid() {
+  public static void Create_PreservesGuid() {
     // Arrange
     var expected = Guid.Parse("00000000-0000-7000-8000-000000000001");
 
     // Act
-    var id = new BrandId(expected);
+    var id = BrandId.Create(expected);
 
     // Assert
     Assert.Equal(expected, id.Value);

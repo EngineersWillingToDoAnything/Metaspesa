@@ -179,7 +179,7 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
     };
     _context.ProductFormats.Add(format);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-    return new ProductFormatId(format.Id);
+    return ProductFormatId.Create(format.Id);
   }
 
   private async Task<PriceSnapshotId> SeedSnapshotAsync(
@@ -195,7 +195,7 @@ public class PostgreSqlPurchasePriceSnapshotReaderTests : IAsyncLifetime {
     };
     _context.PriceSnapshots.Add(snapshot);
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-    return new PriceSnapshotId(snapshot.Id);
+    return PriceSnapshotId.Create(snapshot.Id);
   }
 
   private static DateTime UtcDate(int year, int month, int day) =>

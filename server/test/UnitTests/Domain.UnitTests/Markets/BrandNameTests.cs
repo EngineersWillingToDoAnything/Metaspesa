@@ -4,25 +4,37 @@ using Metaspesa.Domain.Markets.Errors;
 namespace Metaspesa.Domain.UnitTests.Markets;
 
 public static class BrandNameTests {
+  [Theory]
+  [InlineData("")]
+  [InlineData(" ")]
+  [InlineData(" Legacy Brand ")]
+  public static void Constructor_PreservesStoredTextWithoutValidationOrTrimming(string storedName) {
+    // Act
+    var name = new BrandName(storedName);
+
+    // Assert
+    Assert.Equal(storedName, name.Value);
+  }
+
   [Fact]
-  public static void Constructor_TrimsWhitespace() {
+  public static void Create_TrimsWhitespace() {
     // Arrange
     string rawName = " Brand ";
 
     // Act
-    var name = new BrandName(rawName);
+    var name = BrandName.Create(rawName);
 
     // Assert
     Assert.Equal("Brand", name.Value);
   }
 
   [Fact]
-  public static void Constructor_PreservesDisplayCasing() {
+  public static void Create_PreservesDisplayCasing() {
     // Arrange
     string rawName = "Campofrío";
 
     // Act
-    var name = new BrandName(rawName);
+    var name = BrandName.Create(rawName);
 
     // Assert
     Assert.Equal(rawName, name.Value);
@@ -32,12 +44,12 @@ public static class BrandNameTests {
   [InlineData(null)]
   [InlineData("")]
   [InlineData(" ")]
-  public static void Constructor_RejectsBlankName(string? rawName) {
+  public static void Create_RejectsBlankName(string? rawName) {
     // Arrange
     // The theory supplies invalid primitive names.
 
     // Act
-    Exception? exception = Record.Exception(() => new BrandName(rawName!));
+    Exception? exception = Record.Exception(() => BrandName.Create(rawName!));
 
     // Assert
     Assert.IsType<InvalidBrandNameException>(exception);
@@ -46,8 +58,8 @@ public static class BrandNameTests {
   [Fact]
   public static void Equality_IgnoresCase() {
     // Arrange
-    var left = new BrandName("Brand");
-    var right = new BrandName("BRAND");
+    var left = BrandName.Create("Brand");
+    var right = BrandName.Create("BRAND");
 
     // Act
     bool equal = left.Equals(right);
@@ -59,8 +71,8 @@ public static class BrandNameTests {
   [Fact]
   public static void Equality_RecognizesEquivalentUnicodeText() {
     // Arrange
-    var left = new BrandName("Café");
-    var right = new BrandName("CAFE\u0301");
+    var left = BrandName.Create("Café");
+    var right = BrandName.Create("CAFE\u0301");
 
     // Act
     bool equal = left.Equals(right);
@@ -72,8 +84,8 @@ public static class BrandNameTests {
   [Fact]
   public static void Equality_PreservesAccentDifferences() {
     // Arrange
-    var left = new BrandName("Cafe");
-    var right = new BrandName("Café");
+    var left = BrandName.Create("Cafe");
+    var right = BrandName.Create("Café");
 
     // Act
     bool equal = left.Equals(right);
@@ -85,8 +97,8 @@ public static class BrandNameTests {
   [Fact]
   public static void HashCode_MatchesForEqualNames() {
     // Arrange
-    var left = new BrandName("Brand");
-    var right = new BrandName("BRAND");
+    var left = BrandName.Create("Brand");
+    var right = BrandName.Create("BRAND");
     int expected = left.GetHashCode();
 
     // Act

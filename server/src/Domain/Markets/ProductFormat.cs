@@ -32,13 +32,13 @@ public sealed class ProductFormat {
     return new PreparedFormatObservation(
       Quantity.Create(observation.Quantity, observation.UnitOfMeasure),
       Money.Create(observation.Price),
-      new ImageUrl(observation.ImageUrl));
+      ImageUrl.Create(observation.ImageUrl));
   }
 
   internal static ProductFormat Create(
     PreparedFormatObservation observation, ObservationDate observedOn
   ) {
-    var id = new ProductFormatId(Uid.Create());
+    var id = ProductFormatId.Create(Uid.Create());
     var format = new ProductFormat(
       id,
       observation.Quantity,
@@ -56,7 +56,7 @@ public sealed class ProductFormat {
       new UnitOfMeasure(primitives.UnitOfMeasure));
     ImageUrl? imageUrl = primitives.ImageUrl is null
       ? null
-      : new ImageUrl(new Uri(primitives.ImageUrl, UriKind.Absolute));
+      : new ImageUrl(new Uri(primitives.ImageUrl, UriKind.RelativeOrAbsolute));
 
     return new ProductFormat(
       new ProductFormatId(primitives.Id),

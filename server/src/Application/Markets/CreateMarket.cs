@@ -16,7 +16,7 @@ public static class CreateMarket {
     ) {
       ArgumentNullException.ThrowIfNull(command);
 
-      var name = new MarketName(command.Name);
+      var name = MarketName.Create(command.Name);
       if (await repository.ExistsAsync(name.Value, cancellationToken)) {
         throw new MarketAlreadyExistsException(name);
       }

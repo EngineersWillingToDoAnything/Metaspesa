@@ -181,7 +181,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
     await _productRepository.SaveBatchAsync([other], TestContext.Current.CancellationToken);
 
     PagedResult<CatalogProduct> result = await _productRepository.GetProductsAsync(
-      new GetMarketProductsFilter(null, [new MarketId(market.Id)], null, new Pagination(1, 24)), TestContext.Current.CancellationToken);
+      new GetMarketProductsFilter(null, [MarketId.Create(market.Id)], null, new Pagination(1, 24)), TestContext.Current.CancellationToken);
 
     Assert.Equal(product.Id.Value, result.Values.Single().Id);
   }
@@ -199,7 +199,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
 
     PagedResult<CatalogProduct> result = await _productRepository.GetProductsAsync(
-      new GetMarketProductsFilter(null, [new MarketId(Guid.CreateVersion7())], null, new Pagination(1, 24)), TestContext.Current.CancellationToken);
+      new GetMarketProductsFilter(null, [MarketId.Create(Guid.CreateVersion7())], null, new Pagination(1, 24)), TestContext.Current.CancellationToken);
 
     Assert.Empty(result.Values);
   }
@@ -802,7 +802,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(observation.ProductName));
+    var identity = new ProductIdentity(MarketId.Create(observation.MarketId), BrandId.Create(observation.BrandId), new ProductName(observation.ProductName));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity], TestContext.Current.CancellationToken);
 
@@ -820,7 +820,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(observation.ProductName));
+    var identity = new ProductIdentity(MarketId.Create(observation.MarketId), BrandId.Create(observation.BrandId), new ProductName(observation.ProductName));
     var other = Product.Create(observation with { ProductName = "Bread" });
     await _productRepository.SaveBatchAsync([other], TestContext.Current.CancellationToken);
 
@@ -846,8 +846,8 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
     var other = Product.Create(observation with { MarketId = otherMarket.Id, BrandId = otherBrand.Id });
     await _productRepository.SaveBatchAsync([other], TestContext.Current.CancellationToken);
-    var firstKey = new ProductIdentity(new MarketId(market.Id), new BrandId(otherBrand.Id), new ProductName(observation.ProductName));
-    var secondKey = new ProductIdentity(new MarketId(otherMarket.Id), new BrandId(brand.Id), new ProductName(observation.ProductName));
+    var firstKey = new ProductIdentity(MarketId.Create(market.Id), BrandId.Create(otherBrand.Id), new ProductName(observation.ProductName));
+    var secondKey = new ProductIdentity(MarketId.Create(otherMarket.Id), BrandId.Create(brand.Id), new ProductName(observation.ProductName));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([firstKey, secondKey], TestContext.Current.CancellationToken);
 
@@ -868,7 +868,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation with { ProductName = storedName });
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(new MarketId(market.Id), new BrandId(brand.Id), ProductName.Create(requestedName));
+    var identity = new ProductIdentity(MarketId.Create(market.Id), BrandId.Create(brand.Id), ProductName.Create(requestedName));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity], TestContext.Current.CancellationToken);
 
@@ -886,7 +886,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(new MarketId(market.Id), new BrandId(brand.Id), ProductName.Create("MILK"));
+    var identity = new ProductIdentity(MarketId.Create(market.Id), BrandId.Create(brand.Id), ProductName.Create("MILK"));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity], TestContext.Current.CancellationToken);
 
@@ -904,7 +904,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(observation.ProductName));
+    var identity = new ProductIdentity(MarketId.Create(observation.MarketId), BrandId.Create(observation.BrandId), new ProductName(observation.ProductName));
     ProductIdentity equivalent = identity with { Name = ProductName.Create("MILK") };
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity, equivalent], TestContext.Current.CancellationToken);
@@ -927,8 +927,8 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
     var identity = new ProductIdentity(
-      new MarketId(observation.MarketId),
-      new BrandId(observation.BrandId),
+      MarketId.Create(observation.MarketId),
+      BrandId.Create(observation.BrandId),
       new ProductName(observation.ProductName));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity], TestContext.Current.CancellationToken);
@@ -957,8 +957,8 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
     await _productRepository.SaveBatchAsync(
       [product], TestContext.Current.CancellationToken);
     var identity = new ProductIdentity(
-      new MarketId(observation.MarketId),
-      new BrandId(observation.BrandId),
+      MarketId.Create(observation.MarketId),
+      BrandId.Create(observation.BrandId),
       new ProductName(observation.ProductName));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository
@@ -981,7 +981,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
     var product = Product.Create(observation);
     await _productRepository.SaveBatchAsync([product], TestContext.Current.CancellationToken);
-    var identity = new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(observation.ProductName));
+    var identity = new ProductIdentity(MarketId.Create(observation.MarketId), BrandId.Create(observation.BrandId), new ProductName(observation.ProductName));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity], TestContext.Current.CancellationToken);
 
@@ -1020,7 +1020,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
     var observation = new ProductObservationParams(
       market.Id, brand.Id, "Milk", new DateOnly(2026, 7, 28),
       [new ProductFormatObservationParams(1, "l", 1.99m, new Uri("https://example.com/milk.png"))]);
-    var identity = new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(observation.ProductName));
+    var identity = new ProductIdentity(MarketId.Create(observation.MarketId), BrandId.Create(observation.BrandId), new ProductName(observation.ProductName));
 
     IReadOnlyDictionary<ProductIdentity, Product> actual = await _productRepository.GetBatchAsync([identity], TestContext.Current.CancellationToken);
 
@@ -1082,7 +1082,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
       .Select(index => Product.Create(observation with { ProductName = $"Product {index}" }))];
     await _productRepository.SaveBatchAsync(products, TestContext.Current.CancellationToken);
     ProductIdentity[] keys = [.. Enumerable.Range(0, productCount).Select(index =>
-      new ProductIdentity(new MarketId(market.Id), new BrandId(brand.Id), new ProductName($"Product {index}")))];
+      new ProductIdentity(MarketId.Create(market.Id), BrandId.Create(brand.Id), new ProductName($"Product {index}")))];
     var commands = new CommandCounter();
     await using MainContext observed = _fixture.CreateContext(commands);
     var repository = new PostgreSqlProductRepository(observed);
@@ -1158,7 +1158,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
       .Select(index => Product.Create(observation with { ProductName = $"Product {index}" }))];
     await _productRepository.SaveBatchAsync(products, TestContext.Current.CancellationToken);
     ProductIdentity[] keys = [.. Enumerable.Range(0, productCount).Select(index =>
-      new ProductIdentity(new MarketId(market.Id), new BrandId(brand.Id), new ProductName($"Product {index}")))];
+      new ProductIdentity(MarketId.Create(market.Id), BrandId.Create(brand.Id), new ProductName($"Product {index}")))];
     var commands = new CommandCounter();
     await using MainContext observed = _fixture.CreateContext(commands);
     var repository = new PostgreSqlProductRepository(observed);
@@ -1303,7 +1303,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
     foreach (DateOnly observedOn in new[] { observation.ObservedOn, observation.ObservedOn.AddDays(1) }) {
       foreach (Product[] batch in products.Chunk(1000)) {
         ProductIdentity[] identities = [.. batch.Select(product =>
-          new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(productNames[product.Id])))];
+          new ProductIdentity(MarketId.Create(observation.MarketId), BrandId.Create(observation.BrandId), new ProductName(productNames[product.Id])))];
         IReadOnlyDictionary<ProductIdentity, Product> loaded =
           await _productRepository.GetBatchAsync(identities, TestContext.Current.CancellationToken);
         foreach (Product product in loaded.Values) {
@@ -1345,7 +1345,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
     }
     foreach (Product[] batch in products.Chunk(1000)) {
       ProductIdentity[] identities = [.. batch.Select(product =>
-        new ProductIdentity(new MarketId(observation.MarketId), new BrandId(observation.BrandId), new ProductName(productNames[product.Id])))];
+        new ProductIdentity(MarketId.Create(observation.MarketId), BrandId.Create(observation.BrandId), new ProductName(productNames[product.Id])))];
       IReadOnlyDictionary<ProductIdentity, Product> loaded =
         await _productRepository.GetBatchAsync(identities, TestContext.Current.CancellationToken);
       foreach (Product product in loaded.Values) {
@@ -1359,7 +1359,7 @@ public class PostgreSqlProductRepositoryTests : IAsyncLifetime {
     }
 
     PagedResult<CatalogProduct> actual = await _productRepository.GetProductsAsync(
-      new GetMarketProductsFilter("Product 1000", [new MarketId(market.Id)], null, new Pagination(1, 24)),
+      new GetMarketProductsFilter("Product 1000", [MarketId.Create(market.Id)], null, new Pagination(1, 24)),
       TestContext.Current.CancellationToken);
 
     Assert.Equal(2.99m, actual.Values.Single().Formats.Single().Price);

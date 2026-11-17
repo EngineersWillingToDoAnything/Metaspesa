@@ -19,7 +19,7 @@ public static class LoginUser {
       ArgumentNullException.ThrowIfNull(query);
 
       User? user = await userRepository.GetUserByUsernameAsync(
-        new Username(query.Username),
+        Username.Create(query.Username),
         cancellationToken);
 
       if (user is null || !hasher.VerifyHash(query.Password, user.PasswordHash.Value)) {

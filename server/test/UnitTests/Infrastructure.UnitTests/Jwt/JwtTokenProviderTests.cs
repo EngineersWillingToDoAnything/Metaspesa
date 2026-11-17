@@ -32,11 +32,7 @@ public static class JwtTokenProviderTests {
     }
 
     private static User TestUser(Role role = Role.Shopper) =>
-      User.Rehydrate(
-        new UserId(Guid.CreateVersion7()),
-        new Username("testuser"),
-        new PasswordHash("hashed"),
-        role);
+      User.Rehydrate(new UserPrimitives(Guid.CreateVersion7(), "testuser", "hashed", (int)role));
 
     private static JwtSecurityToken ParseToken(string tokenValue) =>
       new JwtSecurityTokenHandler().ReadJwtToken(tokenValue);

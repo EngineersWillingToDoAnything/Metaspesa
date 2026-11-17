@@ -5,6 +5,45 @@ using Metaspesa.Domain.Shopping.Events;
 namespace Metaspesa.Domain.UnitTests.Shopping;
 
 public class ShoppingListTests {
+  [Fact]
+  public void Rehydrate_PreservesAnInvalidPersistedNameWithoutNormalization() {
+    // Arrange
+    const string storedName = " ";
+    var persisted = new ShoppingListPrimitives(Guid.Empty, storedName, false, null, [], []);
+
+    // Act
+    var list = ShoppingList.Rehydrate(persisted);
+
+    // Assert
+    Assert.True(list.IsNamed(storedName));
+  }
+
+  [Fact]
+  public void Rehydrate_RestoresRawOwnersWithoutCreationValidation() {
+    // Arrange
+    var persisted = new ShoppingListPrimitives(Guid.Empty, null, true, null, [Guid.Empty, Guid.Empty], []);
+
+    // Act
+    var list = ShoppingList.Rehydrate(persisted);
+
+    // Assert
+    Assert.True(list.IsOwnedBy(Guid.Empty));
+  }
+
+  [Fact]
+  public void Rehydrate_RestoresRawItemsWithoutCreationValidation() {
+    // Arrange
+    var persistedItem = new ShoppingItemPrimitives(Guid.Empty, Guid.Empty, 0, true, null);
+    var expected = new AddItemsParams(persistedItem.ProductFormatId, persistedItem.Amount, persistedItem.IsChecked);
+    var persisted = new ShoppingListPrimitives(Guid.Empty, null, true, null, [], [persistedItem]);
+
+    // Act
+    var list = ShoppingList.Rehydrate(persisted);
+
+    // Assert
+    Assert.True(list.IncludesItem(expected));
+  }
+
   [Fact(DisplayName = "Creates list with given name")]
   public void Create_CreatesList_WithGivenName() {
     // Act

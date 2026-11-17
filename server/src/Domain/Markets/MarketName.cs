@@ -6,11 +6,15 @@ public readonly record struct MarketName {
   public string Value { get; }
 
   public MarketName(string value) {
+    Value = value;
+  }
+
+  public static MarketName Create(string value) {
     if (string.IsNullOrWhiteSpace(value)) {
       throw new InvalidMarketNameException(value);
     }
 
-    Value = value.Trim();
+    return new MarketName(value.Trim());
   }
 
   public bool Equals(MarketName other) =>

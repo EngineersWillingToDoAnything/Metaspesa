@@ -6,6 +6,31 @@ namespace Metaspesa.Domain.UnitTests.Shopping;
 
 public class PurchaseTests {
   [Fact]
+  public void Rehydrate_RestoresRawItemsWithoutCreationValidation() {
+    // Arrange
+    var persistedItem = new PurchaseItemPrimitives(Guid.Empty, Guid.Empty, 0);
+    var persisted = new PurchasePrimitives(Guid.Empty, Guid.Empty, Guid.Empty, default, [persistedItem]);
+
+    // Act
+    var purchase = Purchase.Rehydrate(persisted);
+
+    // Assert
+    Assert.True(purchase.IncludesItem(persistedItem.PriceSnapshotId, persistedItem.Amount));
+  }
+
+  [Fact]
+  public void Rehydrate_AcceptsAnEmptyPersistedItemCollection() {
+    // Arrange
+    var persisted = new PurchasePrimitives(Guid.Empty, null, null, default, []);
+
+    // Act
+    var purchase = Purchase.Rehydrate(persisted);
+
+    // Assert
+    Assert.Equal(persisted.Id, purchase.Id.Value);
+  }
+
+  [Fact]
   public void Create_PreservesIdentity() {
     // Arrange
     CreatePurchaseParams parameters = CreateParameters();

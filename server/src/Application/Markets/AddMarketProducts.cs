@@ -68,8 +68,8 @@ public static class AddMarketProducts {
     private static NamedProduct[] MapNamedProducts(Command command) {
       return [.. command.Products.Select(product => new NamedProduct(
         product,
-        new MarketName(product.MarketName!),
-        new BrandName(product.BrandName!),
+        MarketName.Create(product.MarketName!),
+        BrandName.Create(product.BrandName!),
         ProductName.Create(product.Name!)))
       ];
     }
@@ -101,8 +101,8 @@ public static class AddMarketProducts {
     ) {
       return [..products
         .GroupBy(product => new ProductIdentity(
-          new MarketId(markets[product.Market]),
-          new BrandId(brands[product.Brand]),
+          MarketId.Create(markets[product.Market]),
+          BrandId.Create(brands[product.Brand]),
           product.Name))
         .Select(group => new ObservationGroup(
           group.Key,
@@ -128,7 +128,7 @@ public static class AddMarketProducts {
         [.. products.Select(product => product.Market.Value).Distinct(StringComparer.InvariantCultureIgnoreCase)],
         cancellationToken);
       var markets = resolvedMarkets.ToDictionary(
-        pair => new MarketName(pair.Key), pair => pair.Value);
+        pair => MarketName.Create(pair.Key), pair => pair.Value);
 
       NamedProduct? unknownMarket = products.FirstOrDefault(product =>
         !markets.ContainsKey(product.Market));
@@ -146,7 +146,7 @@ public static class AddMarketProducts {
         [.. products.Select(product => product.Brand.Value).Distinct(StringComparer.InvariantCultureIgnoreCase)],
         cancellationToken);
       var brands = resolvedBrands.ToDictionary(
-        pair => new BrandName(pair.Key), pair => pair.Value);
+        pair => BrandName.Create(pair.Key), pair => pair.Value);
 
       NamedProduct? unknownBrand = products.FirstOrDefault(product =>
         !brands.ContainsKey(product.Brand));

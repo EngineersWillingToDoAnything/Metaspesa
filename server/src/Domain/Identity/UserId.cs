@@ -6,11 +6,15 @@ public readonly record struct UserId {
   public Guid Value { get; }
 
   public UserId(Guid value) {
+    Value = value;
+  }
+
+  public static UserId Create(Guid value) {
     if (value == Guid.Empty) {
       throw new InvalidUserIdException();
     }
 
-    Value = value;
+    return new UserId(value);
   }
 
   public override string ToString() => Value.ToString();

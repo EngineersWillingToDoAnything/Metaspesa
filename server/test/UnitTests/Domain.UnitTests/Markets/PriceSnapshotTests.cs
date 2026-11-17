@@ -5,6 +5,18 @@ namespace Metaspesa.Domain.UnitTests.Markets;
 
 public class PriceSnapshotTests {
   [Fact]
+  public void Rehydrate_RestoresRawPriceAndDateWithoutCreationValidation() {
+    // Arrange
+    var persisted = new PriceSnapshotPrimitives(Guid.Empty, -1m, default);
+
+    // Act
+    var snapshot = PriceSnapshot.Rehydrate(persisted);
+
+    // Assert
+    Assert.True(snapshot.MatchesObservation(persisted.Price, persisted.ObservedOn));
+  }
+
+  [Fact]
   public void Create_GeneratesVersion7Id() {
     // Arrange
     var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));

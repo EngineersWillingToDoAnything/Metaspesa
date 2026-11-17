@@ -6,11 +6,15 @@ public readonly record struct ShoppingListName {
   public string Value { get; }
 
   public ShoppingListName(string value) {
+    Value = value;
+  }
+
+  public static ShoppingListName Create(string value) {
     if (string.IsNullOrWhiteSpace(value)) {
       throw new InvalidShoppingListNameException();
     }
 
-    Value = value.Trim();
+    return new ShoppingListName(value.Trim());
   }
 
   public override string ToString() => Value;

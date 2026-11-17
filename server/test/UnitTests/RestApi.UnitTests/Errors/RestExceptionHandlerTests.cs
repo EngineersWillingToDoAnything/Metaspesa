@@ -24,7 +24,9 @@ public class RestExceptionHandlerTests {
     // Arrange
     var http = new DefaultHttpContext();
     var failure = new UnknownProductBrandException(
-      new MarketName("Market"), new ProductName("Milk"), new BrandName("Brand"));
+      MarketName.Create("Market"),
+      ProductName.Create("Milk"),
+      BrandName.Create("Brand"));
 
     // Act
     await _handler.TryHandleAsync(http, failure, TestContext.Current.CancellationToken);
@@ -44,7 +46,9 @@ public class RestExceptionHandlerTests {
     // Arrange
     var http = new DefaultHttpContext();
     var failure = new UnknownProductBrandException(
-      new MarketName("Market"), new ProductName("Milk"), new BrandName("Brand"));
+      MarketName.Create("Market"),
+      ProductName.Create("Milk"),
+      BrandName.Create("Brand"));
 
     // Act
     await _handler.TryHandleAsync(http, failure, TestContext.Current.CancellationToken);
@@ -57,7 +61,7 @@ public class RestExceptionHandlerTests {
   public async Task UnknownMarket_ReturnsExpectedStatus() {
     // Arrange
     var http = new DefaultHttpContext();
-    var failure = new UnknownMarketException(new MarketName("Market"));
+    var failure = new UnknownMarketException(MarketName.Create("Market"));
 
     // Act
     await _handler.TryHandleAsync(http, failure, TestContext.Current.CancellationToken);
@@ -74,7 +78,7 @@ public class RestExceptionHandlerTests {
   ) {
     // Arrange
     var http = new DefaultHttpContext();
-    var failure = new UnknownMarketException(new MarketName("Market"));
+    var failure = new UnknownMarketException(MarketName.Create("Market"));
 
     // Act
     await _handler.TryHandleAsync(http, failure, TestContext.Current.CancellationToken);
@@ -87,7 +91,7 @@ public class RestExceptionHandlerTests {
   public async Task ConflictingObservation_ReturnsBadRequest() {
     var http = new DefaultHttpContext();
     var failure = new ConflictingPriceObservationException(
-      new ProductFormatId(Guid.CreateVersion7()),
+      ProductFormatId.Create(Guid.CreateVersion7()),
       ObservationDate.Create(new DateOnly(2026, 7, 28)));
 
     await _handler.TryHandleAsync(http, failure, TestContext.Current.CancellationToken);
@@ -99,7 +103,7 @@ public class RestExceptionHandlerTests {
   public async Task ConflictingObservation_PreservesDomainErrorCode() {
     var http = new DefaultHttpContext();
     var failure = new ConflictingPriceObservationException(
-      new ProductFormatId(Guid.CreateVersion7()),
+      ProductFormatId.Create(Guid.CreateVersion7()),
       ObservationDate.Create(new DateOnly(2026, 7, 28)));
 
     await _handler.TryHandleAsync(http, failure, TestContext.Current.CancellationToken);

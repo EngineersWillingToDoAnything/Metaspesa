@@ -6,11 +6,15 @@ public readonly record struct BrandName {
   public string Value { get; }
 
   public BrandName(string value) {
+    Value = value;
+  }
+
+  public static BrandName Create(string value) {
     if (string.IsNullOrWhiteSpace(value)) {
       throw new InvalidBrandNameException(value);
     }
 
-    Value = value.Trim();
+    return new BrandName(value.Trim());
   }
 
   public bool Equals(BrandName other) =>

@@ -13,8 +13,8 @@ public sealed class Brand : AggregateRoot {
   }
 
   public static Brand Create(string rawName) {
-    BrandId id = new(Uid.Create());
-    BrandName name = new(rawName);
+    var id = BrandId.Create(Uid.Create());
+    var name = BrandName.Create(rawName);
 
     return new Brand(id, name);
   }
@@ -22,7 +22,7 @@ public sealed class Brand : AggregateRoot {
   public static Brand Rehydrate(BrandPrimitives primitives) {
     ArgumentNullException.ThrowIfNull(primitives);
 
-    return new Brand(new(primitives.Id), new(primitives.Name));
+    return new Brand(new BrandId(primitives.Id), new BrandName(primitives.Name));
   }
 
   public BrandPrimitives ToPrimitives() {

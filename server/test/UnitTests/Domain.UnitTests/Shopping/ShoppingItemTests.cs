@@ -1,10 +1,22 @@
-using Metaspesa.Domain.Markets.Errors;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
 
 namespace Metaspesa.Domain.UnitTests.Shopping;
 
 public class ShoppingItemTests {
+  [Fact]
+  public void Rehydrate_RestoresRawValuesWithoutCreationValidation() {
+    // Arrange
+    var persisted = new ShoppingItemPrimitives(Guid.Empty, Guid.Empty, 0, true, null);
+    var expected = new AddItemsParams(persisted.ProductFormatId, persisted.Amount, persisted.IsChecked);
+
+    // Act
+    var item = ShoppingItem.Rehydrate(persisted);
+
+    // Assert
+    Assert.True(item.MatchesItem(expected));
+  }
+
   [Fact]
   public void Create_AssignsItemDetails() {
     // Arrange

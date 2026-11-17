@@ -25,7 +25,7 @@ public sealed class Product : AggregateRoot {
     ArgumentNullException.ThrowIfNull(observation);
 
     var identity = ProductIdentity.Create(observation);
-    var product = new Product(new ProductId(Uid.Create()), identity, []);
+    var product = new Product(ProductId.Create(Uid.Create()), identity, []);
     product.RegisterObservation(observation);
     return product;
   }

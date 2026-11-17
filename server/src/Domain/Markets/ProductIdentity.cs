@@ -7,8 +7,8 @@ public readonly record struct ProductIdentity(
 ) {
   internal static ProductIdentity Create(ProductObservationParams observation) {
     return new ProductIdentity(
-      new MarketId(observation.MarketId),
-      new BrandId(observation.BrandId),
+      MarketId.Create(observation.MarketId),
+      BrandId.Create(observation.BrandId),
       ProductName.Create(observation.ProductName));
   }
 };

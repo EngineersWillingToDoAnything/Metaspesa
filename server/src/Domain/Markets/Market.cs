@@ -17,9 +17,9 @@ public sealed class Market : AggregateRoot {
   public static Market Create(
     string rawName, Uri? rawLogoUrl = null
   ) {
-    var id = new MarketId(Uid.Create());
-    var name = new MarketName(rawName);
-    ImageUrl? logoUrl = rawLogoUrl is null ? null : new ImageUrl(rawLogoUrl);
+    var id = MarketId.Create(Uid.Create());
+    var name = MarketName.Create(rawName);
+    ImageUrl? logoUrl = rawLogoUrl is null ? null : ImageUrl.Create(rawLogoUrl);
 
     return new(id, name, logoUrl);
   }
@@ -31,7 +31,7 @@ public sealed class Market : AggregateRoot {
     var name = new MarketName(primitives.Name);
     ImageUrl? logoUrl = primitives.LogoUrl is null
       ? null
-      : new ImageUrl(new Uri(primitives.LogoUrl));
+      : new ImageUrl(new Uri(primitives.LogoUrl, UriKind.RelativeOrAbsolute));
 
     return new(id, name, logoUrl);
   }

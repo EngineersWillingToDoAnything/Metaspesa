@@ -16,7 +16,7 @@ public static class CreateBrand {
     ) {
       ArgumentNullException.ThrowIfNull(command);
 
-      var name = new BrandName(command.Name);
+      var name = BrandName.Create(command.Name);
       if (await repository.ExistsAsync(name.Value, cancellationToken)) {
         throw new BrandAlreadyExistsException(name);
       }
