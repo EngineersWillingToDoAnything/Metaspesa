@@ -54,8 +54,8 @@ public static class ProductDbEntityTest {
       SuperMarketId = Guid.CreateVersion7(),
     };
     var expected = new ProductIdentity(
-      new MarketId(entity.SuperMarketId),
-      new BrandId(entity.BrandId),
+      MarketId.Create(entity.SuperMarketId),
+      BrandId.Create(entity.BrandId),
       new ProductName(entity.Name));
 
     // Act

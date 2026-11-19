@@ -6,10 +6,14 @@ public readonly record struct PositiveAmount {
   public int Value { get; }
 
   public PositiveAmount(int value) {
+    Value = value;
+  }
+
+  public static PositiveAmount Create(int value) {
     if (value <= 0) {
       throw new InvalidPositiveAmountException(value);
     }
 
-    Value = value;
+    return new PositiveAmount(value);
   }
 }

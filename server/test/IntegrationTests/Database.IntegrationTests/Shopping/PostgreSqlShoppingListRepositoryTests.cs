@@ -808,6 +808,6 @@ public class PostgreSqlShoppingListRepositoryTests : IAsyncLifetime {
       ObservedOn = DateOnly.FromDateTime(RemovedAt.AddDays(-1)),
     });
     await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
-    return new ProductFormatId(format.Id);
+    return ProductFormatId.Create(format.Id);
   }
 }

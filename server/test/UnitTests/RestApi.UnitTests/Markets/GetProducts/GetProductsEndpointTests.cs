@@ -2,7 +2,6 @@ using System.Text.Json;
 using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Markets;
 using Metaspesa.Application.Markets;
-using Metaspesa.Domain.Markets;
 using Metaspesa.Domain.Markets.Errors;
 using Metaspesa.RestApi.Markets.GetProducts;
 using Microsoft.AspNetCore.Builder;
@@ -44,8 +43,8 @@ public static class GetProductsEndpointTests {
 
     GetMarketProductsFilter filter = GetProductsEndpoint.ParseFilter(request);
 
-    Assert.Equal([new MarketId(FirstFilterMarketId),
-      new MarketId(SecondFilterMarketId)], filter.MarketIds);
+    Assert.Equal([Domain.Markets.MarketId.Create(FirstFilterMarketId),
+      Domain.Markets.MarketId.Create(SecondFilterMarketId)], filter.MarketIds);
     Assert.Equal(CatalogSort.PriceDesc, filter.Sort);
     Assert.Equal(3, filter.Pagination.Index);
     Assert.Equal(10, filter.Pagination.Size);

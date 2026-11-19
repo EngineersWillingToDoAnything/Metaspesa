@@ -38,7 +38,7 @@ public class GetMarketProductsFilterTests {
 
   [Fact]
   public void Constructor_KeepsAllSelectedMarketIds() {
-    MarketId[] marketIds = [new MarketId(Guid.Parse("00000000-0000-7000-8000-000000000002")), new MarketId(Guid.Parse("00000000-0000-7000-8000-000000000004"))];
+    MarketId[] marketIds = [MarketId.Create(Guid.Parse("00000000-0000-7000-8000-000000000002")), MarketId.Create(Guid.Parse("00000000-0000-7000-8000-000000000004"))];
 
     var filter = new GetMarketProductsFilter(
       null, marketIds, null, new Pagination(1, 24));
@@ -48,13 +48,13 @@ public class GetMarketProductsFilterTests {
 
   [Fact]
   public void Constructor_CopiesMarketIdsSoLaterInputChangesDoNotAlterFilter() {
-    MarketId[] marketIds = [new MarketId(Guid.Parse("00000000-0000-7000-8000-000000000002"))];
+    MarketId[] marketIds = [MarketId.Create(Guid.Parse("00000000-0000-7000-8000-000000000002"))];
     var filter = new GetMarketProductsFilter(
       null, marketIds, null, new Pagination(1, 24));
 
-    marketIds[0] = new MarketId(Guid.Parse("00000000-0000-7000-8000-000000000004"));
+    marketIds[0] = MarketId.Create(Guid.Parse("00000000-0000-7000-8000-000000000004"));
 
-    Assert.Equal<MarketId>([new MarketId(Guid.Parse("00000000-0000-7000-8000-000000000002"))], filter.MarketIds);
+    Assert.Equal<MarketId>([MarketId.Create(Guid.Parse("00000000-0000-7000-8000-000000000002"))], filter.MarketIds);
   }
 
   [Fact]

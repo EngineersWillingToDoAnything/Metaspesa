@@ -6,6 +6,21 @@ namespace Metaspesa.Domain.UnitTests.Markets;
 
 public class ProductFormatTests {
   [Fact]
+  public void Rehydrate_RestoresRelativeImageWithoutCreationValidation() {
+    // Arrange
+    var image = new Uri("legacy/image.png", UriKind.Relative);
+    var persisted = new ProductFormatPrimitives(
+      Guid.Empty, 0, "legacy", image.ToString(),
+      new PriceSnapshotPrimitives(Guid.Empty, -1m, default), []);
+
+    // Act
+    var format = ProductFormat.Rehydrate(persisted);
+
+    // Assert
+    Assert.True(format.IsIllustratedBy(image));
+  }
+
+  [Fact]
   public void PrepareObservation_RejectsNullObservation() {
     // Act
     static void action() => ProductFormat.PrepareObservation(null!);
@@ -20,7 +35,7 @@ public class ProductFormatTests {
     var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"), Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
 
     // Act
     var format = ProductFormat.Create(prepared, observedOn);
@@ -36,7 +51,7 @@ public class ProductFormatTests {
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
 
     // Act
     var format = ProductFormat.Create(prepared, observedOn);
@@ -52,7 +67,7 @@ public class ProductFormatTests {
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
 
     // Act
     var format = ProductFormat.Create(prepared, observedOn);
@@ -68,7 +83,7 @@ public class ProductFormatTests {
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
 
     // Act
     var format = ProductFormat.Create(prepared, observedOn);
@@ -84,7 +99,7 @@ public class ProductFormatTests {
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var original = ProductFormat.Create(prepared, observedOn);
 
     // Act
@@ -103,7 +118,7 @@ public class ProductFormatTests {
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var original = ProductFormat.Create(prepared, observedOn);
     var legacyQuantity = new Quantity(0, new UnitOfMeasure("legacy"));
     ProductFormatPrimitives persisted = original.ToPrimitives() with {
@@ -125,7 +140,7 @@ public class ProductFormatTests {
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var format = ProductFormat.Create(prepared, observedOn);
     var later = ObservationDate.Create(observedOn.Value.AddDays(1));
 
@@ -143,7 +158,7 @@ public class ProductFormatTests {
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var format = ProductFormat.Create(prepared, observedOn);
     var later = ObservationDate.Create(observedOn.Value.AddDays(1));
     var laterPrice = Money.Create(2.49m);
@@ -166,7 +181,7 @@ public class ProductFormatTests {
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var format = ProductFormat.Create(prepared, observedOn);
     var incoming = ObservationDate.Create(observedOn.Value.AddDays(daysLater));
 
@@ -188,7 +203,7 @@ public class ProductFormatTests {
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var format = ProductFormat.Create(prepared, observedOn);
     var incoming = ObservationDate.Create(observedOn.Value.AddDays(daysLater));
 
@@ -208,7 +223,7 @@ public class ProductFormatTests {
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var format = ProductFormat.Create(prepared, observedOn);
     var earlier = ObservationDate.Create(observedOn.Value.AddDays(-1));
 
@@ -226,7 +241,7 @@ public class ProductFormatTests {
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"),
       Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var format = ProductFormat.Create(prepared, observedOn);
 
     // Act
@@ -242,7 +257,7 @@ public class ProductFormatTests {
     var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"), Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var format = ProductFormat.Create(prepared, observedOn);
 
     var later = ObservationDate.Create(observedOn.Value.AddDays(1));
@@ -261,7 +276,7 @@ public class ProductFormatTests {
     var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"), Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var format = ProductFormat.Create(prepared, observedOn);
 
     _ = format.RecordSnapshot(Money.Create(2.49m), ObservationDate.Create(observedOn.Value.AddDays(1)));
@@ -284,7 +299,7 @@ public class ProductFormatTests {
     var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"), Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var format = ProductFormat.Create(prepared, observedOn);
 
     var incoming = ObservationDate.Create(observedOn.Value.AddDays(daysLater));
@@ -306,7 +321,7 @@ public class ProductFormatTests {
     var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"), Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var format = ProductFormat.Create(prepared, observedOn);
 
     var incoming = ObservationDate.Create(observedOn.Value.AddDays(daysLater));
@@ -324,7 +339,7 @@ public class ProductFormatTests {
     var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"), Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var format = ProductFormat.Create(prepared, observedOn);
 
     // Act
@@ -340,7 +355,7 @@ public class ProductFormatTests {
     var observedOn = ObservationDate.Create(new DateOnly(2026, 7, 28));
     var prepared = new PreparedFormatObservation(
       Quantity.Create(1, "l"), Money.Create(1.99m),
-      new ImageUrl(new Uri("https://example.com/milk.png")));
+      ImageUrl.Create(new Uri("https://example.com/milk.png")));
     var original = ProductFormat.Create(prepared, observedOn);
 
     // Act

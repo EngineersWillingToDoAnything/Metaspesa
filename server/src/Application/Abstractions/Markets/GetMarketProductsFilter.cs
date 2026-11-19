@@ -13,7 +13,7 @@ public sealed record GetMarketProductsFilter {
   ) {
     ArgumentNullException.ThrowIfNull(pagination);
     ArgumentNullException.ThrowIfNull(marketIds);
-    MarketIds = [.. marketIds.Select(id => new MarketId(id.Value))];
+    MarketIds = [.. marketIds.Select(id => MarketId.Create(id.Value))];
     BrandNameSegment = brandNameSegment;
     NameSegment = nameSegment;
     Pagination = pagination;

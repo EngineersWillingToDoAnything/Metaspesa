@@ -31,7 +31,7 @@ public class GetMarketProductsHandlerTest {
   [Fact]
   public async Task Handle_PassesRequestedFilterToRepository() {
     var filter = new GetMarketProductsFilter(
-      "Milk", [new MarketId(Guid.Parse("00000000-0000-7000-8000-000000000001")), new MarketId(Guid.Parse("00000000-0000-7000-8000-000000000002"))], "Brand",
+      "Milk", [MarketId.Create(Guid.Parse("00000000-0000-7000-8000-000000000001")), MarketId.Create(Guid.Parse("00000000-0000-7000-8000-000000000002"))], "Brand",
       new Pagination(3, 10), CatalogSort.PriceDesc);
 
     await _handler

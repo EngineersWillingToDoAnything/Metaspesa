@@ -4,6 +4,18 @@ namespace Metaspesa.Domain.UnitTests.Shopping;
 
 public class PurchaseItemTests {
   [Fact]
+  public void Rehydrate_RestoresRawValuesWithoutCreationValidation() {
+    // Arrange
+    var persisted = new PurchaseItemPrimitives(Guid.Empty, Guid.Empty, 0);
+
+    // Act
+    var item = PurchaseItem.Rehydrate(persisted);
+
+    // Assert
+    Assert.True(item.MatchesPurchase(persisted.PriceSnapshotId, persisted.Amount));
+  }
+
+  [Fact]
   public void Create_GeneratesDistinctPurchaseItemIdentities() {
     // Arrange
     var priceSnapshotId = Guid.CreateVersion7();

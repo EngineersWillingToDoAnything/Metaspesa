@@ -1,3 +1,4 @@
+using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
@@ -17,7 +18,7 @@ public static class CreatePurchase {
   public class Handler(
     IPurchasePriceSnapshotReader priceSnapshotReader,
     IPurchaseRepository purchaseRepository
-  ) {
+  ) : ICommandHandler<Command, Guid> {
     public async Task<Guid> Handle(
       Command command, CancellationToken cancellationToken = default
     ) {

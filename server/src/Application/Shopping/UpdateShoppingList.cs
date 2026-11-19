@@ -1,3 +1,4 @@
+using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
@@ -7,7 +8,9 @@ namespace Metaspesa.Application.Shopping;
 public static class UpdateShoppingList {
   public record Command(Guid UserUid, Guid ShoppingListId, string NewName);
 
-  public class Handler(IShoppingListRepository repository) {
+  public class Handler(
+    IShoppingListRepository repository
+  ) : ICommandHandler<Command> {
     public async Task Handle(
       Command command, CancellationToken cancellationToken = default
     ) {

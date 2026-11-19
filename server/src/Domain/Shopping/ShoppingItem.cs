@@ -31,9 +31,9 @@ public sealed class ShoppingItem {
     AddItemsParams parameters
   ) {
     return new ShoppingItem(
-      new ShoppingItemId(Uid.Create()),
-      new ProductFormatId(parameters.ProductFormatUid),
-      new PositiveAmount(parameters.Amount),
+      ShoppingItemId.Create(Uid.Create()),
+      ProductFormatId.Create(parameters.ProductFormatUid),
+      PositiveAmount.Create(parameters.Amount),
       parameters.IsChecked,
       null);
   }
@@ -66,7 +66,7 @@ public sealed class ShoppingItem {
     }
 
     if (amount.HasValue) {
-      _amount = new PositiveAmount(amount.Value);
+      _amount = PositiveAmount.Create(amount.Value);
     }
     if (isChecked.HasValue) {
       _isChecked = isChecked.Value;

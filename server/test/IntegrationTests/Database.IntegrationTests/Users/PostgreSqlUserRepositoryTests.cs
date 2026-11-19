@@ -159,7 +159,7 @@ public static class PostgreSqlUserRepositoryTests {
 
       // Assert
       User? retrieved = await _repository.GetUserByUsernameAsync(
-        new Username("carol"), TestContext.Current.CancellationToken);
+        Username.Create("carol"), TestContext.Current.CancellationToken);
       Assert.Equal(HashedPassword, retrieved!.PasswordHash.Value);
     }
 
@@ -181,7 +181,7 @@ public static class PostgreSqlUserRepositoryTests {
 
       // Assert
       User? retrieved = await _repository.GetUserByUsernameAsync(
-        new Username("dave"), TestContext.Current.CancellationToken);
+        Username.Create("dave"), TestContext.Current.CancellationToken);
       Assert.Equal(Role.Shopper, retrieved!.Role);
     }
   }
@@ -207,12 +207,39 @@ public static class PostgreSqlUserRepositoryTests {
       GC.SuppressFinalize(this);
     }
 
+    [Fact]
+    public async Task GetUserByUsernameAsync_RestoresStoredHashWithoutCreationValidation() {
+      // Arrange
+      var role = new UserRoleDbEntity {
+        Id = UserRoleIds.Shopper,
+        Name = nameof(Role.Shopper),
+        Description = "Shopper role for testing"
+      };
+      var persisted = new UserDbEntity {
+        Uid = Guid.CreateVersion7(),
+        Username = "legacy_user",
+        EncryptedPassword = "",
+        RoleId = role.Id,
+        Role = role
+      };
+      _context.Users.Add(persisted);
+      await _context.SaveChangesAsync(TestContext.Current.CancellationToken);
+      _context.ChangeTracker.Clear();
+
+      // Act
+      User? restored = await _repository.GetUserByUsernameAsync(
+        Username.Create(persisted.Username), TestContext.Current.CancellationToken);
+
+      // Assert
+      Assert.Equal(persisted.EncryptedPassword, restored?.PasswordHash.Value);
+    }
+
     [Fact(
       DisplayName = "Returns null when user does not exist")]
     public async Task GetUserByUsernameAsync_ReturnsNull_WhenUserDoesNotExist() {
       // Act
       User? result = await _repository.GetUserByUsernameAsync(
-        new Username("nobody"), TestContext.Current.CancellationToken);
+        Username.Create("nobody"), TestContext.Current.CancellationToken);
 
       // Assert
       Assert.Null(result);
@@ -234,7 +261,7 @@ public static class PostgreSqlUserRepositoryTests {
 
       // Act
       User? result = await _repository.GetUserByUsernameAsync(
-        new Username("eve"), TestContext.Current.CancellationToken);
+        Username.Create("eve"), TestContext.Current.CancellationToken);
 
       // Assert
       Assert.NotNull(result);
@@ -257,7 +284,7 @@ public static class PostgreSqlUserRepositoryTests {
 
       // Act
       User? result = await _repository.GetUserByUsernameAsync(
-        new Username("FRANK"), TestContext.Current.CancellationToken);
+        Username.Create("FRANK"), TestContext.Current.CancellationToken);
 
       // Assert
       Assert.NotNull(result);
@@ -279,7 +306,7 @@ public static class PostgreSqlUserRepositoryTests {
 
       // Act
       User? result = await _repository.GetUserByUsernameAsync(
-        new Username("grace"), TestContext.Current.CancellationToken);
+        Username.Create("grace"), TestContext.Current.CancellationToken);
 
       // Assert
       Assert.Equal(Role.Shopper, result!.Role);
@@ -302,7 +329,7 @@ public static class PostgreSqlUserRepositoryTests {
 
       // Act
       User? result = await _repository.GetUserByUsernameAsync(
-        new Username("henry"), TestContext.Current.CancellationToken);
+        Username.Create("henry"), TestContext.Current.CancellationToken);
 
       // Assert
       Assert.Equal(expectedUid, result!.Id.Value);

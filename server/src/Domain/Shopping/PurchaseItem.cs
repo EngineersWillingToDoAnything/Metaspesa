@@ -24,9 +24,9 @@ public sealed class PurchaseItem {
     int amount
   ) {
     return new PurchaseItem(
-      new PurchaseItemId(Uid.Create()),
-      new PriceSnapshotId(priceSnapshotId),
-      new PositiveAmount(amount)
+      PurchaseItemId.Create(Uid.Create()),
+      PriceSnapshotId.Create(priceSnapshotId),
+      PositiveAmount.Create(amount)
     );
   }
 

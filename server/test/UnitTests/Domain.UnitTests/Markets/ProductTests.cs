@@ -5,6 +5,19 @@ namespace Metaspesa.Domain.UnitTests.Markets;
 
 public class ProductTests {
   [Fact]
+  public void Rehydrate_RestoresRawIdentityWithoutCreationValidation() {
+    // Arrange
+    const string storedName = " legacy product ";
+    var persisted = new ProductPrimitives(Guid.Empty, storedName, Guid.Empty, Guid.Empty, [], []);
+
+    // Act
+    var product = Product.Rehydrate(persisted);
+
+    // Assert
+    Assert.True(product.IsIdentifiedBy(persisted.MarketId, persisted.BrandId, storedName));
+  }
+
+  [Fact]
   public void Create_IncludesInitialFormat() {
     // Arrange
     var marketId = Guid.CreateVersion7();
@@ -648,7 +661,7 @@ public class ProductTests {
     var restored = Product.Rehydrate(original.ToPrimitives());
 
     // Assert
-    Assert.Empty(restored.DomainEvents);
+    Assert.Empty(restored.FlushDomainEvents());
   }
 
   [Fact]

@@ -5,31 +5,31 @@ namespace Metaspesa.Domain.UnitTests.Shopping;
 
 public class PurchaseItemIdTests {
   [Fact]
-  public void Constructor_PreservesIdentity() {
+  public void Create_PreservesIdentity() {
     var value = Guid.Parse("00000000-0000-7000-8000-000000000001");
 
-    var id = new PurchaseItemId(value);
+    var id = PurchaseItemId.Create(value);
 
     Assert.Equal(value, id.Value);
   }
 
   [Fact]
-  public void Constructor_RejectsEmptyId() {
+  public void Create_RejectsEmptyId() {
     Assert.Throws<InvalidPurchaseItemIdException>(() =>
-      new PurchaseItemId(Guid.Empty));
+      PurchaseItemId.Create(Guid.Empty));
   }
 
   [Fact]
   public void Equals_UsesIdentityValue() {
     var value = Guid.Parse("00000000-0000-7000-8000-000000000001");
 
-    Assert.Equal(new PurchaseItemId(value), new PurchaseItemId(value));
+    Assert.Equal(PurchaseItemId.Create(value), PurchaseItemId.Create(value));
   }
 
   [Fact]
   public void ToString_ReturnsPrimitiveIdentity() {
     var value = Guid.Parse("00000000-0000-7000-8000-000000000001");
-    var id = new PurchaseItemId(value);
+    var id = PurchaseItemId.Create(value);
 
     Assert.Equal(value.ToString(), id.ToString());
   }

@@ -35,10 +35,10 @@ public sealed class ShoppingList : AggregateRoot {
     Guid primitiveOwnerId,
     string? primitiveName
   ) {
-    var id = new ShoppingListId(Uid.Create());
-    var ownerId = new UserId(primitiveOwnerId);
+    var id = ShoppingListId.Create(Uid.Create());
+    var ownerId = UserId.Create(primitiveOwnerId);
     ShoppingListName? name = string.IsNullOrWhiteSpace(primitiveName)
-      ? null : new ShoppingListName(primitiveName);
+      ? null : ShoppingListName.Create(primitiveName);
 
     return new ShoppingList(id, [ownerId], name, [], null);
   }
@@ -48,7 +48,7 @@ public sealed class ShoppingList : AggregateRoot {
 
     return new ShoppingList(
       new ShoppingListId(primitives.Id),
-      primitives.OwnerIds.Select(o => new UserId(o)),
+      primitives.OwnerIds.Select(id => new UserId(id)),
       primitives.Name is null ? null : new ShoppingListName(primitives.Name),
       primitives.Items.Select(ShoppingItem.Rehydrate),
       primitives.DeletedAt);
@@ -65,7 +65,7 @@ public sealed class ShoppingList : AggregateRoot {
   }
 
   public void Update(string name) {
-    _name = new ShoppingListName(name);
+    _name = ShoppingListName.Create(name);
   }
 
   public void AddItems(IEnumerable<AddItemsParams> items) {

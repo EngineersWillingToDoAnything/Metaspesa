@@ -12,14 +12,14 @@ namespace Metaspesa.Application.UnitTests.Shopping;
 
 public class CheckoutShoppingListHandlerTests {
   private readonly IShoppingListRepository repository;
-  private readonly IClock clock;
+  private readonly TimeProvider clock;
   private readonly IDomainEventPublisher publisher;
 
   private readonly Handler handler;
 
   public CheckoutShoppingListHandlerTests() {
     repository = Substitute.For<IShoppingListRepository>();
-    clock = Substitute.For<IClock>();
+    clock = Substitute.For<TimeProvider>();
     publisher = Substitute.For<IDomainEventPublisher>();
 
     handler = new Handler(repository, clock, publisher);
@@ -63,7 +63,7 @@ public class CheckoutShoppingListHandlerTests {
     repository.GetAsync(ownerId, list.Id.Value, TestContext.Current.CancellationToken)
       .Returns(list);
 
-    clock.GetCurrentTime().Returns(DateTime.UtcNow);
+    clock.GetUtcNow().Returns(new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.Zero));
 
     await handler.Handle(command, TestContext.Current.CancellationToken);
 
@@ -82,7 +82,7 @@ public class CheckoutShoppingListHandlerTests {
     repository.GetAsync(ownerId, list.Id.Value, TestContext.Current.CancellationToken)
       .Returns(list);
 
-    clock.GetCurrentTime().Returns(DateTime.UtcNow);
+    clock.GetUtcNow().Returns(new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.Zero));
 
     IDomainEvent[] publishedEvents = [];
     publisher.When(value => value.PublishAsync(
@@ -106,7 +106,7 @@ public class CheckoutShoppingListHandlerTests {
     repository.GetAsync(ownerId, list.Id.Value, TestContext.Current.CancellationToken)
       .Returns(list);
 
-    clock.GetCurrentTime().Returns(DateTime.UtcNow);
+    clock.GetUtcNow().Returns(new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.Zero));
 
     _ = await handler.Handle(command, TestContext.Current.CancellationToken);
 
@@ -122,7 +122,7 @@ public class CheckoutShoppingListHandlerTests {
 
     repository.GetAsync(ownerId, list.Id.Value, Arg.Any<CancellationToken>())
       .Returns(list);
-    clock.GetCurrentTime().Returns(DateTime.UtcNow);
+    clock.GetUtcNow().Returns(new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.Zero));
 
     repository.SaveAsync(list, Arg.Any<CancellationToken>())
       .ThrowsAsync(new InvalidOperationException("Save failed"));
@@ -135,7 +135,7 @@ public class CheckoutShoppingListHandlerTests {
   }
 
   [Fact]
-  public async Task Handle_ClearsEventsAfterPublication() {
+  public async Task Handle_FlushesEventsAfterSuccessfulSave() {
     var ownerId = Guid.CreateVersion7();
     var list = ShoppingList.Create(ownerId, "Weekly");
     list.AddItems([new AddItemsParams(Guid.CreateVersion7(), 2, true)]);
@@ -143,11 +143,11 @@ public class CheckoutShoppingListHandlerTests {
     repository.GetAsync(ownerId, list.Id.Value, Arg.Any<CancellationToken>())
       .Returns(list);
 
-    clock.GetCurrentTime().Returns(DateTime.UtcNow);
+    clock.GetUtcNow().Returns(new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.Zero));
 
     await handler.Handle(new Command(ownerId, list.Id.Value),
       TestContext.Current.CancellationToken);
 
-    Assert.Empty(list.DomainEvents);
+    Assert.Empty(list.FlushDomainEvents());
   }
 }

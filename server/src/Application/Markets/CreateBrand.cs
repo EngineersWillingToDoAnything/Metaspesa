@@ -1,3 +1,4 @@
+using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Markets;
 using Metaspesa.Domain.Markets;
 using Metaspesa.Domain.Markets.Errors;
@@ -7,13 +8,15 @@ namespace Metaspesa.Application.Markets;
 public static class CreateBrand {
   public sealed record Command(string Name);
 
-  public sealed class Handler(IBrandRepository repository) {
+  public sealed class Handler(
+    IBrandRepository repository
+  ) : ICommandHandler<Command, Guid> {
     public async Task<Guid> Handle(
-      Command command, CancellationToken cancellationToken
+      Command command, CancellationToken cancellationToken = default
     ) {
       ArgumentNullException.ThrowIfNull(command);
 
-      var name = new BrandName(command.Name);
+      var name = BrandName.Create(command.Name);
       if (await repository.ExistsAsync(name.Value, cancellationToken)) {
         throw new BrandAlreadyExistsException(name);
       }

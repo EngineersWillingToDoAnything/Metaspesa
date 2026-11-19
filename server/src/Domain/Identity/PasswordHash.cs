@@ -6,11 +6,15 @@ public readonly record struct PasswordHash {
   public string Value { get; }
 
   public PasswordHash(string value) {
+    Value = value;
+  }
+
+  public static PasswordHash Create(string value) {
     if (string.IsNullOrWhiteSpace(value)) {
       throw new InvalidPasswordHashException();
     }
 
-    Value = value;
+    return new PasswordHash(value);
   }
 
   public override string ToString() => Value;

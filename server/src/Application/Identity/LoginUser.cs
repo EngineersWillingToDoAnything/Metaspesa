@@ -1,3 +1,4 @@
+using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Users;
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Identity.Errors;
@@ -11,14 +12,14 @@ public static class LoginUser {
     IUserRepository userRepository,
     IHasher hasher,
     ITokenProvider tokenProvider
-  ) {
+  ) : IQueryHandler<Query, Token> {
     public async Task<Token> Handle(
       Query query, CancellationToken cancellationToken = default
     ) {
       ArgumentNullException.ThrowIfNull(query);
 
       User? user = await userRepository.GetUserByUsernameAsync(
-        new Username(query.Username),
+        Username.Create(query.Username),
         cancellationToken);
 
       if (user is null || !hasher.VerifyHash(query.Password, user.PasswordHash.Value)) {

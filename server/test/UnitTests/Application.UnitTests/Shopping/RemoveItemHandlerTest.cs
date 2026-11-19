@@ -1,4 +1,3 @@
-using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Shopping;
 using Metaspesa.Domain.Shopping;
 using Metaspesa.Domain.Shopping.Errors;
@@ -9,13 +8,13 @@ namespace Metaspesa.Application.UnitTests.Shopping;
 
 public class RemoveItemHandlerTest {
   private readonly IShoppingListRepository _shoppingListRepository;
-  private readonly IClock _clock;
+  private readonly TimeProvider _clock;
   private readonly Handler _handler;
 
   public RemoveItemHandlerTest() {
     _shoppingListRepository = Substitute.For<IShoppingListRepository>();
-    _clock = Substitute.For<IClock>();
-    _clock.GetCurrentTime().Returns(DateTime.UtcNow);
+    _clock = Substitute.For<TimeProvider>();
+    _clock.GetUtcNow().Returns(new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.Zero));
 
     _handler = new Handler(_shoppingListRepository, _clock);
   }
@@ -42,7 +41,7 @@ public class RemoveItemHandlerTest {
     var list = ShoppingList.Create(ownerId, "Weekly");
     var item = new AddItemsParams(Guid.CreateVersion7(), 1, false);
     list.AddItems([item]);
-    _clock.GetCurrentTime().Returns(DateTime.UtcNow);
+    _clock.GetUtcNow().Returns(new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.Zero));
 
     var command = new Command(ownerId, list.Id.Value, list.ItemIdFor(item));
     _shoppingListRepository.GetAsync(

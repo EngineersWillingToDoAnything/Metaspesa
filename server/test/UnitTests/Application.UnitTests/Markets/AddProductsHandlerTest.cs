@@ -83,8 +83,8 @@ public sealed class AddProductsHandlerTest {
     var command = new Command([item], new DateOnly(2026, 7, 28));
 
     var identity = new ProductIdentity(
-      new MarketId(Guid.CreateVersion7()),
-      new BrandId(Guid.CreateVersion7()),
+      MarketId.Create(Guid.CreateVersion7()),
+      BrandId.Create(Guid.CreateVersion7()),
       ProductName.Create(item.Name!));
 
     _marketsRepo.ResolveMarketsAsync(
@@ -116,8 +116,8 @@ public sealed class AddProductsHandlerTest {
     var command = new Command([item], new DateOnly(2026, 7, 28));
 
     var identity = new ProductIdentity(
-      new MarketId(Guid.CreateVersion7()),
-      new BrandId(Guid.CreateVersion7()),
+      MarketId.Create(Guid.CreateVersion7()),
+      BrandId.Create(Guid.CreateVersion7()),
       ProductName.Create(item.Name!));
 
     _marketsRepo.ResolveMarketsAsync(
@@ -158,8 +158,8 @@ public sealed class AddProductsHandlerTest {
     );
 
     var identity = new ProductIdentity(
-      new MarketId(Guid.CreateVersion7()),
-      new BrandId(Guid.CreateVersion7()),
+      MarketId.Create(Guid.CreateVersion7()),
+      BrandId.Create(Guid.CreateVersion7()),
       ProductName.Create(item.Name!));
 
     _marketsRepo.ResolveMarketsAsync(
@@ -191,8 +191,8 @@ public sealed class AddProductsHandlerTest {
     var command = new Command([item, otherItem], new DateOnly(2026, 7, 28));
 
     var identity = new ProductIdentity(
-      new MarketId(Guid.CreateVersion7()),
-      new BrandId(Guid.CreateVersion7()),
+      MarketId.Create(Guid.CreateVersion7()),
+      BrandId.Create(Guid.CreateVersion7()),
       ProductName.Create(item.Name!));
 
     _marketsRepo.ResolveMarketsAsync(
@@ -225,8 +225,8 @@ public sealed class AddProductsHandlerTest {
       new DateOnly(2026, 7, 28));
 
     var identity = new ProductIdentity(
-      new MarketId(Guid.CreateVersion7()),
-      new BrandId(Guid.CreateVersion7()),
+      MarketId.Create(Guid.CreateVersion7()),
+      BrandId.Create(Guid.CreateVersion7()),
       ProductName.Create(item.Name!));
 
     _marketsRepo.ResolveMarketsAsync(
@@ -260,8 +260,8 @@ public sealed class AddProductsHandlerTest {
       new DateOnly(2026, 7, 28));
 
     var identity = new ProductIdentity(
-      new MarketId(Guid.CreateVersion7()),
-      new BrandId(Guid.CreateVersion7()),
+      MarketId.Create(Guid.CreateVersion7()),
+      BrandId.Create(Guid.CreateVersion7()),
       ProductName.Create(item.Name!));
 
     _marketsRepo.ResolveMarketsAsync(
@@ -301,8 +301,8 @@ public sealed class AddProductsHandlerTest {
       new DateOnly(2026, 7, 28));
 
     var identity = new ProductIdentity(
-      new MarketId(Guid.CreateVersion7()),
-      new BrandId(Guid.CreateVersion7()),
+      MarketId.Create(Guid.CreateVersion7()),
+      BrandId.Create(Guid.CreateVersion7()),
       ProductName.Create(item.Name!));
 
     _marketsRepo.ResolveMarketsAsync(
@@ -344,8 +344,8 @@ public sealed class AddProductsHandlerTest {
       new DateOnly(2026, 7, 28));
 
     var identity = new ProductIdentity(
-      new MarketId(Guid.CreateVersion7()),
-      new BrandId(Guid.CreateVersion7()),
+      MarketId.Create(Guid.CreateVersion7()),
+      BrandId.Create(Guid.CreateVersion7()),
       ProductName.Create(item.Name!));
 
     _marketsRepo.ResolveMarketsAsync(

@@ -1,3 +1,4 @@
+using Metaspesa.Application.Abstractions.Core;
 using Metaspesa.Application.Abstractions.Users;
 using Metaspesa.Domain.Identity;
 using Metaspesa.Domain.Identity.Errors;
@@ -10,7 +11,7 @@ public static class RegisterUser {
   public class Handler(
     IHasher hasher,
     IUserRepository userRepository
-  ) {
+  ) : ICommandHandler<Command> {
     public async Task Handle(
       Command command, CancellationToken cancellationToken = default
     ) {

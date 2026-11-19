@@ -41,11 +41,8 @@ internal partial class PostgreSqlUserRepository(
     }
 
     return Enum.TryParse(entity.Role.Name, out Role role)
-      ? User.Rehydrate(
-        new UserId(entity.Uid),
-        new Username(entity.Username),
-        new PasswordHash(entity.EncryptedPassword),
-        role)
+      ? User.Rehydrate(new UserPrimitives(
+        entity.Uid, entity.Username, entity.EncryptedPassword, (int)role))
       : null;
   }, "Couldn't get user by username.");
 }

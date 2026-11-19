@@ -10,9 +10,9 @@ public static class CheckoutShoppingList {
 
   public class Handler(
     IShoppingListRepository repository,
-    IClock clock,
+    TimeProvider timeProvider,
     IDomainEventPublisher eventPublisher
-  ) {
+  ) : ICommandHandler<Command, Guid> {
     public async Task<Guid> Handle(
       Command command, CancellationToken cancellationToken = default
     ) {
@@ -23,12 +23,11 @@ public static class CheckoutShoppingList {
         ?? throw new ShoppingListNotFoundException();
 
       Guid checkoutId = shoppingList.Checkout(
-        command.UserUid, clock.GetCurrentTime());
+        command.UserUid, timeProvider.GetUtcNow().UtcDateTime);
 
       await repository.SaveAsync(shoppingList, cancellationToken);
       await eventPublisher.PublishAsync(
-        shoppingList.DomainEvents, CancellationToken.None);
-      shoppingList.ClearDomainEvents();
+        shoppingList.FlushDomainEvents(), CancellationToken.None);
 
       return checkoutId;
     }

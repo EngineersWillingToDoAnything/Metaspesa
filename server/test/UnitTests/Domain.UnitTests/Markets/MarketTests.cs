@@ -3,6 +3,18 @@ using Metaspesa.Domain.Markets;
 namespace Metaspesa.Domain.UnitTests.Markets;
 
 public static class MarketTests {
+  [Fact]
+  public static void Rehydrate_AcceptsPersistedValuesThatCreationRejects() {
+    // Arrange
+    var persisted = new MarketPrimitives(Guid.Empty, " ", "legacy/logo.png");
+
+    // Act
+    var market = Market.Rehydrate(persisted);
+
+    // Assert
+    Assert.Equal(persisted.Id, market.Id.Value);
+  }
+
   private sealed class MarketLogos() : TheoryData<Uri?>(
     null,
     new Uri("https://example.test/logo.png")

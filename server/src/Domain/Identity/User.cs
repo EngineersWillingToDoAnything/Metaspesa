@@ -1,4 +1,3 @@
-using Metaspesa.Domain.Identity.Errors;
 using Metaspesa.Domain.SharedKernel;
 
 namespace Metaspesa.Domain.Identity;
@@ -12,8 +11,6 @@ public class User : AggregateRoot {
   private User(
     UserId id, Username username, PasswordHash passwordHash, Role role
   ) {
-    EnsureValidRole(role);
-
     Id = id;
     Username = username;
     PasswordHash = passwordHash;
@@ -23,30 +20,28 @@ public class User : AggregateRoot {
   public static User Create(
     string primitiveUsername, string primitivePasswordHash
   ) {
-    var id = new UserId(Uid.Create());
-    var username = new Username(primitiveUsername);
-    var passwordHash = new PasswordHash(primitivePasswordHash);
+    var id = UserId.Create(Uid.Create());
+    var username = Username.Create(primitiveUsername);
+    var passwordHash = PasswordHash.Create(primitivePasswordHash);
 
     return new User(id, username, passwordHash, Role.Shopper);
   }
 
-  public static User Rehydrate(
-    UserId id,
-    Username username,
-    PasswordHash passwordHash,
-    Role role
-  ) => new(id, username, passwordHash, role);
+  public static User Rehydrate(UserPrimitives primitives) {
+    ArgumentNullException.ThrowIfNull(primitives);
+
+    return new User(
+      new UserId(primitives.Id),
+      new Username(primitives.Username),
+      new PasswordHash(primitives.PasswordHash),
+      (Role)primitives.Role);
+  }
 
   public UserPrimitives ToPrimitives() {
     return new UserPrimitives(
       Id.Value, Username.Value, PasswordHash.Value, (int)Role);
   }
 
-  private static void EnsureValidRole(Role role) {
-    if (role is Role.None || !Enum.IsDefined(role)) {
-      throw new InvalidRoleException(role);
-    }
-  }
 }
 
 public sealed record UserPrimitives(Guid Id, string Username, string PasswordHash, int Role);

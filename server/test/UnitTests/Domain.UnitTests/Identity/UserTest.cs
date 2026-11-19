@@ -4,18 +4,48 @@ using Metaspesa.Domain.Identity.Errors;
 namespace Metaspesa.Domain.UnitTests.Identity;
 
 public static class UserTest {
+  [Theory]
+  [InlineData(0)]
+  [InlineData(99)]
+  public static void Rehydrate_AcceptsPersistedValuesThatCreationRejects(
+    int storedRole
+  ) {
+    // Arrange
+    var persisted = new UserPrimitives(Guid.Empty, "legacy user", "", storedRole);
+
+    // Act
+    var user = User.Rehydrate(persisted);
+
+    // Assert
+    Assert.Equal((Role)storedRole, user.Role);
+  }
+
+  [Fact]
+  public static void Rehydrate_PreservesState() {
+    // Arrange
+    var original = User.Create("shopper", "password_hash");
+
+    // Act
+    var restored = User.Rehydrate(original.ToPrimitives());
+
+    // Assert
+    Assert.Equivalent(original, restored);
+  }
+
   [Fact]
   public static void Rehydrate_DoesNotRaiseDomainEvents() {
     // Arrange
-    var id = new UserId(Guid.Parse("00000000-0000-7000-8000-000000000001"));
-    var username = new Username("estela");
-    var passwordHash = new PasswordHash("hashed");
+    var persisted = new UserPrimitives(
+      Guid.Parse("00000000-0000-7000-8000-000000000001"),
+      "estela",
+      "hashed",
+      (int)Role.Shopper);
 
     // Act
-    var user = User.Rehydrate(id, username, passwordHash, Role.Shopper);
+    var user = User.Rehydrate(persisted);
 
     // Assert
-    Assert.Empty(user.DomainEvents);
+    Assert.Empty(user.FlushDomainEvents());
   }
 
   [Fact(DisplayName = "Creates shopper user")]

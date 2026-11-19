@@ -10,7 +10,7 @@ public static class UserIdTest {
     var value = Guid.CreateVersion7();
 
     // Act
-    var userId = new UserId(value);
+    var userId = UserId.Create(value);
 
     // Assert
     Assert.Equal(value, userId.Value);
@@ -19,7 +19,7 @@ public static class UserIdTest {
   [Fact(DisplayName = "Throws specific exception when GUID is empty")]
   public static void UserId_ThrowsInvalidUserIdException_WhenGuidIsEmpty() {
     // Act & Assert
-    Assert.Throws<InvalidUserIdException>(() => new UserId(Guid.Empty));
+    Assert.Throws<InvalidUserIdException>(() => UserId.Create(Guid.Empty));
   }
 
   [Fact(DisplayName = "Two user ids with the same value are equal")]
@@ -28,6 +28,6 @@ public static class UserIdTest {
     var value = Guid.CreateVersion7();
 
     // Act & Assert
-    Assert.Equal(new UserId(value), new UserId(value));
+    Assert.Equal(UserId.Create(value), UserId.Create(value));
   }
 }

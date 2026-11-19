@@ -21,7 +21,7 @@ public sealed class PriceSnapshot {
   internal static PriceSnapshot Create(
     Money price, ObservationDate observedOn
   ) {
-    var id = new PriceSnapshotId(Uid.Create());
+    var id = PriceSnapshotId.Create(Uid.Create());
     return new(id, price, observedOn);
   }
 

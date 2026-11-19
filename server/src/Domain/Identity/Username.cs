@@ -7,13 +7,17 @@ public readonly partial record struct Username {
   public string Value { get; }
 
   public Username(string value) {
+    Value = value;
+  }
+
+  public static Username Create(string value) {
     bool isValid = !string.IsNullOrWhiteSpace(value) &&
       ValidUsernameRegex().IsMatch(value.Trim());
     if (!isValid) {
       throw new InvalidUsernameException(value);
     }
 
-    Value = value.Trim();
+    return new Username(value.Trim());
   }
 
   public override string ToString() => Value;

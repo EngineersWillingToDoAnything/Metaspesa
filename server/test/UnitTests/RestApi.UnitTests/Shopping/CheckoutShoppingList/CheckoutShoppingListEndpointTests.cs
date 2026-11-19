@@ -17,7 +17,7 @@ public class CheckoutShoppingListEndpointTests {
 
   private sealed class FakeHandler : CheckoutUseCase.Handler {
     private readonly IShoppingListRepository _repository;
-    private readonly IClock _clock;
+    private readonly TimeProvider _clock;
     private readonly ShoppingList _list;
     private Guid? _publishedCheckoutId;
 
@@ -25,7 +25,7 @@ public class CheckoutShoppingListEndpointTests {
     internal Guid ListId => _list.Id.Value;
 
     public FakeHandler(
-      IShoppingListRepository repository, IClock clock, IDomainEventPublisher publisher
+      IShoppingListRepository repository, TimeProvider clock, IDomainEventPublisher publisher
     ) : base(repository, clock, publisher) {
       _repository = repository;
       _clock = clock;
@@ -45,7 +45,7 @@ public class CheckoutShoppingListEndpointTests {
           TestContext.Current.CancellationToken)
         .Returns(_list);
 
-      _clock.GetCurrentTime().Returns(DateTime.UtcNow);
+      _clock.GetUtcNow().Returns(new DateTimeOffset(2026, 11, 17, 12, 0, 0, TimeSpan.Zero));
     }
 
     internal Guid? GetPublishedCheckoutId() => _publishedCheckoutId;
@@ -54,7 +54,7 @@ public class CheckoutShoppingListEndpointTests {
   public CheckoutShoppingListEndpointTests() {
     handler = new FakeHandler(
       Substitute.For<IShoppingListRepository>(),
-      Substitute.For<IClock>(),
+      Substitute.For<TimeProvider>(),
       Substitute.For<IDomainEventPublisher>());
   }
 

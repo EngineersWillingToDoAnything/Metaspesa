@@ -4,6 +4,20 @@ using Metaspesa.Domain.Identity.Errors;
 namespace Metaspesa.Domain.UnitTests.Identity;
 
 public static class UsernameTest {
+  [Theory]
+  [InlineData("")]
+  [InlineData("legacy user")]
+  [InlineData(" legacy_user ")]
+  public static void Constructor_PreservesStoredTextWithoutValidationOrTrimming(
+    string storedName
+  ) {
+    // Act
+    var username = new Username(storedName);
+
+    // Assert
+    Assert.Equal(storedName, username.Value);
+  }
+
   [Theory(DisplayName = "Creates username from valid value")]
   [InlineData("estela")]
   [InlineData("ESTELA")]
@@ -14,7 +28,7 @@ public static class UsernameTest {
     string value
   ) {
     // Act
-    var username = new Username(value);
+    var username = Username.Create(value);
 
     // Assert
     Assert.Equal(value, username.Value);
@@ -23,7 +37,7 @@ public static class UsernameTest {
   [Fact(DisplayName = "Trims surrounding whitespace from username")]
   public static void Username_Trimmed_WhenValueHasSurroundingWhitespace() {
     // Act
-    var username = new Username("  Estela_123  ");
+    var username = Username.Create("  Estela_123  ");
 
     // Assert
     Assert.Equal("Estela_123", username.Value);
@@ -43,12 +57,12 @@ public static class UsernameTest {
     string? value
   ) {
     // Act & Assert
-    Assert.Throws<InvalidUsernameException>(() => new Username(value!));
+    Assert.Throws<InvalidUsernameException>(() => Username.Create(value!));
   }
 
   [Fact(DisplayName = "Two usernames with the same value are equal")]
   public static void Username_Equal_WhenSameValue() {
     // Act & Assert
-    Assert.Equal(new Username("estela"), new Username("estela"));
+    Assert.Equal(Username.Create("estela"), Username.Create("estela"));
   }
 }
