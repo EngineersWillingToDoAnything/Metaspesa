@@ -1,4 +1,4 @@
-FROM python:3.14.10-slim AS builder
+FROM python:3.15.2-slim AS builder
 
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
@@ -6,9 +6,13 @@ WORKDIR /app
 
 COPY pyproject.toml uv.lock ./
 
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
 RUN uv sync --frozen --no-dev --no-install-project
 
-FROM python:3.14.10-slim
+FROM python:3.15.2-slim
 
 WORKDIR /app
 
@@ -16,7 +20,9 @@ COPY --from=builder /app/.venv /app/.venv
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-RUN playwright install --with-deps firefox \
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libatomic1 \
+    && playwright install --with-deps firefox \
     && rm -rf /var/lib/apt/lists/*
 
 COPY . .
