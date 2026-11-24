@@ -14,7 +14,7 @@ dependencies = [
     "opentelemetry-sdk>=1.30.0",
     "playwright>=1.65.2",
     "pydantic>=2.14.4",
-    "pyyaml>=6.0.3",
+    "pyyaml>=6.0.4",
 ]
 
 [dependency-groups]
